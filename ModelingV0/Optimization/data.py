@@ -40,26 +40,26 @@ class Data():
     resources_node = list()
 
     # fu \in {0,1}
-    file_user_request = [[0] * 5] * 3
+    file_user_request = [[0] * num_nodes] * num_files
 
     # rtt_ij \in R
-    edge_rtt = [[0] * 5] * 5
+    edge_rtt = [[0] * num_nodes] * num_nodes
     # bwt_ij \in R
-    total_bandwidth_edge = [[0] * 5] * 5
+    total_bandwidth_edge = [[0] * num_nodes] * num_nodes
 
     # Vars
 
     # bwa_ij \in R
-    bandwidth_actual_edge = [[[0] * 5] * 5] * 3
+    bandwidth_actual_edge = [[[0] * num_nodes] * num_nodes] * num_files
 
     # mf_i \in {0,1}
-    map_node_file = [[0] * 5] * 3
+    map_node_file = [[0] * num_nodes] * num_files
 
     # rr_i \in R
     actual_resources_node = list()
 
     # c_fij \in R
-    weight_file_edge = [[[0] * 5] * 5] * 3
+    weight_file_edge = [[[0] * num_nodes] * num_nodes] * num_files
 
     weight_dict = dict()
 

@@ -1,8 +1,8 @@
 # python -m pip install -i https://pypi.gurobi.com gurobipy
-from optimization.data import Data
-from optimization.handle_data import HandleData
-from optimization.info_data import InfoData
-from optimization.optimize_data import OptimizeData
+from optimization.optimize import Data
+from optimization.optimize import HandleData
+from optimization.optimize import InfoData
+from optimization.optimize import OptimizeData
 from utils import utils as u
 
 
@@ -42,6 +42,7 @@ def main():
     hd = HandleData(d)
     id = InfoData(d)
     od = OptimizeData(d)
+
 
 def convert_to_object(dataset):
     alpha = int(dataset["alpha"])

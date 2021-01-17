@@ -1,7 +1,8 @@
 import gurobipy as gp
 
 
-class Data():
+class Data:
+
     # Input
     alpha = 0
 
@@ -103,7 +104,8 @@ class Data():
         pass
 
 
-class HandleData():
+class HandleData:
+
     data = Data()
 
     def __init__(self, data):
@@ -149,8 +151,13 @@ class HandleData():
                     else:
                         self.data.weight_file_edge[f][i][j] = 1
 
+    def request(self):
+        pass
 
-class InfoData():
+    def update(self):
+        pass
+
+class InfoData:
     data = Data()
 
     def __init__(self, data):
@@ -185,7 +192,7 @@ class InfoData():
             print()
 
 
-class OptimizeData():
+class OptimizeData:
     data = Data()
 
     model = None

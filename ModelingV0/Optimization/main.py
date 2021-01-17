@@ -1,8 +1,8 @@
 # python -m pip install -i https://pypi.gurobi.com gurobipy
-from optimization.optimize import Data
-from optimization.optimize import HandleData
-from optimization.optimize import InfoData
-from optimization.optimize import OptimizeData
+from modeling.optimize import Data
+from modeling.optimize import HandleData
+from modeling.optimize import InfoData
+from modeling.optimize import OptimizeData
 from utils import utils as u
 
 
@@ -43,6 +43,10 @@ def main():
     id = InfoData(d)
     od = OptimizeData(d)
 
+    id.log_map_node_file()
+    id.log_weight_file_edge()
+    id.log_actual_resources_node()
+    id.log_bandwidth_actual_edge()
 
 def convert_to_object(dataset):
     alpha = int(dataset["alpha"])

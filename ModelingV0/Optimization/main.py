@@ -5,7 +5,6 @@ from modeling.optimize import InfoData
 from modeling.optimize import OptimizeData
 from utils import utils as u
 
-
 alpha = None
 
 num_bs = None
@@ -31,14 +30,13 @@ max_rtt = None
 
 
 def main():
-
-    path = r'..\dataset\instance_1.json' #args[0]
+    path = r'..\dataset\instance_1.json'  # args[0]
     dataset = u.get_data(path)
     convert_to_object(dataset)
 
     d = Data(alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, size_file, resources_file,
-            bandwidth_min_file,
-            resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
+             bandwidth_min_file, resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
+
     hd = HandleData(d)
     id = InfoData(d)
     od = OptimizeData(d)
@@ -47,6 +45,7 @@ def main():
     id.log_weight_file_edge()
     id.log_actual_resources_node()
     id.log_bandwidth_actual_edge()
+
 
 def convert_to_object(dataset):
     alpha = int(dataset["alpha"])

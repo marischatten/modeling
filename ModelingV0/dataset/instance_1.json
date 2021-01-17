@@ -1,9 +1,9 @@
 {
     "alpha": 0.5,
 
-    "num_bs": 3,
-    "num_ue": 2,
-    "num_file": 3,
+    "num_bs": 2,
+    "num_ue": 3,
+    "num_files": 3,
 
     "key_index_file": ["A", "B", "C"],
     "key_index_bs": ["I", "J"],
@@ -29,5 +29,11 @@
         [0, 300, 0, 0, 0]
     ],
     "min_rtt": 20,
-    "max_rtt": 50
+    "max_rtt": 50,
+
+    "map_node_file": [
+        [0,1,0,0,0],
+        [0,1,0,0,0],
+        [1,0,0,0,0]
+    ]
   }

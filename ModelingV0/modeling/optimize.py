@@ -1,4 +1,5 @@
 import gurobipy as gp
+import random
 
 
 class Data:
@@ -34,31 +35,31 @@ class Data:
     resources_node = list()
 
     # fu \in {0,1}
-    file_user_request = [[0] * num_nodes] * num_files
+    file_user_request = None # [[0] * num_nodes] * num_files
 
     # rtt_ij \in R
-    edge_rtt = [[0] * num_nodes] * num_nodes
+    edge_rtt = None
     # bwt_ij \in R
-    total_bandwidth_edge = [[0] * num_nodes] * num_nodes
+    total_bandwidth_edge = None #[[0] * num_nodes] * num_nodes
 
     # Vars
     # bwa_ij \in R
-    bandwidth_actual_edge = [[[0] * num_nodes] * num_nodes] * num_files
+    bandwidth_actual_edge = None
 
     # mf_i \in {0,1}
-    map_node_file = [[0] * num_nodes] * num_files
+    map_node_file = None
 
     # rr_i \in R
     actual_resources_node = list()
 
     # c_fij \in R
-    weight_file_edge = [[[0] * num_nodes] * num_nodes] * num_files
+    weight_file_edge = None
 
     weight_dict = dict()
 
     def __init__(self, alpha=None, num_bs=None, num_ue=None, num_file=None, key1=None, key2=None, key3=None, fs=None,
                  fr=None, bwf=None, rt_i=None, fu=None, bwt_ij=None, min_rtt=None,
-                 max_rtt=None):
+                 max_rtt=None, map_node_file = None):
         self.alfa = alpha
         self.num_bs = num_bs
         self.num_ue = num_ue
@@ -75,8 +76,17 @@ class Data:
         self.bandwidth_min_file = bwf
         self.resources_node = rt_i
         self.file_user_request = fu
-        self.edge_rtt = self.generate_rtt(min_rtt, max_rtt)
+
         self.total_bandwidth_edge = bwt_ij
+
+        self.map_node_file = map_node_file
+
+        if num_bs is not None and num_ue is not None and num_file is not None:
+            self.edge_rtt = self.generate_rtt(min_rtt, max_rtt)
+
+            self.bandwidth_actual_edge = [[[0] * self.num_nodes] * self.num_nodes] * self.num_files
+            self.actual_resources_node = [0] * self.num_nodes
+            self.weight_file_edge = [[[0] * self.num_nodes] * self.num_nodes] * self.num_files
 
     def weight_to_dictionary(self):
         tag = " "
@@ -101,7 +111,22 @@ class Data:
             self.weight_dict[key] = value
 
     def generate_rtt(self, bottom, top):
+        self.edge_rtt = [[0] * self.num_nodes] * self.num_nodes
         pass
+        '''population_bottom = [0,1,2,3,4,5]
+        population_top = [5,6,7,8,9,10]
+        weights = [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5]
+
+        for i in range(len(self.key_index_orig)):
+            for j in range(len(self.key_index_dest)):
+                if i is not j:
+                    self.edge_rtt[i][j] = random.choices(population_bottom+population_top, weights, k=1)
+
+
+        for i in range(len(self.key_index_orig)):
+            for j in range(len(self.key_index_dest)):
+                print(self.edge_rtt[i][j])
+            print()'''
 
 
 class HandleData:
@@ -119,7 +144,7 @@ class HandleData:
                     rtt_ij = self.data.edge_rtt[i][j]
                     self.data.bandwidth_actual_edge[i][j] = round(size_f / rtt_ij, 4)
 
-    def calc_map_file(self, file, orig, dest):
+    def replace_map_file(self, file, orig, dest):
         self.data.map_node_file[file][orig] = 0
         self.data.map_node_file[file][dest] = 1
 
@@ -167,28 +192,34 @@ class InfoData:
 
     # Vars
     def log_bandwidth_actual_edge(self):
-        for i in range(len(self.data.key_index_orig)):
-            for j in range(len(self.data.key_index_dest)):
-                print(self.data.bandwidth_actual_edge[i][j], end=" ")
+        print("ACTUAL BANDWIDTH.")
+        for f in range(len(self.data.key_index_file)):
+            for i in range(len(self.data.key_index_orig)):
+                for j in range(len(self.data.key_index_dest)):
+                    print(self.data.bandwidth_actual_edge[f][i][j], end=" ")
+                print()
             print()
 
     def log_map_node_file(self):
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_orig)):
-                print(self.data.map_node_file[f][i], end=" ")
-            print()
+        if self.data.map_node_file is not None:
+            print("MAPPING.")
+            for f in range(len(self.data.key_index_file)):
+                for i in range(len(self.data.key_index_orig)):
+                    print(self.data.map_node_file[f][i], end=" ")
+                print()
 
     def log_actual_resources_node(self):
+        print("ACTUAL RESOURCES.")
         for i in range(len(self.data.key_index_orig)):
             print(self.data.actual_resources_node[i])
 
     def log_weight_file_edge(self):
+        print("WEIGHT.")
         for f in range(len(self.data.key_index_file)):
             for i in range(len(self.data.key_index_orig)):
                 for j in range(len(self.data.key_index_dest)):
                     print(self.data.weight_file_edge[f][i][j], end=" ")
                 print()
-            print()
             print()
 
 

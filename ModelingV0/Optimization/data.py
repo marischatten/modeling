@@ -1,12 +1,5 @@
-from info_data import InfoData
-from handle_data import HandleData
-from optimize_data import OptimizeData
-
 
 class Data():
-    id = InfoData()
-    hd = HandleData()
-    od = OptimizeData()
 
     # Input
     alpha = 0
@@ -47,7 +40,6 @@ class Data():
     total_bandwidth_edge = [[0] * num_nodes] * num_nodes
 
     # Vars
-
     # bwa_ij \in R
     bandwidth_actual_edge = [[[0] * num_nodes] * num_nodes] * num_files
 
@@ -62,8 +54,8 @@ class Data():
 
     weight_dict = dict()
 
-    def __init__(self, alpha, num_bs, num_ue, num_file, key1, key2, key3, fs, fr, bwf, rt_i, fu, bwt_ij, min_rtt,
-                 max_rtt):
+    def __init__(self, alpha=None, num_bs=None, num_ue=None, num_file=None, key1=None, key2=None, key3=None, fs=None, fr=None, bwf=None, rt_i=None, fu=None, bwt_ij=None, min_rtt=None,
+                 max_rtt=None):
         self.alfa = alpha
         self.num_bs = num_bs
         self.num_ue = num_ue

@@ -9,14 +9,13 @@ class Data():
     od = OptimizeData()
 
     # Input
-    alpha = None
+    alpha = 0
 
     # Parameters
-
-    num_bs = None
-    num_ue = None
-    num_nodes = None
-    num_files = None
+    num_bs = 0
+    num_ue = 0
+    num_nodes = 0
+    num_files = 0
 
     # f \in F
     key_index_file = list()

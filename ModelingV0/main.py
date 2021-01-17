@@ -26,20 +26,23 @@ total_bandwidth_edge = [[0] * 5] * 5
 min_rtt = None
 max_rtt = None
 
-def main(args):
-    dataset = "dataset/instance_1.json"  # u.get_data(args[0])
+
+def main():
+
+    path = r'..\dataset\instance_1.json' #args[0]
+    dataset = u.get_data(path)
     convert_to_object(dataset)
 
     d = Data(alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, size_file, resources_file,
-             bandwidth_min_file,
-             resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
+            bandwidth_min_file,
+            resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
 
 def convert_to_object(dataset):
-    alpha = dataset["alpha"]
+    alpha = int(dataset["alpha"])
 
-    num_bs = dataset["num_bs"]
-    num_ue = dataset["num_ue"]
-    num_file = dataset["num_file"]
+    num_bs = int(dataset["num_bs"])
+    num_ue = int(dataset["num_ue"])
+    num_file = int(dataset["num_file"])
 
     key_index_file = dataset["key_index_file"]
     key_index_bs = dataset["key_index_bs"]
@@ -55,8 +58,9 @@ def convert_to_object(dataset):
 
     total_bandwidth_edge = dataset["total_bandwidth_edge"]
 
-    min_rtt = dataset["min_rtt"]
-    max_rtt = dataset["max_rtt"]
+    min_rtt = int(dataset["min_rtt"])
+    max_rtt = int(dataset["max_rtt"])
+
 
 if __name__ == "__main__":
     main()

@@ -12,6 +12,8 @@ class OptimizeData(Data):
     # n_fij \in {0,1}
     def create_vars(self):
         n = self.model.addVars(self.key_index_file, self.key_index_orig, self.key_index_dest, vtype=gp.GRB.BINARY)
+
+
 '''
     def set_function_objective(self):
         self.model.setObjective(gp.quicksum(

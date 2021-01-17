@@ -1,5 +1,5 @@
 # python -m pip install -i https://pypi.gurobi.com gurobipy
-from Optimization.data import Data
+from optimization.data import Data
 from utils import utils as u
 
 
@@ -36,6 +36,7 @@ def main():
     d = Data(alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, size_file, resources_file,
             bandwidth_min_file,
             resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
+
 
 def convert_to_object(dataset):
     alpha = int(dataset["alpha"])

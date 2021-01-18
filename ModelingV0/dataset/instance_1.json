@@ -11,7 +11,7 @@
 
     "size_file": [200, 200, 100],
     "resources_file": [3, 1, 1],
-    "bandwidth_min_file": [50, 50, 50],
+    "bandwidth_min_file": [15.0, 15.0, 15.0],
 
     "resources_node": [3, 4, 0, 0, 0],
 
@@ -28,8 +28,8 @@
         [300, 300, 0, 0, 0],
         [0, 300, 0, 0, 0]
     ],
-    "min_rtt": 20,
-    "max_rtt": 50,
+    "avg_rtt": 15.0,
+    "sd_rtt": 1.0,
 
     "map_node_file": [
         [0,1,0,0,0],

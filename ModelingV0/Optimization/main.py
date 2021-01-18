@@ -7,11 +7,11 @@ from utils import utils as u
 from simulation import request as r
 
 
-alpha = None
+alpha = 0
 
-num_bs = None
-num_ue = None
-num_files = None
+num_bs = 0
+num_ue = 0
+num_files = 0
 
 key_index_file = list()
 key_index_bs = list()
@@ -27,22 +27,19 @@ file_user_request = None
 
 total_bandwidth_edge = None
 
-min_rtt = None
-max_rtt = None
+avg_rtt = 0
+sd_rtt = 0
 
 map_node_file = None
+
 
 def main():
     path = r'..\dataset\instance_1.json'  # args[0]
     dataset = u.get_data(path)
     convert_to_object(dataset)
 
-    print(dataset)
-    print(alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, size_file, resources_file,
-          bandwidth_min_file, resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt)
-
     d = Data(alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, size_file, resources_file,
-             bandwidth_min_file, resources_node, file_user_request, total_bandwidth_edge, min_rtt, max_rtt,map_node_file)
+             bandwidth_min_file, resources_node, file_user_request, total_bandwidth_edge, avg_rtt, sd_rtt, map_node_file)
 
     hd = HandleData(d)
     id = InfoData(d)
@@ -50,13 +47,18 @@ def main():
 
     num_request = 10
     request = r.Request.generate_request(num_request, (num_bs+1), (num_bs + num_ue), num_files)
-    print(request)
 
+    #id.log_weight_file_edge()
+    hd.calc_bandwidth_actual_edge()
     hd.calc_actual_resources_node()
-    id.log_map_node_file()
-    id.log_weight_file_edge()
-    id.log_actual_resources_node()
-    id.log_bandwidth_actual_edge()
+    hd.calc_weight_file_edge()
+
+    #id.log_total_bandwidth()
+    #id.log_rtt_edge()
+    #id.log_map_node_file()
+    #id.log_weight_file_edge()
+    #id.log_actual_resources_node()
+    #id.log_bandwidth_actual_edge()
 
     print("SUCESS!")
 
@@ -76,11 +78,11 @@ def convert_to_object(dataset):
     global resources_node
     global file_user_request
     global total_bandwidth_edge
-    global min_rtt
-    global max_rtt
-    global  map_node_file
+    global avg_rtt
+    global sd_rtt
+    global map_node_file
 
-    alpha = int(dataset["alpha"])
+    alpha = float(dataset["alpha"])
 
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])
@@ -104,10 +106,11 @@ def convert_to_object(dataset):
         total_bandwidth_edge = [[0] * (num_bs+num_ue)] * (num_bs+num_ue)
         total_bandwidth_edge = dataset["total_bandwidth_edge"]
 
-    min_rtt = int(dataset["min_rtt"])
-    max_rtt = int(dataset["max_rtt"])
+    avg_rtt = int(dataset["avg_rtt"])
+    sd_rtt = int(dataset["sd_rtt"])
 
     map_node_file = dataset["map_node_file"]
+
 
 if __name__ == "__main__":
     main()

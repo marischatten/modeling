@@ -48,17 +48,17 @@ def main():
     num_request = 10
     request = r.Request.generate_request(num_request, (num_bs+1), (num_bs + num_ue), num_files)
 
-    #id.log_weight_file_edge()
+    id.log_weight_file_edge()
     hd.calc_bandwidth_actual_edge()
     hd.calc_actual_resources_node()
     hd.calc_weight_file_edge()
 
-    #id.log_total_bandwidth()
-    #id.log_rtt_edge()
-    #id.log_map_node_file()
-    #id.log_weight_file_edge()
-    #id.log_actual_resources_node()
-    #id.log_bandwidth_actual_edge()
+    id.log_total_bandwidth()
+    id.log_rtt_edge()
+    id.log_map_node_file()
+    id.log_weight_file_edge()
+    id.log_actual_resources_node()
+    id.log_bandwidth_actual_edge()
 
     print("SUCESS!")
 
@@ -99,11 +99,11 @@ def convert_to_object(dataset):
     resources_node = dataset["resources_node"]
 
     if num_bs is not None and num_ue is not None and num_files is not None:
-        file_user_request = [[0] * (num_bs+num_ue)] * num_files
+        file_user_request =  [[0 for u in range(num_bs+num_ue)] for f in range(num_files)]
         file_user_request = dataset["file_user_request"]
 
     if num_bs is not None and num_ue is not None:
-        total_bandwidth_edge = [[0] * (num_bs+num_ue)] * (num_bs+num_ue)
+        total_bandwidth_edge = [[0 for i in range(num_bs+num_ue)] for j in range(num_bs+num_ue)]
         total_bandwidth_edge = dataset["total_bandwidth_edge"]
 
     avg_rtt = int(dataset["avg_rtt"])

@@ -1,5 +1,6 @@
 import gurobipy as gp
 import statistics as s
+import numpy as np
 
 NO_EDGE = 9999
 
@@ -87,9 +88,9 @@ class Data:
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.generate_rtt(avg_rtt, sd_rtt)
 
-            self.bandwidth_actual_edge = [[[0] * self.num_nodes] * self.num_nodes] * self.num_files
-            self.actual_resources_node = [0] * self.num_nodes
-            self.weight_file_edge = [[[0] * self.num_nodes] * self.num_nodes] * self.num_files
+            self.bandwidth_actual_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in range(self.num_files)]
+            self.actual_resources_node = [0 for i in range(self.num_nodes)]
+            self.weight_file_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in range(self.num_files)]
 
     def weight_to_dictionary(self):
         tag = " "
@@ -114,7 +115,7 @@ class Data:
             self.weight_dict[key] = value
 
     def generate_rtt(self, avg, sd):
-        self.rtt_edge = [[0] * self.num_nodes] * self.num_nodes
+        self.rtt_edge = [[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)]
         for i in range(len(self.key_index_orig)):
             for j in range(len(self.key_index_dest)):
                 if i != j:
@@ -165,10 +166,10 @@ class HandleData:
                 for j in range(len(self.data.key_index_dest)):
                     rt_i = self.data.resources_node[i]
                     rr_i = self.data.actual_resources_node[i]
-                    bwa_ij = self.data.bandwidth_actual_edge[f][i][j]
+                    bwa_fij = self.data.bandwidth_actual_edge[f][i][j]
                     bwt_ij = self.data.total_bandwidth_edge[i][j]
                     if rt_i != 0 and bwt_ij != 0 and bwt_ij != NO_EDGE:
-                        weight = ((self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (bwa_ij / bwt_ij))) / (
+                        weight = ((self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (bwa_fij / bwt_ij))) / (
                                     self.data.alpha + (1.0 - self.data.alpha))
                         self.data.weight_file_edge[f][i][j] = round(weight, 4)
                     else:
@@ -222,20 +223,19 @@ class InfoData:
             print()
 
     def log_rtt_edge(self):
-        print("RTT EDGE")
-        if self.data.rtt_edge is not None:
-            for i in range(len(self.data.key_index_orig)):
-                for j in range(len(self.data.key_index_dest)):
-                    print(self.data.rtt_edge[i][j], end=" ")
-                print()
+        print("RTT EDGE.")
+        #if self.data.rtt_edge is not None:
+        for i in range(len(self.data.key_index_orig)):
+            for j in range(len(self.data.key_index_dest)):
+                print(self.data.rtt_edge[i][j], end=" ")
+            print()
 
     def log_total_bandwidth(self):
         print("TOTAL BANDWIDTH.")
         if self.data.total_bandwidth_edge is not None:
-            for f in range(len(self.data.key_index_file)):
                 for i in range(len(self.data.key_index_orig)):
                     for j in range(len(self.data.key_index_dest)):
-                        print(self.data.total_bandwidth_edge[f][i][j], end=" ")
+                        print(self.data.total_bandwidth_edge[i][j], end=" ")
                     print()
                 print()
 

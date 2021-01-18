@@ -6,7 +6,6 @@ NO_EDGE = 9999
 
 
 class Data:
-
     # Input
     alpha = 0
 
@@ -88,31 +87,21 @@ class Data:
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.generate_rtt(avg_rtt, sd_rtt)
 
-            self.bandwidth_actual_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in range(self.num_files)]
+            self.bandwidth_actual_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
+                                          range(self.num_files)]
             self.actual_resources_node = [0 for i in range(self.num_nodes)]
-            self.weight_file_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in range(self.num_files)]
+            self.weight_file_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
+                                     range(self.num_files)]
+            self.weight_to_dictionary()
 
     def weight_to_dictionary(self):
-        tag = " "
-        key_weight = list()
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_orig)):
                 for j in range(len(self.key_index_dest)):
-                    tag += self.key_index_file[f] + "-"
-                    tag += self.key_index_orig[i] + "_"
-                    tag += self.key_index_dest[j]
-                    key_weight.append(tag)
-                    tag = ""
-
-        value_weight = list()
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_orig)):
-                for j in range(len(self.key_index_dest)):
-                    value_weight.append(self.weight_file_edge[f][i][j])
-
-        for i, value in enumerate(value_weight):
-            key = key_weight[i]
-            self.weight_dict[key] = value
+                    tag_file = self.key_index_file[f]
+                    tag_orig = self.key_index_orig[i]
+                    tag_dest = self.key_index_dest[j]
+                    self.weight_dict[tag_file, tag_orig, tag_dest] = self.weight_file_edge[f][i][j]
 
     def generate_rtt(self, avg, sd):
         self.rtt_edge = [[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)]
@@ -126,7 +115,6 @@ class Data:
 
 
 class HandleData:
-
     data = Data()
 
     def __init__(self, data):
@@ -170,10 +158,11 @@ class HandleData:
                     bwt_ij = self.data.total_bandwidth_edge[i][j]
                     if rt_i != 0 and bwt_ij != 0 and bwt_ij != NO_EDGE:
                         weight = ((self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (bwa_fij / bwt_ij))) / (
-                                    self.data.alpha + (1.0 - self.data.alpha))
+                                self.data.alpha + (1.0 - self.data.alpha))
                         self.data.weight_file_edge[f][i][j] = round(weight, 4)
                     else:
                         self.data.weight_file_edge[f][i][j] = 1
+        self.data.weight_to_dictionary()
 
     def request(self):
         pass
@@ -222,9 +211,14 @@ class InfoData:
                 print()
             print()
 
+    def log_weight_dict(self):
+        for k in self.data.weight_dict.keys():
+            print(k, self.data.weight_dict[k])
+
+    # PARAMETERS
     def log_rtt_edge(self):
         print("RTT EDGE.")
-        #if self.data.rtt_edge is not None:
+        # if self.data.rtt_edge is not None:
         for i in range(len(self.data.key_index_orig)):
             for j in range(len(self.data.key_index_dest)):
                 print(self.data.rtt_edge[i][j], end=" ")
@@ -233,74 +227,85 @@ class InfoData:
     def log_total_bandwidth(self):
         print("TOTAL BANDWIDTH.")
         if self.data.total_bandwidth_edge is not None:
-                for i in range(len(self.data.key_index_orig)):
-                    for j in range(len(self.data.key_index_dest)):
-                        print(self.data.total_bandwidth_edge[i][j], end=" ")
-                    print()
+            for i in range(len(self.data.key_index_orig)):
+                for j in range(len(self.data.key_index_dest)):
+                    print(self.data.total_bandwidth_edge[i][j], end=" ")
                 print()
+            print()
 
 
 class OptimizeData:
     data = Data()
 
-    model = None
+    name = ""
+    model = gp.Model(name)
     n = None
 
-    def __init__(self, data):
+    def __init__(self, data, name=""):
         self.data = data
-
-    def create_model(self):
-        model = gp.Model("Orchestrator")
+        self.name = name
 
     # n_fij \in {0,1}
     def create_vars(self):
-        n = self.model.addVars(self.data.key_index_file, self.data.key_index_orig, self.data.key_index_dest,
-                               vtype=gp.GRB.BINARY)
+        self.n = self.model.addVars(self.data.key_index_file, self.data.key_index_orig, self.data.key_index_dest,
+                                    vtype=gp.GRB.BINARY)
 
-
-'''
     def set_function_objective(self):
-        self.model.setObjective(gp.quicksum(
-            n[f, i, j] * self.data.weight_file_edge[f][i][j] for f in self.data.key_index_file for i in self.data.key_index_orig for j
-            in self.data.key_index_dest),
-                                sense=gp.GRB.MINIMIZE
-                                )     
+        self.model.setObjective(
+            gp.quicksum(self.n[f, i, j] * self.data.weight_dict[f, i, j] for f in self.data.key_index_file for i in
+                        self.data.key_index_orig for j
+                        in self.data.key_index_dest), sense=gp.GRB.MINIMIZE)
 
     def create_constraints(self):
         c1 = self.model.addConstrs(self.data.resources_node[i]
-                                   >= self.data.actual_resources_node[i] for i in self.data.key_index_orig)
+                                   >= self.data.actual_resources_node[i] for i in range(len(self.data.key_index_orig)))
 
         c2 = self.model.addConstrs(self.data.total_bandwidth_edge[i][j]
-                                   >= self.data.bandwidth_actual_edge[i][j] for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest)
+                                   >= self.data.bandwidth_actual_edge[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
+                                   range(len(self.data.key_index_dest)))
 
         c3 = self.model.addConstrs(
-            (self.data.bandwidth_actual_edge[i][j] for i in self.data.key_index_orig for j in self.data.key_index_dest)
-            >=
-            gp.quicksum(
-                self.data.resources_file[f] * n[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                self.data.key_index_dest))
+                (self.data.bandwidth_actual_edge[f][i][j]
+                    for f in range(len(self.data.key_index_file))
+                    for i in range(len(self.data.key_index_orig))
+                    for j in range(len(self.data.key_index_dest))
+                )
+                >=
+                gp.quicksum(
+                    self.data.resources_file[f] * self.n[[f], [i],[j]]
+                    for f in self.data.key_index_file
+                    for i in self.data.key_index_orig
+                    for j in self.data.key_index_dest
+                )
+            )
+
+        gambiarra = self.model.addConstrs(
+                (self.data.bandwidth_actual_edge[f][i][j]
+                    for f in range(len(self.data.key_index_file))
+                    for i in range(len(self.data.key_index_orig))
+                    for j in range(len(self.data.key_index_dest))
+                )
+                >=
+                gp.quicksum(
+                    self.data.resources_file[f] * self.n[self.data.key_index_file[f], self.data.key_index_orig[i], self.data.key_index_dest[j]]
+                    for f in range(len(self.data.key_index_file))
+                    for i in range(len(self.data.key_index_orig))
+                    for j in range(len(self.data.key_index_dest))
+                )
+            )
 
         c4 = self.model.addConstrs(0
                                    <= self.data.weight_file_edge[f][i][j]
-                                   <= 1 for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest)
+                                   <= 1 for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
+                                   range(len(self.data.key_index_dest)))
 
-        c5 = self.model.addConstrs(gp.quicksum(self.data.map_node_file[f][i] for i in self.data.key_index_bs)
-                                   <= 2 for f in self.data.key_index_file)
+        c5 = self.model.addConstrs(gp.quicksum(self.data.map_node_file[f][i] for i in range(len(self.data.key_index_bs))) <= 2 for f in range(len(self.data.key_index_file)))
 
         c6 = self.model.addConstrs(
-            gp.quicksum(n[f, i, j] for i in self.data.key_index_orig for j in self.data.key_index_dest)
-            >= 1 for f in self.data.key_index_file)
+            gp.quicksum(self.n[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in self.data.key_index_dest)
+            >= 0 for f in range(len(self.data.key_index_file)))
 
-        c7 = self.model.addConstrs(
-            gp.quicksum(n[f, i, j] for i in self.data.key_index_orig for j in self.data.key_index_dest)
-            <= abs(self.data.key_index_orig * self.data.key_index_dest) for f in self.data.key_index_file)
-
-        c8 = self.model.addConstrs()
-
-        # c9 = model.addConstrs(gp.quicksum(n[f,i,j] for i in key_index_orig) - gp.quicksum(n[f,k,i] for k in key_index_orig) == 1 if i == f -1 if i==u else 0)
+        #c7 = self.model.addConstrs()
 
     def execute(self):
         self.model.optimize()
-'''

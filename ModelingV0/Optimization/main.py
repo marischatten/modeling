@@ -43,24 +43,29 @@ def main():
 
     hd = HandleData(d)
     id = InfoData(d)
-    od = OptimizeData(d)
+    od = OptimizeData(d,"Orchestrator")
 
     num_request = 10
     request = r.Request.generate_request(num_request, (num_bs+1), (num_bs + num_ue), num_files)
 
-    id.log_weight_file_edge()
     hd.calc_bandwidth_actual_edge()
     hd.calc_actual_resources_node()
     hd.calc_weight_file_edge()
 
-    id.log_total_bandwidth()
-    id.log_rtt_edge()
-    id.log_map_node_file()
-    id.log_weight_file_edge()
-    id.log_actual_resources_node()
-    id.log_bandwidth_actual_edge()
+    #id.log_weight_dict()
+    #id.log_total_bandwidth()
+    #id.log_rtt_edge()
+    #id.log_map_node_file()
+    #id.log_weight_file_edge()
+    #id.log_actual_resources_node()
+    #id.log_bandwidth_actual_edge()
 
-    print("SUCESS!")
+    od.create_vars()
+    od.set_function_objective()
+    od.create_constraints()
+    #od.execute()
+
+    print("SUCCESS!")
 
 
 def convert_to_object(dataset):

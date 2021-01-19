@@ -271,24 +271,21 @@ class OptimizeData:
                                    >= self.data.bandwidth_actual_edge[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
                                    range(len(self.data.key_index_dest)))
 
-        '''
         c3 = self.model.addConstrs(
-                    (self.data.bandwidth_actual_edge[f][i][j]
+                    gp.quicksum(
+                        self.n[f,i,j] * self.data.resources_dict[f] for f in self.data.key_index_file for i in self.data.key_index_orig for j in self.data.key_index_dest
+                    )
+                    <=
+                    self.data.bandwidth_actual_edge[f][i][j]
                          for f in range(len(self.data.key_index_file))
                          for i in range(len(self.data.key_index_orig))
                          for j in range(len(self.data.key_index_dest))
-                    )
-                    >=
-                    gp.quicksum(
-                        self.data.resources_dict[f] * self.n[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in self.data.key_index_dest
-                        )
-                    )
-        '''
+        )
 
         c4 = self.model.addConstrs(0
-                                   <= self.data.weight_file_edge[f][i][j]
-                                   <= 1 for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
-                                   range(len(self.data.key_index_dest)))
+                                   <= self.data.weight_dict[f,i,j]
+                                   <= 1 for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+                                   self.data.key_index_dest)
 
         c5 = self.model.addConstrs(gp.quicksum(self.data.map_node_file[f][i] for i in range(len(self.data.key_index_bs))) <= 2 for f in range(len(self.data.key_index_file)))
 

@@ -66,7 +66,7 @@ def main():
     d.resources_file_to_dictionary()
 
     od.create_constraints()
-    #od.execute()
+    od.execute()
 
     print("SUCCESS!")
 

@@ -59,9 +59,12 @@ def main():
     #id.log_weight_file_edge()
     #id.log_actual_resources_node()
     #id.log_bandwidth_actual_edge()
+    #id.log_resources_file_dict()
 
     od.create_vars()
     od.set_function_objective()
+    d.resources_file_to_dictionary()
+
     od.create_constraints()
     #od.execute()
 

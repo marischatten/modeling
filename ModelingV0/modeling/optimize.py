@@ -1,14 +1,17 @@
 import gurobipy as gp
 import statistics as s
-import numpy as np
+from utils import utils as utils
+from fractions import Fraction as frac
+from decimal import Decimal
 
 NO_EDGE = 9999
-
+TAG_COORD = 0
+X_COORD = 1
+Y_COORD = 2
 
 class Data:
     # Input
     alpha = 0
-    beta = 0
     phi = 0
 
     # Parameters
@@ -30,21 +33,34 @@ class Data:
 
     # fr \in R
     resources_file = list()
-    # fbw \in R
+    #mfu \in {0,1}
+    map_user_file = list()
+    # bwf \in R
     bandwidth_min_file = list()
 
     # rt_i \in R
     resources_node = list()
-
-    # fu \in {0,1}
-    file_user_request = None
 
     rtt_base = 0
 
     # rtt_ij \in R
     rtt_edge = None
 
+    #D \in R
+    distance = 0
+
+    #loc(x,y)
+    loc_UE_node =list()
+    loc_BS_node = list()
+    #gama \in {0,1}
+    gama_file_node = list()
+
+    #r(s,t) \forall s \in F, \forall t \in UE
+    req= None
     # Vars
+
+    # omega
+    omega_user_node = None
 
     # bwc_ij \in R
     bandwidth_current_edge = None
@@ -52,7 +68,7 @@ class Data:
     # bwe_ij \in R
     bandwidth_expected_edge = None
 
-    #bwdiff_fij \in R
+    # bwdiff_fij \in R
     bandwidth_diff_edge = None
 
     # rr_i \in R
@@ -65,12 +81,12 @@ class Data:
     bandwidth_diff = dict()
     resources_dict = dict()
 
-    def __init__(self, alpha=0, beta=0, phi=0 ,num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None,
-                 fr=None, bwf=None, rt_i=None, fu=None, rtt_base=0,avg_rtt=0,
-                 sd_rtt=0):
+    def __init__(self, alpha=0, phi=0, num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None,
+                 rf=None, mfu=None, bwf=None, rt_i=None, rtt_base=0, distance=0,avg_rtt=0,
+                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, req=None):
 
         self.alpha = alpha
-        self.beta = beta
+
         self.phi = phi
         self.num_bs = num_bs
         self.num_ue = num_ue
@@ -83,28 +99,39 @@ class Data:
         if key2 is not None and key3 is not None:
             self.key_index_orig = self.key_index_dest = key2 + key3
 
-        self.resources_file = fr
+        self.resources_file = rf
+        self.map_user_file = mfu
         self.bandwidth_min_file = bwf
         self.resources_node = rt_i
-        self.file_user_request = fu
+        self.file_user_request = req
 
         self.rtt_base = rtt_base
+        self.distance = distance
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.generate_rtt(avg_rtt, sd_rtt)
 
-            self.bandwidth_current_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
-                                          range(self.num_files)]
+            self.bandwidth_current_edge = [[[" " for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f
+                                           in
+                                           range(self.num_files)]
             self.actual_resources_node = [0 for i in range(self.num_nodes)]
 
-            self.bandwidth_expected_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
-                                     range(self.num_files)]
+            self.bandwidth_expected_edge = [[[" " for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f
+                                            in
+                                            range(self.num_files)]
 
-            self.bandwidth_diff_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
-                                     range(self.num_files)]
+            self.bandwidth_diff_edge = [[[" " for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
+                                        range(self.num_files)]
 
             self.weight_file_edge = [[[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)] for f in
                                      range(self.num_files)]
+
+            self.omega_user_node = [[0.0 for i in range(self.num_bs)] for j in range(self.num_ue)]
+
+            self.loc_UE_node = loc_UE_node
+            self.loc_BS_node = loc_BS_node
+            self.gama_file_node = gama_file_node
+            self.req =req
 
             self.weight_to_dictionary()
             self.bandwidth_diff_to_dictionary()
@@ -142,13 +169,14 @@ class Data:
             tag = self.key_index_file[f]
             self.resources_dict[tag] = self.resources_file[f]
 
+
 class HandleData:
     data = Data()
 
     def __init__(self, data):
         self.data = data
 
-    def calc_bandwidth_current_edge(self):
+    def calc_current_bandwidth_edge(self):
         rtt_ij = 0
         for f in range(len(self.data.key_index_file)):
             for i in range(len(self.data.key_index_orig)):
@@ -156,21 +184,35 @@ class HandleData:
                     size_f = self.data.resources_file[f]
                     if self.data.rtt_edge is not None:
                         rtt_ij = self.data.rtt_edge[i][j]
-                    self.data.bandwidth_current_edge[f][i][j] = round(size_f / rtt_ij, 2)
+                    self.data.bandwidth_current_edge[f][i][j] = round(size_f/ rtt_ij,2)
 
-    def calc_bandwidth_expected_edge(self):
+    def calc_expected_bandwidth_edge(self):
         for f in range(len(self.data.key_index_file)):
             for i in range(len(self.data.key_index_orig)):
                 for j in range(len(self.data.key_index_dest)):
-                    size_f = self.data.size_file[f]
-                    self.data.bandwidth_current_edge[f][i][j] = round(size_f / self.data.rtt_base, 2)
+                    size_f = self.data.resources_file[f]
+                    self.data.bandwidth_expected_edge[f][i][j] = round(size_f /self.data.rtt_base,2)
+
 
     def calc_diff_bandwidth(self):
         for f in range(len(self.data.key_index_file)):
             for i in range(len(self.data.key_index_orig)):
                 for j in range(len(self.data.key_index_dest)):
-                    self.data.bandwidth_diff_edge[f][i][j] = self.data.bandwidth_expected_edge[f][i][j] - self.data.bandwidth_current_edge[f][i][j]
+                    self.data.bandwidth_diff_edge[f][i][j] = round(self.data.bandwidth_expected_edge[f][i][j] - self.data.bandwidth_current_edge[f][i][j],2)
 
+    def calc_actual_resources_node(self):
+        sum_users = 0
+        by_file = 0
+        for i in range(len(self.data.key_index_orig)):
+            for f in range(len(self.data.key_index_file)):
+                if self.data.gama_file_node[f][i] == 1:
+                    for u in range(len(self.data.key_index_orig)):
+                        sum_users += self.data.map_user_file[f][u]
+                    by_file += sum_users * self.data.resources_file[f]
+                    sum_users = 0
+            self.data.actual_resources_node[i] = by_file
+            by_file = 0
+            
     def calc_weight_file_edge(self):
         global NO_EDGE
         for f in range(len(self.data.key_index_file)):
@@ -181,11 +223,21 @@ class HandleData:
                     bwc_fij = self.data.bandwidth_current_edge[f][i][j]
                     bwe_ij = self.data.bandwidth_expected_edge[f][i][j]
                     if rt_i != 0 and bwe_ij != 0 and bwe_ij != NO_EDGE:
-                        weight = ((self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (bwc_fij / bwe_ij)))
+                        weight = ((self.data.phi * (rr_i / rt_i)) + ((1 - self.data.phi) * (bwc_fij / bwe_ij)))
                         self.data.weight_file_edge[f][i][j] = round(weight, 4)
                     else:
-                        self.data.weight_file_edge[f][i][j] = 1
+                        self.data.weight_file_edge[f][i][j] = NO_EDGE
         self.data.weight_to_dictionary()
+
+    def calc_omega_user_node(self):
+        for u in range(len(self.data.loc_UE_node)):
+            for i in range(len(self.data.loc_BS_node)):
+                dis = utils.euclidean_distance(float(self.data.loc_UE_node[u][X_COORD]), float(self.data.loc_BS_node[i][X_COORD]), float(self.data.loc_UE_node[u][Y_COORD]), float(self.data.loc_BS_node[i][Y_COORD]))
+                if dis <= self.data.distance:
+                    self.data.omega_user_node[u][i] = 1
+                else:
+                    self.data.omega_user_node[u][i] = 0
+
 
     def request(self):
         pass
@@ -203,8 +255,25 @@ class InfoData:
     # Parameters
 
     # Vars
-    def log_bandwidth_current_edge(self):
-        print("ACTUAL BANDWIDTH.")
+    def log_omega_user_node(self):
+        print("USER COVERAGE PER BASE STATION.")
+        for u in range(len(self.data.loc_UE_node)):
+            for i in range(len(self.data.loc_BS_node)):
+                print(self.data.omega_user_node[u][i], end=" ")
+            print()
+
+    def log_expected_bandwidth_edge(self):
+        print("EXPECTED BANDWIDTH.")
+        if self.data.bandwidth_expected_edge is not None:
+            for f in range(len(self.data.key_index_file)):
+                for i in range(len(self.data.key_index_orig)):
+                    for j in range(len(self.data.key_index_dest)):
+                        print(self.data.bandwidth_expected_edge[f][i][j], end=" ")
+                    print()
+                print()
+
+    def log_current_bandwidth_edge(self):
+        print("CURRENT BANDWIDTH.")
         for f in range(len(self.data.key_index_file)):
             for i in range(len(self.data.key_index_orig)):
                 for j in range(len(self.data.key_index_dest)):
@@ -212,6 +281,14 @@ class InfoData:
                 print()
             print()
 
+    def log_diff_bandwidth_edge(self):
+        print("DIFFERENCE BANDWIDTH")
+        for f in range(len(self.data.key_index_file)):
+            for i in range(len(self.data.key_index_orig)):
+                for j in range(len(self.data.key_index_dest)):
+                    print(self.data.bandwidth_diff_edge[f][i][j], end=" ")
+                print()
+            print()
 
     def log_actual_resources_node(self):
         print("ACTUAL RESOURCES.")
@@ -240,18 +317,9 @@ class InfoData:
                 print(self.data.rtt_edge[i][j], end=" ")
             print()
 
-    def log_expected_bandwidth(self):
-        print("TOTAL BANDWIDTH.")
-        if self.data.bandwidth_expected_edge is not None:
-            for i in range(len(self.data.key_index_orig)):
-                for j in range(len(self.data.key_index_dest)):
-                    print(self.data.bandwidth_expected_edge[i][j], end=" ")
-                print()
-            print()
-
     def log_resources_file_dict(self):
         for k in self.data.resources_dict.keys():
-            print(k,self.data.resources_dict[k])
+            print(k, self.data.resources_dict[k])
 
 
 class OptimizeData:
@@ -263,48 +331,82 @@ class OptimizeData:
 
     def __init__(self, data, name=""):
         self.data = data
-        self.xame = name
+        self.name = name
 
     # n_fij \in {0,1}
     def create_vars(self):
         self.x = self.model.addVars(self.data.key_index_file, self.data.key_index_orig, self.data.key_index_dest,
                                     vtype=gp.GRB.BINARY, name="flow")
+
     def set_function_objective(self):
         self.model.setObjective(
             gp.quicksum(self.x[f, i, j] * self.data.weight_dict[f, i, j] for f in self.data.key_index_file for i in
-                        self.data.key_index_orig for j
-                        in self.data.key_index_dest), sense=gp.GRB.MINIMIZE)
+                        self.data.key_index_orig for j in self.data.key_index_dest),
+            sense=gp.GRB.MINIMIZE)
 
     def create_constraints(self):
+
+        #limite de recursos do nó.
         c1 = self.model.addConstrs(self.data.resources_node[i]
                                    >= self.data.actual_resources_node[i] for i in range(len(self.data.key_index_orig)))
 
+        #restrição para vazão esperada seja sempre a menor que a atual.
         c2 = self.model.addConstrs(self.data.bandwidth_expected_edge[f][i][j]
-                                   >= self.data.bandwidth_current_edge[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
-                                   range(len(self.data.key_index_dest)))
+                                   >= self.data.bandwidth_current_edge[f][i][j] for f in
+                                   range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig))
+                                   for j in range(len(self.data.key_index_dest)))
 
+        #limiares de custo.
         c3 = self.model.addConstrs(0
-                                   <= self.data.weight_dict[f,i,j]
+                                   <= self.data.weight_dict[f, i, j]
                                    <= 1 for f in self.data.key_index_file for i in self.data.key_index_orig for j in
                                    self.data.key_index_dest)
-        c4 = self.model.addConstrs(self.data.alpha <= (self.x[f,i,j] * self.data.bandwidth_diff[f][i][j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in self.data.key_index_dest) <= self.data.beta)
 
-        c5 = self.model.addConstrs(gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) - gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) == 0)
+        #limiares de capacidade do fluxo.
+        c4 = self.model.addConstrs(0
+                                   <= self.x[f,i,j]
+                                   <= 1 for f in self.data.key_index_file for i in self.data.key_index_orig for j
+                                    in self.data.key_index_dest)
 
-        c6 = self.model.addConstrs(gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) - gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) == self.data.bandwidth_min_file[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
-                                   range(len(self.data.key_index_dest)))
 
-        c7 = self.model.addConstrs(gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) - gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
-                                   self.data.key_index_dest) == - self.data.bandwidth_min_file[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig)) for j in
-                                   range(len(self.data.key_index_dest)))
+        # restrições de equilibrio de fluxo em nós intermediarios.
+        c5 = self.model.addConstrs(gp.quicksum(
+            self.x[f, i, j] - self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j
+            in self.data.key_index_dest)
+                                   == 0)
+
+        #restrições de equilibrio de fluxo no nó de origem.
+        c6 = self.model.addConstrs(gp.quicksum(
+            self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest)
+                                   - gp.quicksum(
+            self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest)
+                                   == self.data.bandwidth_min_file[f][i][j] for f in
+                                   range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig))
+                                   for j in range(len(self.data.key_index_dest)))
+
+        # restrições de equilibrio de fluxo no nó de destino.
+        c7 = self.model.addConstrs(gp.quicksum(
+            self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest)
+                                   - gp.quicksum(
+            self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest)
+                                   == - self.data.bandwidth_min_file[f][i][j] for f in
+                                   range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_orig))
+                                   for j in range(len(self.data.key_index_dest)))
+
+        #retrição de único enlace entre UE e BS.
+        c8 = self.model.addConstrs(gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest) == self.data.bandwidth_min_file[u] for u in range(len(self.data.key_index_ue)))
+
+        # retrição de único enlace entre conteúdo e BS.
+        c9 = self.model.addConstrs(gp.quicksum(self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_orig for j in
+            self.data.key_index_dest) == self.data.bandwidth_min_file[f] for f in range(len(self.data.key_index_file)))
+
     def execute(self):
         self.model.optimize()
-
 
     def result(self):
         var = self.model.getObjective()
@@ -316,24 +418,4 @@ class OptimizeData:
                         print(self.x[f,i,j])
         '''
 
-
-'''
-    def calc_actual_resources_node(self):
-        sum_users = 0
-        by_file = 0
-        for i in range(len(self.data.key_index_orig)):
-            for f in range(len(self.data.key_index_file)):
-                if self.data.map_node_file[f][i] == 1:
-                    for u in range(len(self.data.key_index_orig)):
-                        sum_users += self.data.file_user_request[f][u]
-                    by_file += sum_users * self.data.resources_file[f]
-                    sum_users = 0
-            self.data.actual_resources_node[i] = by_file
-            by_file = 0
-'''
-
-
-'''
-
-'''
 

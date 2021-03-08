@@ -24,7 +24,7 @@ bandwidth_min_file = list()
 
 resources_node = list()
 
-rtt_base = 0
+rtt_base = list()
 
 loc_BS_node = list()
 loc_UE_node = list()
@@ -44,9 +44,10 @@ def main():
     num_request = 10
     request = r.Request.generate_request(num_request, (num_bs + 1), (num_bs + num_ue), num_files)
 
-    for i in range(num_request):
-        req = request[i]
-        d = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue,
+    #for i in range(num_request):
+    #req = request[i]
+    req = 0
+    d = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue,
                  resources_file,map_user_file,
                  bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,req
                  )
@@ -64,12 +65,29 @@ def main():
 
     d.resources_file_to_dictionary()
 
+    #Parameters
+    print("PARAMETERS.\n")
+    id.log_map_user_file()
+
+    id.log_resources_file_dict()
+    id.log_bandwidth_min_dict()
+
+    id.log_resources_node_dict()
+    #id.log_map_user_file_dict()
+
+    id.log_rtt_base()
+    id.log_rtt_edge()
+
+    id.log_gama_file_node()
+
+    #Vars
+    print("VARS.\n")
     id.log_omega_user_node()
     id.log_expected_bandwidth_edge()
     id.log_current_bandwidth_edge()
     id.log_diff_bandwidth_edge()
-    id.log_resources_file_dict()
-    id.log_rtt_edge()
+    #id.log_actual_resources_node()
+    id.log_actual_resources_node_dict()
 
     #id.log_weight_dict()
     id.log_weight_file_edge()
@@ -134,14 +152,14 @@ def convert_to_object(dataset):
     resources_file = dataset["resources_file"]
 
     if num_bs is not None and num_ue is not None:
-        map_user_file = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]
+        map_user_file = [[0 for i in range(num_ue)] for f in range(num_files)]
         map_user_file = dataset["map_user_file"]
 
     bandwidth_min_file = dataset["bandwidth_min_file"]
 
     resources_node = dataset["resources_node"]
 
-    rtt_base = float(dataset["rtt_base"])
+    rtt_base = dataset["rtt_base"]
 
     if num_bs is not None:
         loc_BS_node = [[0 for j in range(3)]for i in range(num_bs)]

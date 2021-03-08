@@ -74,11 +74,11 @@ def main():
     #id.log_weight_dict()
     id.log_weight_file_edge()
 
-    # od.create_vars()
-    # od.set_function_objective()
-    # od.create_constraints()
-    # od.execute()
-    # od.result()
+    od.create_vars()
+    od.set_function_objective()
+    od.create_constraints()
+    od.execute()
+    od.result()
 
     # picture()
     print("SUCCESS!")

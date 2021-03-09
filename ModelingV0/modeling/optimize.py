@@ -325,12 +325,12 @@ class OptimizeData:
 
     # n_fij \in {0,1}
     def create_vars(self):
-        self.x = self.model.addVars(self.data.key_index_all, self.data.key_index_all,
+        self.x = self.model.addVars(self.data.key_index_file,self.data.key_index_all, self.data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
     def set_function_objective(self):
         self.model.setObjective(
-            gp.quicksum(self.x[i, j] * self.data.weight_dict[f, i, j] for f in self.data.key_index_file for i in
+            gp.quicksum(self.x[f,i, j] * self.data.weight_dict[f, i, j] for f in self.data.key_index_file for i in
                         self.data.key_index_all for j in self.data.key_index_all),
             sense=gp.GRB.MINIMIZE)
 
@@ -342,7 +342,7 @@ class OptimizeData:
         c2 = self.set_constraint_2()
 
         #limiares de custo.
-        c3 = self.set_constraint_3()
+        #c3 = self.set_constraint_3()
 
         #limiares de capacidade do fluxo.
         c4 = self.set_constraint_4()
@@ -352,57 +352,43 @@ class OptimizeData:
         c5 = self.set_constraint_5()
 
         #restrições de equilibrio de fluxo no nó de origem.
-        c6 = self.set_constraint_6()
+        #c6 = self.set_constraint_6()
 
         # restrições de equilibrio de fluxo no nó de destino.
-        c7 = self.set_constraint_7()
+        #c7 = self.set_constraint_7()
 
-        # retrição de único enlace entre conteúdo e BS.
-        c8 = self.set_constraint_8()
-
-    def set_constraint_8(self):
-        return self.model.addConstrs(
-            gp.quicksum(self.x[i, j]  for i in self.data.key_index_file for j in
-                        self.data.key_index_file) == self.data.bandwidth_min_file[f] for f in
-            range(len(self.data.key_index_file)))
 
     def set_constraint_7(self):
-        return self.model.addConstrs(gp.quicksum(
-            self.x[i, j] for i in self.data.key_index_all for j in
-            self.data.key_index_all)
-                                     - gp.quicksum(
-            self.x[i, j] for i in self.data.key_index_all for j in
-            self.data.key_index_all)
+        tag_file = self.data.bandwidth_min_file_dict.keys
+        return self.model.addConstrs(gp.quicksum(self.x.select(f,'*,','*'))
+                                     - gp.quicksum(self.x.select(f,'*,','*'))
                                      == - self.data.bandwidth_min_file[f] for f in
-                                     range(len(self.data.key_index_file))
+                                     tag_file
                                      )
 
     def set_constraint_6(self):
-        return self.model.addConstrs(gp.quicksum(
-            self.x[i, j] for i in self.data.key_index_all for j in
-            self.data.key_index_all)
-                                     - gp.quicksum(
-            self.x[i, j] for i in self.data.key_index_all for j in
-            self.data.key_index_all)
+        tag_file = self.data.bandwidth_min_file_dict.keys
+        return self.model.addConstrs(gp.quicksum(self.x.select(f,'*,','*'))
+                                     - gp.quicksum(self.x.select(f,'*,','*'))
                                      == self.data.bandwidth_min_file[f] for f in
-                                     range(len(self.data.key_index_file))
+                                     tag_file
                                      )
 
     def set_constraint_5(self):
         return self.model.addConstr(gp.quicksum(
-            self.x[i, j] - self.x[j, i] for i in self.data.key_index_all for j
+            self.x[f,i, j] - self.x[f,j, i] for f in self.data.key_index_file for i in self.data.key_index_all for j
             in self.data.key_index_all)
                                    == 0)
 
     def set_constraint_4(self):
         return self.model.addConstrs(
-            self.x[i,j]
+            self.x[f,i,j]
             <= self.data.bandwidth_current[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all
         )
 
     def set_constraint_04(self):
         return self.model.addConstrs(0 <=
-            self.x[i,j] for i in self.data.key_index_all for j in self.data.key_index_all
+            self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all
         )
 
     def set_constraint_3(self):
@@ -429,10 +415,11 @@ class OptimizeData:
         var = self.model.getObjective()
         print(var)
         count =1
-        for i in self.data.key_index_all:
-            for j in self.data.key_index_all:
-                print(count,self.x[i,j])
-                count += 1
+        for f in self.data.key_index_file:
+            for i in self.data.key_index_all:
+                for j in self.data.key_index_all:
+                    print(count,self.x[f,i,j])
+                    count += 1
 
 
 class InfoData:

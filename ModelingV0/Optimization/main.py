@@ -18,6 +18,8 @@ key_index_file = list()
 key_index_bs = list()
 key_index_ue = list()
 
+x_bs_adj = list()
+
 resources_file = list()
 map_user_file = list()
 bandwidth_min_file = list()
@@ -47,25 +49,41 @@ def main():
     #for i in range(num_request):
     #req = request[i]
     req = 0
-    d = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue,
+    data = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
                  resources_file,map_user_file,
                  bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,req
                  )
 
-    hd = HandleData(d)
-    id = InfoData(d)
-    od = OptimizeData(d, "Orchestrator")
+    calc_vars(data)
+    #show_parameters(data)
+    show_vars(data)
+    create_model(data,"Orchestrator")
+    # picture()
+    print("SUCCESS!")
+
+def create_model(data,name):
+    od = OptimizeData(data,name)
+    od.create_vars()
+    od.set_function_objective()
+    od.create_constraints()
+    od.execute()
+    #od.result()
+
+
+def calc_vars(data):
+    hd = HandleData(data)
 
     hd.calc_omega_user_node()
     hd.calc_expected_bandwidth_edge()
     hd.calc_current_bandwidth_edge()
     hd.calc_diff_bandwidth()
-    hd.calc_actual_resources_node()
+    hd.calc_current_resources_node()
     hd.calc_weight_file_edge()
 
-    d.resources_file_to_dictionary()
 
-    #Parameters
+def show_parameters(data):
+    id = InfoData(data)
+
     print("PARAMETERS.\n")
     id.log_map_user_file()
 
@@ -73,33 +91,33 @@ def main():
     id.log_bandwidth_min_dict()
 
     id.log_resources_node_dict()
-    #id.log_map_user_file_dict()
+    id.log_map_user_file_dict()
 
     id.log_rtt_base()
     id.log_rtt_edge()
 
     id.log_gama_file_node()
+    id.log_x_bs_adj_dict()
 
-    #Vars
+
+def show_vars(data):
+    id = InfoData(data)
+
     print("VARS.\n")
-    id.log_omega_user_node()
-    id.log_expected_bandwidth_edge()
-    id.log_current_bandwidth_edge()
-    id.log_diff_bandwidth_edge()
-    #id.log_actual_resources_node()
-    id.log_actual_resources_node_dict()
-
-    #id.log_weight_dict()
+    # id.log_omega_user_node()
+    #id.log_expected_bandwidth_edge()
+    #id.log_current_bandwidth_edge()
+    #id.log_diff_bandwidth_edge()
+    # id.log_current_resources_node()
     id.log_weight_file_edge()
 
-    od.create_vars()
-    od.set_function_objective()
-    od.create_constraints()
-    od.execute()
-    od.result()
-
-    # picture()
-    print("SUCCESS!")
+    # dict
+    #id.log_omega_user_node_dict()
+    # id.log_expected_bandwidth_edge_dict()
+    # id.log_current_bandwidth_edge_dict()
+    # id.log_diff_bandwidth_edge_dict()
+    #id.log_current_resources_node_dict()
+    # id.log_weight_dict()
 
 
 def picture():
@@ -126,6 +144,7 @@ def convert_to_object(dataset):
     global key_index_file
     global key_index_bs
     global key_index_ue
+    global x_bs_adj
     global resources_file
     global map_user_file
     global bandwidth_min_file
@@ -148,6 +167,8 @@ def convert_to_object(dataset):
     key_index_file = dataset["key_index_file"]
     key_index_bs = dataset["key_index_bs"]
     key_index_ue = dataset["key_index_ue"]
+
+    x_bs_adj = dataset["x_bs_adj"]
 
     resources_file = dataset["resources_file"]
 

@@ -1,8 +1,17 @@
 # python -m pip install -i https://pypi.gurobi.com gurobipy
 # pip install python-igraph
 # pip install pycairo
+# pip install ortools
+# pip install numpy
+# pip install matplotlib
+
+import ortools.linear_solver.pywraplp as otlp
+from ortools.linear_solver import pywraplp  #https://developers.google.com/optimization/introduction/python
+from ortools.graph import pywrapgraph
+
 from igraph import *
 from modeling.optimize import *
+import matplotlib.pyplot as plt
 
 from utils import utils as u
 from simulation import request as r
@@ -59,6 +68,9 @@ def main():
     show_vars(data)
     create_model(data,"Orchestrator")
     # picture()
+
+    min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+    pywraplp.Solver('teste', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
     print("SUCCESS!")
 
 def create_model(data,name):
@@ -67,7 +79,7 @@ def create_model(data,name):
     od.set_function_objective()
     od.create_constraints()
     od.execute()
-    #od.result()
+    od.result()
 
 
 def calc_vars(data):

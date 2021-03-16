@@ -1,17 +1,29 @@
 import gurobipy as gp
 import statistics as s
 from utils import utils as utils
+import numpy as np
+import ortools as otlp  #somente LP
 
 NO_EDGE = 9999
 TAG_COORD = 0
 X_COORD = 1
 Y_COORD = 2
 
+RED = "\033[1;31m"
+BLUE = "\033[1;34m"
+CYAN = "\033[1;36m"
+GREEN = "\033[0;32m"
+RESET = "\033[0;0m"
+BOLD = "\033[;1m"
+REVERSE = "\033[;7m"
 
 class Data:
     # Input
     alpha = 0
     phi = 0
+
+    s = 'B'
+    t = 'W'
 
     # Parameters
     num_bs = 0
@@ -410,6 +422,9 @@ class OptimizeData:
                         self.data.key_index_all for j in self.data.key_index_all),
             sense=gp.GRB.MINIMIZE)
 
+    def create_model_in_ortools(self):
+        pass
+
     def create_constraints(self):
         # limite de recursos do nó.
         c1 = self.set_constraint_node_resources_capacity()
@@ -425,67 +440,56 @@ class OptimizeData:
         c4 = self.set_constraint_flow_conservation()
 
         # restrições de equilibrio de fluxo no nó de origem.
-        #c5 = self.set_constraint_flow_conservation_source()
+        c5 = self.set_constraint_flow_conservation_source()
 
         # restrições de equilibrio de fluxo no nó de destino.
-        # c6 = self.set_constraint_flow_conservation_sink()
+        c6 = self.set_constraint_flow_conservation_sink()
 
     def set_constraint_flow_conservation_sink(self):
-        tag_file = self.data.bandwidth_min_file_dict.keys
-        return self.model.addConstrs(gp.quicksum(self.x.select(f, '*,', '*'))
-                                     - gp.quicksum(self.x.select(f, '*,', '*'))
-                                     == - self.data.bandwidth_min_file[f] for f in
-                                     tag_file
-                                     )
+        for f in self.data.key_index_file:
+            self.model.addConstr(gp.quicksum(self.x[f, i, j]
+                - self.x[f, j, i] for i in self.data.key_index_bs for j in self.data.t)
+                == - self.data.bandwidth_min_file_dict[f],'c6')
 
     def set_constraint_flow_conservation_source(self):
-        tag_file = self.data.bandwidth_min_file_dict.keys
-        return self.model.addConstrs(self.x.sum(f, '*', '*')
-                                     - self.x.sum(f, '*', '*') for f in self.data.key_index_all)
+        for f in self.data.key_index_file:
+            self.model.addConstr(gp.quicksum(self.x[f, i, j]
+                - self.x[f, j, i] for i in self.data.key_index_bs for j in self.data.s)
+                == self.data.bandwidth_min_file_dict[f],'c5')
 
     def set_constraint_flow_conservation(self):
-        return self.model.addConstr(gp.quicksum(
-            self.x[f, i, j] - self.x[f, j, i] for f in self.data.key_index_file for i in self.data.key_index_all for j
-            in self.data.key_index_all)
-                                    == 0)
+        return self.model.addConstr(gp.quicksum(self.x[f, i, j]
+            - self.x[f, j, i] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
+            == 0,'c4')
 
     def set_constraint_flow_capacity_max(self):
-        return self.model.addConstrs(
-            self.x[f, i, j]
-            <= self.data.bandwidth_current_edge_dict[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_all
-            for j in self.data.key_index_all
-        )
+        return self.model.addConstrs(self.x[f, i, j]
+            <= self.data.bandwidth_current_edge_dict[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
 
     def set_constraint_flow_capacity_min(self):
-        return self.model.addConstrs(0 <=
-                                     self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_all
-                                     for j in self.data.key_index_all
-                                     )
+        return self.model.addConstrs(0
+            <= self.x[f, i, j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
 
     def set_constraint_throughput(self):
         return self.model.addConstrs(self.data.bandwidth_expected_edge[f][i][j]
-                                     >= self.data.bandwidth_current_edge[f][i][j] for f in
-                                     range(len(self.data.key_index_file)) for i in
-                                     range(len(self.data.key_index_with_ue))
-                                     for j in range(len(self.data.key_index_with_ue)))
+            >= self.data.bandwidth_current_edge[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_with_ue)) for j in range(len(self.data.key_index_with_ue)))
 
     def set_constraint_node_resources_capacity(self):
         return self.model.addConstrs(self.data.resources_node[i]
-                                     >= self.data.current_resources_node[i] for i in
-                                     range(len(self.data.key_index_bs)))
+             >= self.data.current_resources_node[i] for i in range(len(self.data.key_index_bs)))
 
     def execute(self):
         self.model.optimize()
 
     def result(self):
-        var = self.model.getObjective()
-        print(var)
-        count = 1
-        for f in self.data.key_index_file:
-            for i in self.data.key_index_all:
-                for j in self.data.key_index_all:
-                    print(count, self.x[f, i, j])
-                    count += 1
+        if self.model.status == gp.GRB.OPTIMAL:
+            print(GREEN +"SOLUÇÃO ÓTIMA."+RESET)
+            obj = self.model.getObjective()
+            print(CYAN +"FUNÇÃO OBJETIVO: "+ RED +str(obj.getValue())+RESET)
+            print("CAMINHO:")
+            for var in self.model.getVars():
+                if var.X != 0:
+                    print(var.VarName, round(var.X,2))
 
 
 # This class show data in parameters and vars.

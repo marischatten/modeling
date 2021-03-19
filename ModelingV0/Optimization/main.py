@@ -57,21 +57,23 @@ def main():
 
     #for i in range(num_request):
     #req = request[i]
-    req = 0
+    source = 'B'
+    sink = 'W'
     data = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
                  resources_file,map_user_file,
-                 bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,req
+                 bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,
+                    source,sink
                  )
 
     calc_vars(data)
     #show_parameters(data)
     show_vars(data)
     create_model(data,"Orchestrator")
-    # picture()
+    #picture(data)
 
-    min_cost_flow = pywrapgraph.SimpleMinCostFlow()
-    pywraplp.Solver('teste', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
-    print("SUCCESS!")
+    #min_cost_flow = pywrapgraph.SimpleMinCostFlow()
+    #pywraplp.Solver('teste', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
+    #print("SUCCESS!")
 
 def create_model(data,name):
     od = OptimizeData(data,name)
@@ -132,17 +134,18 @@ def show_vars(data):
     # id.log_weight_dict()
 
 
-def picture():
+def picture(data):
     g = Graph(directed=1)
     g.is_weighted()
-    key_nodes = key_index_bs + key_index_ue
+    key_nodes = key_index_bs + key_index_ue + key_index_file
     for i, name in enumerate(key_nodes):
         g.add_vertex(name)
 
-    for i, name_orig in enumerate(key_nodes):
-        for j, name_dest in enumerate(key_nodes):
-            #if adj[i][j] == 1:
-                g.add_edge(name_orig, name_dest)
+    for f,filename in enumerate(key_index_file):
+        for i, name_orig in enumerate(key_nodes):
+            for j, name_dest in enumerate(key_nodes):
+                if data.weight_dict[filename,name_orig,name_dest] <= 9999:
+                    g.add_edge(name_orig, name_dest)
 
     plot(g, vertex_label=key_nodes, vertex_color="white")
 

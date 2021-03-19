@@ -1,6 +1,7 @@
 import gurobipy as gp
 import statistics as s
 from utils import utils as utils
+import itertools
 import numpy as np
 import ortools as otlp  #somente LP
 
@@ -22,8 +23,10 @@ class Data:
     alpha = 0
     phi = 0
 
-    s = 'B'
-    t = 'W'
+    #source
+    s = None
+    #sink
+    t = None
 
     # Parameters
     num_bs = 0
@@ -106,11 +109,13 @@ class Data:
 
     def __init__(self, alpha=0, phi=0, num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None, x_bs_adj=None,
                  rf=None, mfu=None, bwf=None, rt_i=None, rtt_base=None, distance=0, avg_rtt=0,
-                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, req=None):
+                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, source=None, sink=None):
 
         self.alpha = alpha
-
         self.phi = phi
+        self.s = source
+        self.t = sink
+
         self.num_bs = num_bs
         self.num_ue = num_ue
         if num_bs != 0 and num_ue != 0:
@@ -131,7 +136,6 @@ class Data:
         self.map_user_file = mfu
         self.bandwidth_min_file = bwf
         self.resources_node = rt_i
-        self.file_user_request = req
 
         self.rtt_base = rtt_base
         self.distance = distance
@@ -167,7 +171,6 @@ class Data:
             self.loc_UE_node = loc_UE_node
             self.loc_BS_node = loc_BS_node
             self.gama_file_node = gama_file_node
-            self.req = req
 
             self.weight_to_dictionary()
             self.resources_file_to_dictionary()
@@ -446,20 +449,21 @@ class OptimizeData:
         c6 = self.set_constraint_flow_conservation_sink()
 
     def set_constraint_flow_conservation_sink(self):
-        for f in self.data.key_index_file:
-            self.model.addConstr(gp.quicksum(self.x[f, i, j]
-                - self.x[f, j, i] for i in self.data.key_index_bs for j in self.data.t)
+        for f in self.data.s:
+            self.model.addConstr(gp.quicksum(self.x[f, t, i]
+                - self.x[f, i, t] for t in self.data.t for i in self.data.key_index_bs)
                 == - self.data.bandwidth_min_file_dict[f],'c6')
 
     def set_constraint_flow_conservation_source(self):
-        for f in self.data.key_index_file:
-            self.model.addConstr(gp.quicksum(self.x[f, i, j]
-                - self.x[f, j, i] for i in self.data.key_index_bs for j in self.data.s)
+        for f in self.data.s:
+            self.model.addConstr(gp.quicksum(self.x[f, s, i]
+                - self.x[f, i, s] for s in self.data.s for i in self.data.key_index_bs)
                 == self.data.bandwidth_min_file_dict[f],'c5')
 
     def set_constraint_flow_conservation(self):
-        return self.model.addConstr(gp.quicksum(self.x[f, i, j]
-            - self.x[f, j, i] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
+        for f,k in itertools.product(self.data.s,self.data.key_index_bs):
+            self.model.addConstr(gp.quicksum(self.x[f, i, k]
+            - self.x[f, k, j] for i in self.data.key_index_bs for j in self.data.key_index_bs)
             == 0,'c4')
 
     def set_constraint_flow_capacity_max(self):
@@ -640,7 +644,8 @@ class InfoData:
 
     def log_weight_file_edge(self):
         print("WEIGHT.")
-        for f in range(len(self.data.key_index_file)):
+        for f,filename in enumerate(self.data.key_index_file):
+            print(filename.upper())
             for i in range(len(self.data.key_index_all)):
                 for j in range(len(self.data.key_index_all)):
                     print(str(self.data.weight_file_edge[f][i][j]).format(), end=" ")

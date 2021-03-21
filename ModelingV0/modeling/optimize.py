@@ -456,7 +456,8 @@ class OptimizeData:
     def set_constraint_flow_conservation(self):
         for f in self.data.s:
             for i in self.data.key_index_all:
-                if i != self.data.s and i != self.data.t:
+                if all(i != s for s in self.data.s) and all(i != t for t in self.data.t):
+                #if i != self.data.s and i != self.data.t:
                     self.model.addConstr(gp.quicksum(self.x[f, i, j] for j in self.data.key_index_all)
                     - gp.quicksum(self.x[f, j, i] for j in self.data.key_index_all)
                     == 0,'c4')
@@ -466,12 +467,12 @@ class OptimizeData:
             self.x[f, i, j] <= self.data.bandwidth_current_edge_dict[f, i, j] for f in self.data.s for i in self.data.key_index_all for j in self.data.key_index_all)
 
     def set_constraint_throughput(self):
-        self.model.addConstrs(self.data.bandwidth_expected_edge[f][i][j]
-            >= self.data.bandwidth_current_edge[f][i][j] for f in range(len(self.data.key_index_file)) for i in range(len(self.data.key_index_with_ue)) for j in range(len(self.data.key_index_with_ue)))
+        self.model.addConstrs(self.data.bandwidth_expected_edge_dict[f,i,j]
+            >= self.data.bandwidth_current_edge_dict[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_with_ue for j in self.data.key_index_with_ue)
 
     def set_constraint_node_resources_capacity(self):
-        self.model.addConstrs(self.data.resources_node[i]
-             >= self.data.current_resources_node[i] for i in range(len(self.data.key_index_bs)))
+        self.model.addConstrs(self.data.resources_node_dict[i]
+             >= self.data.current_resources_node_dict[i] for i in self.data.key_index_bs)
 
     def execute(self):
         self.model.optimize()

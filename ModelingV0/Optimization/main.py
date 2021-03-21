@@ -4,6 +4,7 @@
 # pip install ortools
 # pip install numpy
 # pip install matplotlib
+import numpy as np
 
 import ortools.linear_solver.pywraplp as otlp
 from ortools.linear_solver import pywraplp  #https://developers.google.com/optimization/introduction/python
@@ -57,8 +58,8 @@ def main():
 
     #for i in range(num_request):
     #req = request[i]
-    source = "A"
-    sink = "Z"
+    source = np.array(['A'])
+    sink = np.array(['U'])
 
     data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
                  resources_file,phi,
@@ -67,7 +68,7 @@ def main():
                  )
 
     calc_vars(data)
-    show_parameters(data)
+    #show_parameters(data)
     show_vars(data)
     create_model(data,"Orchestrator")
     #picture(data)
@@ -114,17 +115,16 @@ def show_parameters(data):
     id.log_gama_file_node()
     id.log_x_bs_adj_dict()
 
-
 def show_vars(data):
     id = InfoData(data)
 
     print("VARS.\n")
-    id.log_omega_user_node()
-    id.log_expected_bandwidth_edge()
-    id.log_current_bandwidth_edge()
-    id.log_diff_bandwidth_edge()
-    id.log_current_resources_node()
-    id.log_weight_file_edge()
+    #id.log_omega_user_node()
+    #id.log_expected_bandwidth_edge()
+    #id.log_current_bandwidth_edge()
+    #id.log_diff_bandwidth_edge()
+    #id.log_current_resources_node()
+    #id.log_weight_file_edge()
 
     # dict
     #id.log_omega_user_node_dict()
@@ -132,7 +132,7 @@ def show_vars(data):
     # id.log_current_bandwidth_edge_dict()
     # id.log_diff_bandwidth_edge_dict()
     #id.log_current_resources_node_dict()
-    # id.log_weight_dict()
+    id.log_weight_dict()
 
 
 def picture(data):

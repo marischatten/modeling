@@ -1,7 +1,13 @@
 {
 
-    "alpha" : 10.0,
-    "phi": 0.5,
+    "alpha" : 0.25,
+    "beta": 0.5,
+
+    "phi" : [
+        [1,0],
+        [0,0],
+        [0,1]
+    ],
 
     "num_bs": 2,
     "num_ue": 3,
@@ -12,11 +18,7 @@
     "key_index_ue": ["U", "W", "Z"],
 
     "resources_file": [100.0, 200.0, 200.0],
-    "map_user_file" : [
-        [1,0,0],
-        [0,0,0],
-        [0,0,1]
-    ],
+
     "bandwidth_min_file": [10.0, 13.0, 5.0],
 
     "resources_node": [300.0, 400.0],

@@ -17,7 +17,7 @@ from utils import utils as u
 from simulation import request as r
 
 alpha = 0
-phi = 0
+beta = 0
 
 num_bs = 0
 num_ue = 0
@@ -30,7 +30,7 @@ key_index_ue = list()
 x_bs_adj = list()
 
 resources_file = list()
-map_user_file = list()
+phi = list()
 bandwidth_min_file = list()
 
 resources_node = list()
@@ -57,16 +57,17 @@ def main():
 
     #for i in range(num_request):
     #req = request[i]
-    source = 'B'
-    sink = 'W'
-    data = Data(alpha, phi, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
-                 resources_file,map_user_file,
+    source = "A"
+    sink = "Z"
+
+    data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
+                 resources_file,phi,
                  bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,
                     source,sink
                  )
 
     calc_vars(data)
-    #show_parameters(data)
+    show_parameters(data)
     show_vars(data)
     create_model(data,"Orchestrator")
     #picture(data)
@@ -99,13 +100,13 @@ def show_parameters(data):
     id = InfoData(data)
 
     print("PARAMETERS.\n")
-    id.log_map_user_file()
+    id.log_phi()
 
     id.log_resources_file_dict()
     id.log_bandwidth_min_dict()
 
     id.log_resources_node_dict()
-    id.log_map_user_file_dict()
+    id.log_phi_dict()
 
     id.log_rtt_base()
     id.log_rtt_edge()
@@ -118,11 +119,11 @@ def show_vars(data):
     id = InfoData(data)
 
     print("VARS.\n")
-    # id.log_omega_user_node()
-    #id.log_expected_bandwidth_edge()
-    #id.log_current_bandwidth_edge()
-    #id.log_diff_bandwidth_edge()
-    # id.log_current_resources_node()
+    id.log_omega_user_node()
+    id.log_expected_bandwidth_edge()
+    id.log_current_bandwidth_edge()
+    id.log_diff_bandwidth_edge()
+    id.log_current_resources_node()
     id.log_weight_file_edge()
 
     # dict
@@ -152,7 +153,7 @@ def picture(data):
 
 def convert_to_object(dataset):
     global alpha
-    global phi
+    global beta
     global num_bs
     global num_ue
     global num_files
@@ -161,7 +162,7 @@ def convert_to_object(dataset):
     global key_index_ue
     global x_bs_adj
     global resources_file
-    global map_user_file
+    global phi
     global bandwidth_min_file
     global resources_node
     global rtt_base
@@ -173,7 +174,7 @@ def convert_to_object(dataset):
     global sd_rtt
 
     alpha = dataset["alpha"]
-    phi = float(dataset["phi"])
+    beta = float(dataset["beta"])
 
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])
@@ -187,9 +188,9 @@ def convert_to_object(dataset):
 
     resources_file = dataset["resources_file"]
 
-    if num_bs is not None and num_ue is not None:
-        map_user_file = [[0 for i in range(num_ue)] for f in range(num_files)]
-        map_user_file = dataset["map_user_file"]
+    if num_bs is not None and num_files is not None:
+        phi = [[0 for i in range(num_bs)] for f in range(num_files)]
+        phi = dataset["phi"]
 
     bandwidth_min_file = dataset["bandwidth_min_file"]
 

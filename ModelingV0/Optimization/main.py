@@ -42,6 +42,7 @@ loc_BS_node = list()
 loc_UE_node = list()
 
 gama = list()
+omega = list()
 distance = 0
 
 avg_rtt = 0
@@ -49,7 +50,7 @@ sd_rtt = 0
 
 
 def main():
-    path = r'..\dataset\instance_1.json'  # args[0]
+    path = r'..\dataset\instance_2.json'  # args[0]
     dataset = u.get_data(path)
     convert_to_object(dataset)
 
@@ -58,43 +59,43 @@ def main():
 
     #for i in range(num_request):
     #req = request[i]
-    source = np.array(['A'])
-    sink = np.array(['U'])
-
+    source = np.array(['F1'])
+    sink = np.array(['UE9'])
+    #sources = np.array(['F1', 'F2', 'F3','F4', 'F5', 'F6','F7', 'F8', 'F9','F10'])
+    #sinks = np.array(['UE1', 'UE2', 'UE3','UE4', 'UE5', 'UE6','UE7', 'UE8', 'UE9','UE10', 'UE11'])
+    #source = ""
+    #sink = ""
+    #for s in sources:
+    #    for t in sinks:
+    #        source = s
+    #        sink = t
+    #        print(source)
+    #        print(sink)
     data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
-                 resources_file,phi,
-                 bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,
-                    source,sink
-                 )
+                         resources_file,phi,
+                         bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt,loc_UE_node,loc_BS_node,gama,omega,
+                            source,sink
+                         )
 
     calc_vars(data)
     #show_parameters(data)
-    show_vars(data)
-    create_model(data,"Orchestrator")
+    #show_vars(data)
+    run_model(data,"Orchestrator")
+
     #picture(data)
 
     #min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     #pywraplp.Solver('teste', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
-    #print("SUCCESS!")
 
-def create_model(data,name):
+
+def run_model(data,name):
     od = OptimizeData(data,name)
-    od.create_vars()
-    od.set_function_objective()
-    od.create_constraints()
-    od.execute()
-    od.result()
+    od.run_model()
 
 
 def calc_vars(data):
     hd = HandleData(data)
-
-    hd.calc_omega_user_node()
-    hd.calc_expected_bandwidth_edge()
-    hd.calc_current_bandwidth_edge()
-    hd.calc_diff_bandwidth()
-    hd.calc_current_resources_node()
-    hd.calc_weight_file_edge()
+    hd.calc_vars()
 
 
 def show_parameters(data):
@@ -169,6 +170,7 @@ def convert_to_object(dataset):
     global loc_BS_node
     global loc_UE_node
     global gama
+    global omega
     global distance
     global avg_rtt
     global sd_rtt
@@ -201,13 +203,17 @@ def convert_to_object(dataset):
     if num_bs is not None:
         loc_BS_node = [[0 for j in range(3)]for i in range(num_bs)]
         loc_BS_node = dataset['loc_BS_node']
-
-    loc_UE_node = [[0 for j in range(3)] for u in range(num_ue)]
-    loc_UE_node = dataset['loc_UE_node']
+    if num_ue is not None:
+        loc_UE_node = [[0 for j in range(3)] for u in range(num_ue)]
+        loc_UE_node = dataset['loc_UE_node']
 
     if num_bs is not None and num_ue is not None and num_files is not None:
         gama = [[0 for i in range(num_bs+num_ue)] for f in range(num_files)]
         gama = dataset["gama"]
+
+    if num_bs is not None and num_ue is not None:
+        omega = [[0.0 for i in range(num_bs)] for j in range(num_ue)]
+        omega = dataset["omega"]
 
     distance = int(dataset["distance"])
 

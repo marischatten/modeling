@@ -109,7 +109,7 @@ class Data:
 
     def __init__(self, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None, x_bs_adj=None,
                  rf=None, phi=None, bwf=None, rt_i=None, rtt_base=None, distance=0, avg_rtt=0,
-                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, source=None, sink=None):
+                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, omega_user_node=None,source=None, sink=None):
 
         self.alpha = alpha
         self.beta = beta
@@ -167,7 +167,11 @@ class Data:
                 for f in
                 range(self.num_files)]
 
-            self.omega_user_node = [[0.0 for i in range(self.num_bs)] for j in range(self.num_ue)]
+            if omega_user_node is not None:
+                self.omega_user_node = omega_user_node
+                self.omega_user_node_to_dictionary()
+            else:
+                self.omega_user_node = [[0.0 for i in range(self.num_bs)] for j in range(self.num_ue)]
 
             self.loc_UE_node = loc_UE_node
             self.loc_BS_node = loc_BS_node
@@ -285,6 +289,14 @@ class HandleData:
 
     def __init__(self, data):
         self.data = data
+
+    def calc_vars(self):
+        #self.calc_omega_user_node()
+        self.calc_expected_bandwidth_edge()
+        self.calc_current_bandwidth_edge()
+        self.calc_diff_bandwidth()
+        self.calc_current_resources_node()
+        self.calc_weight_file_edge()
 
     def calc_omega_user_node(self):
         for u in range(len(self.data.loc_UE_node)):
@@ -407,6 +419,13 @@ class OptimizeData:
     def __init__(self, data, name=""):
         self.data = data
         self.name = name
+
+    def run_model(self):
+        self.create_vars()
+        self.set_function_objective()
+        self.create_constraints()
+        self.execute()
+        self.result()
 
     # n_fij \in {0,1}
     def create_vars(self):

@@ -421,11 +421,7 @@ class OptimizeData:
         self.name = name
 
     def run_model(self):
-        self.create_vars()
-        self.set_function_objective()
-        self.create_constraints()
-        self.execute()
-        self.result()
+        pass
 
     # n_fij \in {0,1}
     def create_vars(self):
@@ -494,11 +490,12 @@ class OptimizeData:
              >= self.data.current_resources_node_dict[i] for i in self.data.key_index_bs)
 
     def execute(self):
+        self.model.setParam("LogToConsole",0)
         self.model.optimize()
 
     def result(self):
         if self.model.status == gp.GRB.OPTIMAL:
-            print(GREEN +"SOLUÇÃO ÓTIMA."+RESET)
+            print(GREEN +"\nSOLUÇÃO ÓTIMA."+RESET)
             obj = self.model.getObjective()
             print(CYAN +"FUNÇÃO OBJETIVO: "+ RED +str(obj.getValue())+RESET)
             print("CAMINHO:")

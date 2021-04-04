@@ -379,7 +379,7 @@ class HandleData:
         self.data.weight_to_dictionary()
 
     def calc_weight(self,rr_i,rt_i,bwc_diff_fij):
-        return (self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha - self.data.beta) * (self.data.beta*bwc_diff_fij))
+        return (self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (self.data.beta*bwc_diff_fij))
 
     def is_caching(self, file, bs):
         return self.data.gama_file_node_dict[file,bs] == 1
@@ -444,9 +444,6 @@ class OptimizeData:
         # restrição para vazão esperada seja sempre a menor que a atual.
         self.set_constraint_throughput()
 
-        # limiares de capacidade do fluxo.
-        #self.set_constraint_flow_capacity_max()
-
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.set_constraint_flow_conservation()
 
@@ -456,17 +453,13 @@ class OptimizeData:
         # restrições de equilibrio de fluxo no nó de destino.
         self.set_constraint_flow_conservation_sink()
 
-    def set_constraint_flow_conservation_sink(self):
-        for f in self.data.s:
-            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.data.t for i in self.data.key_index_bs)
-                - gp.quicksum(self.x[f, i, t] for t in self.data.t for i in self.data.key_index_bs)
-                == - self.data.bandwidth_min_file_dict[f],'c6')
+    def set_constraint_node_resources_capacity(self):
+        self.model.addConstrs(self.data.resources_node_dict[i] * self.x[s,s,i]
+             >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[s]) * self.x[s,s,i] for f in self.data.key_index_file for s in self.data.s for i in self.data.key_index_bs)
 
-    def set_constraint_flow_conservation_source(self):
-        for f in self.data.s:
-            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.data.s for i in self.data.key_index_bs)
-                - gp.quicksum(self.x[f, i, s] for s in self.data.s for i in self.data.key_index_bs)
-                == self.data.bandwidth_min_file_dict[f],'c5')
+    def set_constraint_throughput(self):
+        self.model.addConstrs(self.data.bandwidth_expected_edge_dict[f,i,j] * self.x[f,i,j]
+            >= self.data.bandwidth_current_edge_dict[f,i,j]*self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
 
     def set_constraint_flow_conservation(self):
         for f in self.data.s:
@@ -477,17 +470,17 @@ class OptimizeData:
                     - gp.quicksum(self.x[f, j, i] for j in self.data.key_index_all)
                     == 0,'c4')
 
-    def set_constraint_flow_capacity_max(self):
-        self.model.addConstrs(
-            self.x[f, i, j] <= self.data.bandwidth_current_edge_dict[f, i, j] for f in self.data.s for i in self.data.key_index_all for j in self.data.key_index_all)
+    def set_constraint_flow_conservation_source(self):
+        for f in self.data.s:
+            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.data.s for i in self.data.key_index_bs)
+                - gp.quicksum(self.x[f, i, s] for s in self.data.s for i in self.data.key_index_bs)
+                == self.data.bandwidth_min_file_dict[f],'c5')
 
-    def set_constraint_throughput(self):
-        self.model.addConstrs(self.data.bandwidth_expected_edge_dict[f,i,j]
-            >= self.data.bandwidth_current_edge_dict[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_with_ue for j in self.data.key_index_with_ue)
-
-    def set_constraint_node_resources_capacity(self):
-        self.model.addConstrs(self.data.resources_node_dict[i]
-             >= self.data.current_resources_node_dict[i] for i in self.data.key_index_bs)
+    def set_constraint_flow_conservation_sink(self):
+        for f in self.data.s:
+            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.data.t for i in self.data.key_index_bs)
+                - gp.quicksum(self.x[f, i, t] for t in self.data.t for i in self.data.key_index_bs)
+                == - self.data.bandwidth_min_file_dict[f],'c6')
 
     def execute(self):
         self.model.setParam("LogToConsole",0)
@@ -594,6 +587,7 @@ class InfoData:
         print()
 
     def log_omega_user_node_dict(self):
+        print("USER COVERAGE PER BASE STATION(OMEGA).")
         for k in self.data.omega_user_node_dict.keys():
             print(k, self.data.omega_user_node_dict[k])
 
@@ -610,6 +604,7 @@ class InfoData:
         print()
 
     def log_expected_bandwidth_edge_dict(self):
+        print("EXPECTED BANDWIDTH.")
         for k in self.data.bandwidth_expected_edge_dict.keys():
             print(k, self.data.bandwidth_expected_edge_dict[k])
 
@@ -625,6 +620,7 @@ class InfoData:
         print()
 
     def log_current_bandwidth_edge_dict(self):
+        print("CURRENT BANDWIDTH.")
         for k in self.data.bandwidth_current_edge_dict.keys():
             print(k, self.data.bandwidth_current_edge_dict[k])
 
@@ -640,6 +636,7 @@ class InfoData:
         print()
 
     def log_diff_bandwidth_edge_dict(self):
+        print("DIFFERENCE BANDWIDTH")
         for k in self.data.bandwidth_diff_edge_dict.keys():
             print(k, self.data.bandwidth_diff_edge_dict[k])
 

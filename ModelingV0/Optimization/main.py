@@ -5,9 +5,13 @@
 # pip install numpy
 # pip install matplotlib
 #pip install tqdm
+#pip install scipy
+#pip install seaborn
+
 import numpy as np
 import time
 import tqdm
+import  seaborn as sns
 
 import ortools.linear_solver.pywraplp as otlp
 from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
@@ -58,38 +62,119 @@ def main():
     convert_to_object(dataset)
 
     #random
-    num_blocks = 2
-    num_requests = 3
-    sources = list()
-    sinks = list()
+    avg_bulk = 5
+    num_events = 100
+
+    num_alpha = 0.8
 
     #single
     source = np.array(['F5'])
     sink = np.array(['UE11'])
 
     #todos para todos
-    sources = np.array(['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10'])
-    sinks = np.array(['UE1', 'UE2', 'UE3', 'UE4', 'UE5', 'UE6', 'UE7', 'UE8', 'UE9', 'UE10', 'UE11'])
+    sources = np.array(['F1'])
+    sinks = np.array(['UE1'])
 
     start_time = time.time()
     #all(sources, sinks)
     single(source,sink)
+    #bulk_distribuition_poisson(avg_bulk,num_events)
     #random_request(num_blocks,num_requests,sources,sinks)
     print(CYAN,"--- %s seconds ---" % (time.time() - start_time))
 
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('teste', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
+def bulk_distribuition_poisson(avg_size_bulk,num_events):
+    show = False
+    bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
+    #r.Request.generate_bulk_zip(avg_size_bulk,num_events,bulks,num_events)
+    print(bulks)
+    sns.displot(bulks)
+    plt.xlim([0,25])
+    plt.xlabel('k')
+    plt.ylabel('P(X=k)')
+    plt.legend()
+    plt.show()
+
+    for event in tqdm.tqdm(range(num_events)): #EVENTS IN TIMELINE
+        qtd_req = bulks[event]
+        sources = r.Request.generate_sources_random(qtd_req,key_index_file)
+        sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
+        for req in range(qtd_req):
+            source = sources[req]
+            sink = sinks[req]
+            #if req == sources[-1] and req == sinks[-1]:
+            show = True
+
+            source = [source]
+            sink = [sink]
+            #print(GREEN,"\nOrigem:", source, "| Destino:", sink)
+            data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
+                                resources_file, phi, bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
+                                loc_BS_node, gama, omega, source, sink
+                                )
+            calc_vars(data)
+            # show_parameters(data)
+            # show_vars(data)
+            #run_model(data, show)
+
+
+def bulk_poisson_req_zipf(num_alpha,avg_size_bulk,num_events):
+    show = False
+    bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
+    for event in tqdm.tqdm(range(num_events)): #EVENTS IN TIMELINE
+        qtd_req = bulks[event]
+        sources = r.Request.generate_sources_random(qtd_req,key_index_file)
+        sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
+        for req in range(qtd_req):
+            source = sources[req]
+            sink = sinks[req]
+            #if req == sources[-1] and req == sinks[-1]:
+            show = True
+
+            source = [source]
+            sink = [sink]
+            #print(GREEN,"\nOrigem:", source, "| Destino:", sink)
+            data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
+                                resources_file, phi, bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
+                                loc_BS_node, gama, omega, source, sink
+                                )
+            calc_vars(data)
+            # show_parameters(data)
+            # show_vars(data)
+            run_model(data, show)
+
+
+def all(sources,sinks):
+    show = False
+    for s in tqdm.tqdm(sources):
+        for t in sinks:
+            source = np.array([s])
+            sink = np.array([t])
+            if s == sources[-1] and t == sinks[-1]:
+                show = True
+            #print(GREEN,"\nOrigem:", source, "| Destino:", sink)
+            data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
+                        resources_file, phi, bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
+                        loc_BS_node, gama, omega, source, sink
+                        )
+            calc_vars(data)
+            #show_parameters(data)
+            #show_vars(data)
+            #run_model(data, show)
+
+
 def random_request(num_blocks,num_requests,sources,sinks):
     show = False
     for num_blocks in range(num_blocks):
-        r.Request.generate_request(num_requests, key_index_file, key_index_ue, sources, sinks)
+        #r.Request.generate_request_random(num_requests, key_index_file, key_index_ue, sources, sinks)
         for req in tqdm.tqdm(range(num_requests)):
             source = np.array(sources[req])
             sink = np.array(sinks[req])
             if req == sources[-1] and req == sinks[-1]:
                 show = True
-            # print(GREEN,"\nOrigem:", source, "| Destino:", sink)
+            print(GREEN,"\nOrigem:", source, "| Destino:", sink)
             data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
                             resources_file, phi,
                             bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
@@ -106,6 +191,7 @@ def random_request(num_blocks,num_requests,sources,sinks):
 def single(source,sink):
     show = True
     print(GREEN,"\nOrigem:", source, "| Destino:", sink)
+    print("single",type(source),type(sink))
     data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
                 resources_file, phi,
                 bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
@@ -114,41 +200,19 @@ def single(source,sink):
                 source, sink
                 )
     calc_vars(data)
-    # show_parameters(data)
-    # show_vars(data)
+    #show_parameters(data)
+    show_vars(data)
     run_model(data, show)
 
-def all(sources,sinks):
-    show = True
-    for s in tqdm.tqdm(sources):
-        for t in sinks:
-            source = np.array([s])
-            sink = np.array([t])
-            #if s == sources[-1] and t == sinks[-1]:
-             #   show = True
-            # print(GREEN,"\nOrigem:", source, "| Destino:", sink)
-            data = Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, x_bs_adj,
-                        resources_file, phi,
-                        bandwidth_min_file, resources_node, rtt_base, distance, avg_rtt, sd_rtt, loc_UE_node,
-                        loc_BS_node,
-                        gama, omega,
-                        source, sink
-                        )
-            calc_vars(data)
-            # show_parameters(data)
-            # show_vars(data)
-            run_model(data, show)
 
 def run_model(data, show):
     od = OptimizeData(data, "Orchestrator")
-    #od.run_model()
     od.create_vars()
     od.set_function_objective()
     od.create_constraints()
     od.execute()
     if show:
         od.result()
-
 
 
 def calc_vars(data):
@@ -180,19 +244,19 @@ def show_vars(data):
 
     print("VARS.\n")
     # id.log_omega_user_node()
-    # id.log_expected_bandwidth_edge()
-    # id.log_current_bandwidth_edge()
+    #id.log_expected_bandwidth_edge()
+    #id.log_current_bandwidth_edge()
     # id.log_diff_bandwidth_edge()
     # id.log_current_resources_node()
-    # id.log_weight_file_edge()
+    #id.log_weight_file_edge()
 
     # dict
     # id.log_omega_user_node_dict()
-    # id.log_expected_bandwidth_edge_dict()
-    # id.log_current_bandwidth_edge_dict()
+    id.log_expected_bandwidth_edge_dict()
+    id.log_current_bandwidth_edge_dict()
     # id.log_diff_bandwidth_edge_dict()
     # id.log_current_resources_node_dict()
-    id.log_weight_dict()
+    #id.log_weight_dict()
 
 
 def picture(data):

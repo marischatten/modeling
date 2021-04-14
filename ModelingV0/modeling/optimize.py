@@ -4,11 +4,14 @@ from utils import utils as utils
 import itertools
 import numpy as np
 import ortools as otlp  #somente LP
+from enum import Enum
 
 NO_EDGE = 9999
 TAG_COORD = 0
 X_COORD = 1
 Y_COORD = 2
+CURRENT_NODE = 0
+NEXT_HOP = 1
 
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
@@ -18,15 +21,12 @@ RESET = "\033[0;0m"
 BOLD = "\033[;1m"
 REVERSE = "\033[;7m"
 
+
+# This class manages and handles the data of an instance of the problem.
 class Data:
     # Input
     alpha = 0
     beta = 0
-
-    #source
-    s = None
-    #sink
-    t = None
 
     # Parameters
     num_bs = 0
@@ -46,7 +46,7 @@ class Data:
     key_index_with_ue = list()
     key_index_all = list()
 
-    x_bs_adj = list()
+    e_bs_adj = list()
 
     # fr \in R
     resources_file = list()
@@ -73,6 +73,9 @@ class Data:
     loc_BS_node = list()
     # gama \in {0,1}
     gama_file_node = list()
+
+    #psi \in {0,1}
+    psi_edge = list()
 
     # Vars
 
@@ -105,17 +108,15 @@ class Data:
     bandwidth_min_file_dict = dict()
     gama_file_node_dict = dict()
     omega_user_node_dict = dict()
-    x_bs_adj_dict = dict()
+    e_bs_adj_dict = dict()
+    psi_edge_dict = dict()
 
-    def __init__(self, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None, x_bs_adj=None,
+    def __init__(self, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key1=None, key2=None, key3=None, e_bs_adj=None,
                  rf=None, phi=None, bwf=None, rt_i=None, rtt_base=None, distance=0, avg_rtt=0,
-                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, omega_user_node=None,source=None, sink=None):
+                 sd_rtt=0, loc_UE_node=None, loc_BS_node=None, gama_file_node=None, omega_user_node=None):
 
         self.alpha = alpha
         self.beta = beta
-
-        self.s = source
-        self.t = sink
 
         self.num_bs = num_bs
         self.num_ue = num_ue
@@ -131,7 +132,7 @@ class Data:
             self.key_index_with_ue = key3 + key2
             self.key_index_all = key2 + key3+ key1
 
-        self.x_bs_adj = x_bs_adj
+        self.e_bs_adj = e_bs_adj
 
         self.resources_file = rf
         self.phi = phi
@@ -167,6 +168,11 @@ class Data:
                 for f in
                 range(self.num_files)]
 
+            self.psi_edge = [
+                [[0 for i in range(self.num_nodes + self.num_files)] for j in range(self.num_nodes + self.num_files)]
+                for f in
+                range(self.num_files)]
+
             if omega_user_node is not None:
                 self.omega_user_node = omega_user_node
                 self.omega_user_node_to_dictionary()
@@ -183,7 +189,7 @@ class Data:
             self.phi_file_to_dictionary()
             self.bandwidth_min_file_to_dictionary()
             self.gama_file_node_to_dictionary()
-            self.x_bs_adj_to_dictionary()
+            self.e_bs_adj_to_dictionary()
 
     def generate_rtt(self, avg, sd):
         self.rtt_edge = [[0.0 for i in range(self.num_nodes)] for j in range(self.num_nodes)]
@@ -225,12 +231,12 @@ class Data:
                 tag_bs = self.key_index_bs[i]
                 self.gama_file_node_dict[tag_file, tag_bs] = self.gama_file_node[f][i]
 
-    def x_bs_adj_to_dictionary(self):
+    def e_bs_adj_to_dictionary(self):
         for i in range(len(self.key_index_bs)):
             for j in range(len(self.key_index_bs)):
                 tag_orig = self.key_index_bs[i]
                 tag_dest = self.key_index_bs[j]
-                self.x_bs_adj_dict[tag_orig, tag_dest] = self.x_bs_adj[i][j]
+                self.e_bs_adj_dict[tag_orig, tag_dest] = self.e_bs_adj[i][j]
 
     # VARS TO DICTIONARY
     def omega_user_node_to_dictionary(self):
@@ -283,7 +289,17 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.weight_dict[tag_file, tag_orig, tag_dest] = self.weight_file_edge[f][i][j]
 
+    def psi_edge_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            for i in range(len(self.key_index_all)):
+                for j in range(len(self.key_index_all)):
+                    tag_file = self.key_index_file[f]
+                    tag_orig = self.key_index_all[i]
+                    tag_dest = self.key_index_all[j]
+                    self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
 
+
+# This class handles and calculates the variables and parameters.
 class HandleData:
     data = Data()
 
@@ -295,6 +311,7 @@ class HandleData:
         self.calc_expected_bandwidth_edge()
         self.calc_current_bandwidth_edge()
         self.calc_diff_bandwidth()
+        self.calc_psi_edge()
         self.calc_current_resources_node()
         self.calc_weight_file_edge()
 
@@ -378,6 +395,14 @@ class HandleData:
                                 self.data.weight_file_edge[f][i][j] = NO_EDGE
         self.data.weight_to_dictionary()
 
+    def calc_psi_edge(self):
+        for f in range(len(self.data.key_index_file)):
+            for i in range(len(self.data.key_index_all)):
+                for j in range(len(self.data.key_index_all)):
+                    if self.data.bandwidth_diff_edge[f][i][j] >= self.data.beta:
+                        self.data.psi_edge[f][i][j] = 1
+        self.data.psi_edge_to_dictionary()
+
     def calc_weight(self,rr_i,rt_i,bwc_diff_fij):
         return (self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (self.data.beta*bwc_diff_fij))
 
@@ -403,22 +428,27 @@ class HandleData:
         return dest in self.data.key_index_file
 
     def is_coverage_bs_to_bs(self,orig,dest):
-        return self.data.x_bs_adj_dict[orig,dest] == 1
+        return self.data.e_bs_adj_dict[orig,dest] == 1
 
     def is_coverage_bs_to_ue(self,orig,dest):
         return self.data.omega_user_node_dict[dest,orig] == 1
 
 
+# This class execute the optimization model.
 class OptimizeData:
     data = Data()
 
-    name = ""
-    model = gp.Model(name)
+    model = None
     x = None
+    s = ""
+    t = ""
+    path = list()
 
-    def __init__(self, data, name=""):
+    def __init__(self,data,source,sink):
         self.data = data
-        self.name = name
+        self.s = source
+        self.t = sink
+
 
     def run_model(self):
         pass
@@ -455,35 +485,36 @@ class OptimizeData:
 
     def set_constraint_node_resources_capacity(self):
         self.model.addConstrs(self.data.resources_node_dict[i] * self.x[s,s,i]
-             >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[s]) * self.x[s,s,i] for f in self.data.key_index_file for s in self.data.s for i in self.data.key_index_bs)
+             >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[s]) * self.x[s,s,i] for f in self.data.key_index_file for s in self.s for i in self.data.key_index_bs)
 
     def set_constraint_throughput(self):
         self.model.addConstrs(self.data.bandwidth_expected_edge_dict[f,i,j] * self.x[f,i,j]
             >= self.data.bandwidth_current_edge_dict[f,i,j]*self.x[f,i,j] for f in self.data.key_index_file for i in self.data.key_index_all for j in self.data.key_index_all)
 
     def set_constraint_flow_conservation(self):
-        for f in self.data.s:
+        for f in self.s:
             for i in self.data.key_index_all:
-                if all(i != s for s in self.data.s) and all(i != t for t in self.data.t):
-                #if i != self.data.s and i != self.data.t:
+                if all(i != s for s in self.s) and all(i != t for t in self.t):
+                # if i != self.s and i != self.t:
                     self.model.addConstr(gp.quicksum(self.x[f, i, j] for j in self.data.key_index_all)
                     - gp.quicksum(self.x[f, j, i] for j in self.data.key_index_all)
                     == 0,'c4')
 
     def set_constraint_flow_conservation_source(self):
-        for f in self.data.s:
-            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.data.s for i in self.data.key_index_bs)
-                - gp.quicksum(self.x[f, i, s] for s in self.data.s for i in self.data.key_index_bs)
+        for f in self.s:
+            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.data.key_index_bs)
+                - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.data.key_index_bs)
                 == self.data.bandwidth_min_file_dict[f],'c5')
 
     def set_constraint_flow_conservation_sink(self):
-        for f in self.data.s:
-            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.data.t for i in self.data.key_index_bs)
-                - gp.quicksum(self.x[f, i, t] for t in self.data.t for i in self.data.key_index_bs)
+        for f in self.s:
+            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.data.key_index_bs)
+                - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.data.key_index_bs)
                 == - self.data.bandwidth_min_file_dict[f],'c6')
 
-    def execute(self):
-        self.model.setParam("LogToConsole",0)
+    def execute(self,log):
+        #self.model.reset()
+        self.model.setParam("LogToConsole",log)
         self.model.optimize()
 
     def result(self):
@@ -498,9 +529,41 @@ class OptimizeData:
         else:
             print(RED + "NÃO EXISTE SOLUÇÃO ÓTIMA.")
 
+    def solution_path(self):
+        hops = list()
+        if self.model.status == gp.GRB.OPTIMAL:
+            for var in self.model.getVars():
+                if var.X != 0:
+                    hops.append(self.get_solution(str(var.VarName)))
+        else:
+            print(RED + "NÃO EXISTE SOLUÇÃO ÓTIMA.")
+
+        self.make_path(hops,self.s[0],self.t[0])
+        print("PATH:\n", self.path)
+        self.path.clear()
+
+    def get_solution(self,hop):
+        next_hop = list()
+        hop = hop[5:]
+        hop = hop[:-1]
+        aux = hop.split(',')
+        next_hop.append(aux[1])
+        next_hop.append(aux[2])
+        return next_hop
+
+    def make_path(self,hops,source,sink):
+        self.next_hop(hops,source)
+        self.path.append(sink)
+
+    def next_hop(self,hops,node):
+        for i in range(len(hops)):
+            if node in hops[i][CURRENT_NODE]:
+                self.path.append(hops[i][CURRENT_NODE])
+                return self.next_hop(hops,hops[i][NEXT_HOP])
+
 
 # This class show data in parameters and vars.
-class InfoData:
+class LogData:
     data = Data()
 
     def __init__(self, data):
@@ -563,18 +626,18 @@ class InfoData:
             print()
         print()
 
-    def log_x_bs_adj(self):
+    def log_e_bs_adj(self):
         print("COVERAGE BETWEEN BASE STATIONS(X).")
         for i in range(len(self.data.key_index_bs)):
             for j in range(len(self.data.key_index_bs)):
-                print(self.data.x_bs_adj[i][j], end=" ")
+                print(self.data.e_bs_adj[i][j], end=" ")
             print()
         print()
 
-    def log_x_bs_adj_dict(self):
+    def log_e_bs_adj_dict(self):
         print("COVERAGE BETWEEN BASE STATIONS(X).")
-        for k in self.data.x_bs_adj_dict.keys():
-            print(k, self.data.x_bs_adj_dict[k])
+        for k in self.data.e_bs_adj_dict.keys():
+            print(k, self.data.e_bs_adj_dict[k])
         print()
 
     # VARS
@@ -640,6 +703,22 @@ class InfoData:
         for k in self.data.bandwidth_diff_edge_dict.keys():
             print(k, self.data.bandwidth_diff_edge_dict[k])
 
+    def log_psi_edge(self):
+        print("DIFFERENCE INSIDE BOUND BETA.")
+        for f,filename in enumerate(self.data.key_index_file):
+            print(filename.upper())
+            for i in range(len(self.data.key_index_all)):
+                for j in range(len(self.data.key_index_all)):
+                    print(self.data.psi_edge[f][i][j], end=" ")
+                print()
+            print()
+        print()
+
+    def log_psi_edge_dict(self):
+        print("DIFFERENCE INSIDE BOUND BETA.")
+        for k in self.data.psi_edge_dict.keys():
+            print(k, self.data.psi_edge_dict[k])
+
     def log_current_resources_node(self):
         print("CURRENT RESOURCES.")
         for i in range(len(self.data.key_index_bs)):
@@ -668,3 +747,73 @@ class InfoData:
         for k in self.data.weight_dict.keys():
             print(k, self.data.weight_dict[k])
         print()
+
+    def show_parameters(self):
+        print("PARAMETERS.\n")
+        self.log_phi()
+
+        self.log_resources_file_dict()
+        self.log_bandwidth_min_dict()
+
+        self.log_resources_node_dict()
+        self.log_phi_dict()
+
+        self.log_rtt_base()
+        self.log_rtt_edge()
+
+        self.log_gama_file_node()
+        self.log_e_bs_adj_dict()
+
+    def show_vars_matrix(self):
+        print("VARS.\n")
+        self.log_omega_user_node()
+        self.log_expected_bandwidth_edge()
+        self.log_current_bandwidth_edge()
+        self.log_diff_bandwidth_edge()
+        self.log_current_resources_node()
+        self.log_psi_edge()
+        self.log_weight_file_edge()
+
+    def show_vars_dict(self):
+        print("VARS.\n")
+        self.log_omega_user_node_dict()
+        self.log_expected_bandwidth_edge_dict()
+        self.log_current_bandwidth_edge_dict()
+        self.log_diff_bandwidth_edge_dict()
+        self.log_current_resources_node_dict()
+        self.log_psi_edge_dict()
+        self.log_weight_dict()
+
+
+# This class update data of the problem.
+class UpdateData:
+    data = Data()
+
+    def __init__(self, data):
+        self.data = data
+
+    def update_rtt_min(self):
+        pass
+
+    def update_rtt(self):
+        pass
+
+    def update_phi_node(self,):
+        pass
+
+    def update_data(self):
+        hd = HandleData(self.data)
+        self.update_rtt_min()
+        self.update_rtt()
+        hd.calc_vars()
+
+    def get_results_optimization(self,source,sink,path):
+        pass
+
+# This class changes the type of trials.
+class Type(Enum):
+    SINGLE = 1
+    POISSON = 2
+    ZIPF = 3
+    ALLTOALL = 4
+    RANDOM = 5

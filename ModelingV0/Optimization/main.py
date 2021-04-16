@@ -57,12 +57,14 @@ distance = 0
 avg_rtt = 0
 sd_rtt = 0
 
+data = None
+
 show_log = 0
 show_results = False
-show_path = True
+show_path = False
 show_var = False
 show_par = False
-type = Type.SINGLE
+type = Type.POISSON
 
 
 def main():
@@ -71,46 +73,56 @@ def main():
     convert_to_object(dataset)
 
     # random and distribution.
-    avg_qtd_bulk = 5
-    num_events = 10
+    avg_qtd_bulk = 2
+    num_events = 2
     num_alpha = 2
     # single.
     source = np.array(['F5'])
     sink = np.array(['UE11'])
 
     # all to all or random.
-    #source = np.array(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"])
-    #sink = np.array(["UE1", "UE2", "UE3", "UE4", "UE5", "UE6", "UE7", "UE8", "UE9", "UE10", "UE11"])
+    source = np.array(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10"])
+    sink = np.array(["UE1", "UE2", "UE3", "UE4", "UE5", "UE6", "UE7", "UE8", "UE9", "UE10", "UE11"])
 
+    global data
     data = make_data()
-    calc_vars(data)
+
+    calc_vars()
     start_time = time.time()
-    discrete_events(type, data, source=source, sink=sink, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
+    discrete_events(type, source=source, sink=sink, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
     print(CYAN, "--- %s seconds ---" % (time.time() - start_time), RESET)
-
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
 
-def discrete_events(type, data, source=None, sink=None, avg_qtd_bulk=0, num_events=0, num_alpha=0):
+def discrete_events(type, source=None, sink=None, avg_qtd_bulk=0, num_events=0, num_alpha=0):
     if type == Type.SINGLE:
-        single(data, source, sink)
+        single( source, sink)
     if type == Type.POISSON:
-        bulk_distribution_poisson(data, avg_qtd_bulk, num_events)
+        bulk_distribution_poisson( avg_qtd_bulk, num_events)
     if type == Type.ZIPF:
-        bulk_poisson_req_zipf(data, num_alpha, avg_qtd_bulk, num_events)
+        bulk_poisson_req_zipf( num_alpha, avg_qtd_bulk, num_events)
     if type == Type.ALLTOALL:
-        all_to_all(data, source, sink)
+        all_to_all(source, sink)
     if type == Type.RANDOM:
-        random_request(data, avg_qtd_bulk, num_events)
+        random_request( avg_qtd_bulk, num_events)
 
 
-def single(data, source, sink):
-    create_model(data, source, sink)
+def single(source, sink):
+    pd = PlotData(data)
+    ud = UpdateData(data)
+    path = create_model( source, sink)
+    allocated_request(pd, path)
+    ud.path = path
+    ud.update_data()
+    #pd.show_paths()
 
 
-def bulk_distribution_poisson(data, avg_size_bulk, num_events):
+def bulk_distribution_poisson(avg_size_bulk, num_events):
+    pd = PlotData(data)
+    ud = UpdateData(data)
+
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     # zipf = r.Request.generate_bulk_zip(2,100)
     plot_poisson(bulks)
@@ -126,10 +138,15 @@ def bulk_distribution_poisson(data, avg_size_bulk, num_events):
 
             source = [source]
             sink = [sink]
-            create_model(data, source, sink)
+            path = create_model(source, sink)
+            pd = allocated_request(pd, path)
+            ud.path = path
+            ud.update_data()
+    #pd.show_paths()
+    # pd.plot()
 
 
-def bulk_poisson_req_zipf(data, num_alpha, avg_size_bulk, num_events):
+def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_bulk_zip(num_alpha, num_events)
     plot_poisson(bulks)
@@ -145,25 +162,32 @@ def bulk_poisson_req_zipf(data, num_alpha, avg_size_bulk, num_events):
 
             source = [source]
             sink = [sink]
-            create_model(data, source, sink)
+            create_model(source, sink)
 
 
-def all_to_all(data, sources, sinks):
+def all_to_all(sources, sinks):
+    pd = PlotData(data)
+    ud = UpdateData(data)
     for s in tqdm.tqdm(sources):
         for t in sinks:
             source = np.array([s])
             sink = np.array([t])
-            create_model(data, source, sink)
+            path = create_model(source, sink)
+            allocated_request(pd,path)
+            ud.path = path
+            ud.update_data()
+    # pd.show_paths()
+    # pd.plot()
 
 
-def random_request(data, qtd_bulk, num_events):
+def random_request(qtd_bulk, num_events):
     for num_blocks in range(num_events):
         sources = r.Request.generate_sources_random(qtd_bulk, num_events)
         sinks = r.Request.generate_sinks_random(qtd_bulk, num_events)
         for req in tqdm.tqdm(range(qtd_bulk)):
             source = np.array(sources[req])
             sink = np.array(sinks[req])
-            create_model(data, source, sink)
+            create_model(source, sink)
 
 
 def plot_poisson(distribution):
@@ -198,15 +222,15 @@ def make_data():
                 )
 
 
-def create_model(data, source, sink):
+def create_model(source, sink):
     if show_par:
-        show_parameters(data)
+        show_parameters()
     if show_var:
-        show_vars(data)
-    run_model(data, source, sink)
+        show_vars()
+    return run_model(source, sink)
 
 
-def run_model(data, source, sink):
+def run_model(source, sink):
     od = OptimizeData(data=data, source=source, sink=sink)
     od.model = gp.Model("Orchestrator")
     od.create_vars()
@@ -216,26 +240,31 @@ def run_model(data, source, sink):
     if show_results:
         print(GREEN, "\nContent:", source, " to User:", sink)
         od.result()
-    if show_path:
-        od.solution_path()
+    return od.solution_path(show_path)
 
-def calc_vars(data):
+
+def allocated_request(pd, path):
+    pd.insert_path(path)
+    return pd
+
+
+def calc_vars():
     hd = HandleData(data)
     hd.calc_vars()
 
 
-def show_parameters(data):
-    id = LogData(data)
-    id.show_parameters()
+def show_parameters():
+    ld = LogData(data)
+    ld.show_parameters()
 
 
-def show_vars(data):
+def show_vars():
     id = LogData(data)
     id.show_vars_matrix()
     id.show_vars_dict()
 
 
-def picture(data):
+def picture():
     g = Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -252,27 +281,7 @@ def picture(data):
 
 
 def convert_to_object(dataset):
-    global alpha
-    global beta
-    global num_bs
-    global num_ue
-    global num_files
-    global key_index_file
-    global key_index_bs
-    global key_index_ue
-    global e_bs_adj
-    global resources_file
-    global phi
-    global bandwidth_min_file
-    global resources_node
-    global rtt_base
-    global loc_BS_node
-    global loc_UE_node
-    global gama
-    global omega
-    global distance
-    global avg_rtt
-    global sd_rtt
+    global alpha,beta,     num_bs,     num_ue,     num_files,     key_index_file,     key_index_bs,     key_index_ue,     e_bs_adj,     resources_file,     phi,     bandwidth_min_file,     resources_node,     rtt_base,     loc_BS_node,     loc_UE_node,     gama,     omega,     distance,     avg_rtt,     sd_rtt
 
     alpha = dataset["alpha"]
     beta = float(dataset["beta"])

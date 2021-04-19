@@ -1,7 +1,6 @@
 {
-
-    "alpha" : 0.25,
-    "beta": 0.5,
+    "alpha" : 0.5,
+    "beta": 10.0,
 
     "phi" : [
         [1,0],
@@ -13,15 +12,15 @@
     "num_ue": 3,
     "num_files": 3,
 
-    "key_index_file": ["A", "B", "C"],
-    "key_index_bs": ["I", "J"],
-    "key_index_ue": ["U", "W", "Z"],
+    "key_index_file": ["F1", "F2", "F3"],
+    "key_index_bs": ["SBS1", "SBS2"],
+    "key_index_ue": ["UE1", "UE2", "UE3"],
 
     "resources_file": [100.0, 200.0, 200.0],
 
     "bandwidth_min_file": [10.0, 13.0, 5.0],
 
-    "resources_node": [300.0, 400.0],
+    "resources_node": [800.0, 800.0],
 
     "rtt_base" : [
         [10,10,10,10,10],
@@ -31,31 +30,24 @@
         [10,10,10,10,10]
     ],
 
-    "loc_UE_node" : [
-
-        ["U","3","4"],
-        ["W","7","5"],
-        ["Z","11","6"]
-    ],
-    "loc_BS_node" : [
-        ["I","5","5"],
-        ["J","9","5"]
+    "distance_ue": [
+        [2.23,6.08],
+        [2.0,2.0],
+        [6.08,2.23]
     ],
 
-    "omega" : [],
+    "distance_bs" : [],
 
     "gama" : [
         [1,0],
         [1,1],
         [0,1]
     ],
-    "distance" : 3.0,
+    "radius_sbs" : 3.0,
+    "radius_mbs" : 0,
 
-    "x_bs_adj": [
-        [0,1],
-        [1,0]
-    ],
-
-    "avg_rtt": 15.0,
-    "sd_rtt": 1.0
+    "e_bs_adj": [
+        [1,1],
+        [1,1]
+    ]
 }

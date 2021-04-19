@@ -7,8 +7,15 @@ def get_data(filename) -> object:
         return json.load(f)
 
 
-# def write_data(filename):
-#   with open(filename,"w",encoding='utf8') as f:
+def write_data(filename, obj):
+    with open(filename, encoding='utf8') as f:
+        data = json.load(f)
+
+    data.update(obj)
+
+    with open(filename, "w", encoding='utf8') as f:
+        json.dump(data, f)
+
 
 def euclidean_distance(x1: object, x2: object, y1: object, y2: object) -> object:
     a = numpy.array((x1, y1))

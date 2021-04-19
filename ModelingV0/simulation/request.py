@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from numpy import random
 import seaborn as sns
 from scipy import special
-
+import scipy.stats as stats
 
 class Request:
 
@@ -16,17 +16,6 @@ class Request:
         for i in range(size_bulk):
             file_rand = randrange(0, len(key_files) - 1)
             sources.append(key_files[file_rand])
-        return sources
-
-    @staticmethod
-    def generate_sources_zipf(num_alpha,size_bulks, num_events,key_files):
-        sources = list()
-        all_req = 0
-        for event in range(num_events):
-            all_req += size_bulks[event]
-
-        file_zipf = zipf.rvs(num_alpha, all_req)
-
         return sources
 
     @staticmethod
@@ -42,7 +31,20 @@ class Request:
         return poisson.rvs(mu=avg_size_bulk, size=num_events)
 
     @staticmethod
-    def generate_bulk_zip(num_alpha, requests):
-        z = np.random.zipf(num_alpha, requests)
-        #z = zipf.rvs(a,requests)
-        return z
+    def generate_sources_zip(num_alpha, requests, key_files):
+        x = np.arange(1, len(key_files) + 1)
+        weights = x ** (-num_alpha)
+        weights /= weights.sum()
+        bounded_zipf = stats.rv_discrete(name='bounded_zipf', values=(x, weights))
+        z = bounded_zipf.rvs(size=requests)
+
+        zipf = list()
+        for i in range(len(z)):
+            zipf.append(str(z[i]))
+
+        for i in range(len(zipf)):
+            filename = key_files[int(zipf[i])-1]
+            zipf[i] = str(filename)
+
+        return zipf
+

@@ -36,8 +36,6 @@ REVERSE = "\033[;7m"
 # This class manages and handles the data of an instance of the problem.
 class Data:
 
-    path = None
-
     # Input
     alpha = 0
     beta = 0
@@ -326,46 +324,21 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
 
-    # This method update data of the problem.
-    def update_data(self):
-        hd = HandleData(self)
-        self.__update_rtt_min()
-        self.__update_rtt()
-        self.__update_phi_node()
-        hd.calc_vars()
-
-    def __update_rtt_min(self):
-        for i in range(len(self.key_index_with_ue)):
-            for j in range(len(self.key_index_with_ue)):
-                if self.rtt_edge[i][j] <= self.rtt_base[i][j]:
-                    self.rtt_base[i][j] = self.rtt_edge[i][j]
-        self.rtt_base_to_dictionary()
-
-    def __update_rtt(self):
-        for i in range(len(self.key_index_with_ue)):
-            for j in range(len(self.key_index_with_ue)):
-                if self.rtt_edge[i][j] != NO_EDGE:
-                    self.rtt_edge[i][j] += randrange(10, 100)
-        self.rtt_edge_to_dictionary()
-
-    def __update_phi_node(self):
-        for i, file in enumerate(self.key_index_file):
-            for j, bs in enumerate(self.key_index_bs):
-                if file == self.path[CONTENT] and bs == self.path[STORE]:
-                    self.phi_node[i][j] += 1
-        self.phi_node_to_dictionary()
-
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
+
+    path = None
+
     __data = Data()
 
     def __init__(self, data):
-        self.data = data
+        self.__data = data
 
-    def calc_vars(self):
+    def calc_vars(self, is_update = False):
         self.__calc_omega_user_node()
-        self.__generate_rtt()
+        if not is_update:
+            self.__generate_rtt()
         self.__calc_expected_bandwidth_edge()
         self.__calc_current_bandwidth_edge()
         self.__calc_diff_bandwidth()
@@ -374,56 +347,56 @@ class HandleData:
         self.__calc_weight_file_edge()
 
     def __calc_omega_user_node(self):
-        for u in range(len(self.data.key_index_ue)):
-            for i in range(len(self.data.key_index_bs)):
-                if self.data.distance_ue[u][i] <= self.data.radius_sbs:
-                    self.data.omega_user_node[u][i] = 1
+        for u in range(len(self.__data.key_index_ue)):
+            for i in range(len(self.__data.key_index_bs)):
+                if self.__data.distance_ue[u][i] <= self.__data.radius_sbs:
+                    self.__data.omega_user_node[u][i] = 1
                 else:
-                    self.data.omega_user_node[u][i] = 0
-        self.data.omega_user_node_to_dictionary()
+                    self.__data.omega_user_node[u][i] = 0
+        self.__data.omega_user_node_to_dictionary()
 
     def __generate_rtt(self):
-        self.data.rtt_edge = [[0.0 for i in range(self.data.num_nodes)] for j in range(self.data.num_nodes)]
-        for i in range(len(self.data.key_index_with_ue)):
-            for j in range(len(self.data.key_index_with_ue)):
+        self.__data.rtt_edge = [[0.0 for i in range(self.__data.num_nodes)] for j in range(self.__data.num_nodes)]
+        for i in range(len(self.__data.key_index_with_ue)):
+            for j in range(len(self.__data.key_index_with_ue)):
                 if i == j:
-                    self.data.rtt_edge[i][j] = NO_EDGE
+                    self.__data.rtt_edge[i][j] = NO_EDGE
 
         self.__generate_rtt_bs_to_bs()
         self.__generate_rtt_bs_to_ue()
-        self.data.rtt_edge_to_dictionary()
+        self.__data.rtt_edge_to_dictionary()
 
     def __generate_rtt_bs_to_bs(self):
-        for i, tag_i in enumerate(self.data.key_index_bs):
-            for j, tag_j in enumerate(self.data.key_index_bs):
-                if self.data.e_bs_adj[i][j] == 1:
-                    self.data.rtt_edge[i][j] = self.data.rtt_base[i][j]
+        for i, tag_i in enumerate(self.__data.key_index_bs):
+            for j, tag_j in enumerate(self.__data.key_index_bs):
+                if self.__data.e_bs_adj[i][j] == 1:
+                    self.__data.rtt_edge[i][j] = self.__data.rtt_base[i][j]
                 else:
-                    self.data.rtt_edge[i][j] = NO_EDGE
+                    self.__data.rtt_edge[i][j] = NO_EDGE
 
     def __generate_rtt_bs_to_ue(self):
-        for i, tag_i in enumerate(self.data.key_index_with_ue):
-            for j, tag_j in enumerate(self.data.key_index_with_ue):
-                if self.data.rtt_edge[i][j] == 0.0 and self.data.rtt_edge[i][j] != NO_EDGE:
-                    rtt = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j, self.data.rtt_base[i][j])
-                    self.data.rtt_edge[i][j] = self.data.rtt_edge[j][i] = round(rtt, 2)
+        for i, tag_i in enumerate(self.__data.key_index_with_ue):
+            for j, tag_j in enumerate(self.__data.key_index_with_ue):
+                if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
+                    rtt = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j, self.__data.rtt_base[i][j])
+                    self.__data.rtt_edge[i][j] = self.__data.rtt_edge[j][i] = round(rtt, 2)
 
     def __calc_rtt_bs_to_ue(self, tag_i, i, tag_j, j, rtt_base):
         rtt = 0
-        if self.data.rtt_edge[i][j] == 0.0 and self.data.rtt_edge[i][j] != NO_EDGE:
+        if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
             if tag_i[:2] != tag_j[:2]:
                 if tag_i[:2] == 'UE':
                     ue = tag_i
                     bs = tag_j
-                    if self.data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_base * (1 + (self.data.distance_ue_dict[ue, bs] / self.data.radius_sbs))
+                    if self.__data.omega_user_node_dict[ue, bs] == 1:
+                        rtt = rtt_base * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
                     else:
                         rtt = NO_EDGE
                 if tag_j[:2] == 'UE':
                     ue = tag_j
                     bs = tag_i
-                    if self.data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_base * (1 + (self.data.distance_ue_dict[ue, bs] / self.data.radius_sbs))
+                    if self.__data.omega_user_node_dict[ue, bs] == 1:
+                        rtt = rtt_base * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
                     else:
                         rtt = NO_EDGE
             else:
@@ -432,87 +405,88 @@ class HandleData:
 
     def __calc_current_bandwidth_edge(self):
         rtt_ij = 0
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_with_ue)):
-                for j in range(len(self.data.key_index_with_ue)):
-                    size_f = self.data.resources_file[f]
-                    if self.data.rtt_edge is not None:
-                        rtt_ij = self.data.rtt_edge[i][j]
-                    self.data.bandwidth_current_edge[f][i][j] = round(size_f / rtt_ij, 2)
-        self.data.bandwidth_current_to_dictionary()
+        for f in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_with_ue)):
+                for j in range(len(self.__data.key_index_with_ue)):
+                    size_f = self.__data.resources_file[f]
+                    if self.__data.rtt_edge is not None:
+                        rtt_ij = self.__data.rtt_edge[i][j]
+                    self.__data.bandwidth_current_edge[f][i][j] = round(size_f / rtt_ij, 2)
+        self.__data.bandwidth_current_to_dictionary()
 
     def __calc_expected_bandwidth_edge(self):
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_with_ue)):
-                for j in range(len(self.data.key_index_with_ue)):
-                    size_f = self.data.resources_file[f]
-                    self.data.bandwidth_expected_edge[f][i][j] = round(size_f / self.data.rtt_base[i][j], 2)
-        self.data.bandwidth_expected_to_dictionary()
+        for f in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_with_ue)):
+                for j in range(len(self.__data.key_index_with_ue)):
+                    size_f = self.__data.resources_file[f]
+                    self.__data.bandwidth_expected_edge[f][i][j] = round(size_f / self.__data.rtt_base[i][j], 2)
+        self.__data.bandwidth_expected_to_dictionary()
 
     def __calc_diff_bandwidth(self):
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_with_ue)):
-                for j in range(len(self.data.key_index_with_ue)):
-                    self.data.bandwidth_diff_edge[f][i][j] = round(
-                        self.data.bandwidth_expected_edge[f][i][j] - self.data.bandwidth_current_edge[f][i][j], 2)
-        self.data.bandwidth_diff_to_dictionary()
+        for f in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_with_ue)):
+                for j in range(len(self.__data.key_index_with_ue)):
+                    self.__data.bandwidth_diff_edge[f][i][j] = round(
+                        self.__data.bandwidth_expected_edge[f][i][j] - self.__data.bandwidth_current_edge[f][i][j], 2)
+        self.__data.bandwidth_diff_to_dictionary()
 
     def __calc_current_resources_node(self):
-        for i in range(len(self.data.key_index_bs)):
+        for i in range(len(self.__data.key_index_bs)):
             file = 0
-            for f in range(len(self.data.key_index_file)):
-                if self.data.gama_file_node[f][i] == 1 and self.data.phi_node[f][i] != 0:
-                    file += self.data.gama_file_node[f][i] * self.data.resources_file[f] * self.data.phi_node[f][i]
-            self.data.current_resources_node[i] = file
-        self.data.current_resources_node_to_dictionary()
+            for f in range(len(self.__data.key_index_file)):
+                if self.__data.gama_file_node[f][i] == 1 and self.__data.phi_node[f][i] != 0:
+                    file += self.__data.gama_file_node[f][i] * self.__data.resources_file[f] * self.__data.phi_node[f][
+                        i]
+            self.__data.current_resources_node[i] = file
+        self.__data.current_resources_node_to_dictionary()
 
     def __calc_weight_file_edge(self):
         global NO_EDGE
-        for f, filename in enumerate(self.data.key_index_file):
-            for i, orig_name in enumerate(self.data.key_index_all):
-                for j, dest_name in enumerate(self.data.key_index_all):
+        for f, filename in enumerate(self.__data.key_index_file):
+            for i, orig_name in enumerate(self.__data.key_index_all):
+                for j, dest_name in enumerate(self.__data.key_index_all):
                     if i == j:  # Origem e destino não podem ser iguais.
-                        self.data.weight_file_edge[f][i][j] = NO_EDGE
+                        self.__data.weight_file_edge[f][i][j] = NO_EDGE
                     elif self.__is_ue(orig_name) or self.__is_content(orig_name):  # UE ou F
                         if self.__is_ue(orig_name):  # Não existe aresta saindo de UE.
-                            self.data.weight_file_edge[f][i][j] = NO_EDGE
+                            self.__data.weight_file_edge[f][i][j] = NO_EDGE
                         elif self.__is_content_to_bs(
                                 dest_name):  # O custo de F para BS é sempre 0. Se o Gama entre BS e F são iguais a 1.
                             if self.__is_caching(orig_name, dest_name):  # #BS não armazena F.
-                                self.data.weight_file_edge[f][i][j] = 0.0
+                                self.__data.weight_file_edge[f][i][j] = 0.0
                             else:  # BS armazena F.
-                                self.data.weight_file_edge[f][i][j] = NO_EDGE
+                                self.__data.weight_file_edge[f][i][j] = NO_EDGE
                         else:  # F para UE.
-                            self.data.weight_file_edge[f][i][j] = NO_EDGE  # Não existe aresta entre F e UE.
+                            self.__data.weight_file_edge[f][i][j] = NO_EDGE  # Não existe aresta entre F e UE.
                     else:  # BS
                         if self.__is_bs_to_content(dest_name):  # Não existe aresta com origem em BS para F.
-                            self.data.weight_file_edge[f][i][j] = NO_EDGE
+                            self.__data.weight_file_edge[f][i][j] = NO_EDGE
                         else:  # BS para UE
                             if self.__is_coverage(orig_name,
                                                   dest_name):  # Existe aresta de origem em BS para o destino UE ou origem em BS para o destino BS.
-                                rt_i = self.data.resources_node[i]
-                                rr_i = self.data.current_resources_node[i]
-                                bwc_fij = self.data.bandwidth_current_edge[f][i][j]
-                                bwe_fij = self.data.bandwidth_expected_edge[f][i][j]
+                                rt_i = self.__data.resources_node[i]
+                                rr_i = self.__data.current_resources_node[i]
+                                bwc_fij = self.__data.bandwidth_current_edge[f][i][j]
+                                bwe_fij = self.__data.bandwidth_expected_edge[f][i][j]
                                 weight = self.__calc_weight(rr_i, rt_i, bwc_fij, bwe_fij)
-                                self.data.weight_file_edge[f][i][j] = round(weight, 4)
+                                self.__data.weight_file_edge[f][i][j] = round(weight, 4)
                             else:  # Não existe aresta de origem em BS parao destino UE.
-                                self.data.weight_file_edge[f][i][j] = NO_EDGE
-        self.data.weight_to_dictionary()
+                                self.__data.weight_file_edge[f][i][j] = NO_EDGE
+        self.__data.weight_to_dictionary()
 
     def __calc_psi_edge(self):
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_all)):
-                for j in range(len(self.data.key_index_all)):
-                    if self.data.bandwidth_diff_edge[f][i][j] >= self.data.beta:
-                        self.data.psi_edge[f][i][j] = 1
-        self.data.psi_edge_to_dictionary()
+        for f in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_all)):
+                for j in range(len(self.__data.key_index_all)):
+                    if self.__data.bandwidth_diff_edge[f][i][j] >= self.__data.beta:
+                        self.__data.psi_edge[f][i][j] = 1
+        self.__data.psi_edge_to_dictionary()
 
     def __calc_weight(self, rr_i, rt_i, bwc_fij, bwe_fij):
-        return (self.data.alpha * (rr_i / rt_i)) + ((1 - self.data.alpha) * (bwc_fij / bwe_fij))
+        return (self.__data.alpha * (rr_i / rt_i)) + ((1 - self.__data.alpha) * (bwc_fij / bwe_fij))
 
     def __is_caching(self, file, bs):
-        return self.data.gama_file_node_dict[file, bs] == 1
+        return self.__data.gama_file_node_dict[file, bs] == 1
 
     def __is_coverage(self, orig, dest):
         if self.__is_ue(dest):
@@ -521,22 +495,50 @@ class HandleData:
             return self.__is_coverage_bs_to_bs(orig, dest)
 
     def __is_ue(self, name):
-        return name in self.data.key_index_ue
+        return name in self.__data.key_index_ue
 
     def __is_content(self, name):
-        return name in self.data.key_index_file
+        return name in self.__data.key_index_file
 
     def __is_content_to_bs(self, dest):
-        return dest in self.data.key_index_bs
+        return dest in self.__data.key_index_bs
 
     def __is_bs_to_content(self, dest):
-        return dest in self.data.key_index_file
+        return dest in self.__data.key_index_file
 
     def __is_coverage_bs_to_bs(self, orig, dest):
-        return self.data.e_bs_adj_dict[orig, dest] == 1
+        return self.__data.e_bs_adj_dict[orig, dest] == 1
 
     def __is_coverage_bs_to_ue(self, orig, dest):
-        return self.data.omega_user_node_dict[dest, orig] == 1
+        return self.__data.omega_user_node_dict[dest, orig] == 1
+
+    # This method update data of the problem.
+    def update_data(self):
+        self.__update_rtt_min()
+        self.__update_rtt()
+        self.__update_phi_node()
+        self.calc_vars(True)
+
+    def __update_rtt_min(self):
+        for i in range(len(self.__data.key_index_with_ue)):
+            for j in range(len(self.__data.key_index_with_ue)):
+                if self.__data.rtt_edge[i][j] <= self.__data.rtt_base[i][j]:
+                    self.__data.rtt_base[i][j] = self.__data.rtt_edge[i][j]
+        self.__data.rtt_base_to_dictionary()
+
+    def __update_rtt(self):
+        for i in range(len(self.__data.key_index_with_ue)):
+            for j in range(len(self.__data.key_index_with_ue)):
+                if self.__data.rtt_edge[i][j] != NO_EDGE:
+                    self.__data.rtt_edge[i][j] += randrange(10, 100)
+        self.__data.rtt_edge_to_dictionary()
+
+    def __update_phi_node(self):
+        for i, file in enumerate(self.__data.key_index_file):
+            for j, bs in enumerate(self.__data.key_index_bs):
+                if file == self.path[CONTENT] and bs == self.path[STORE]:
+                    self.__data.phi_node[i][j] += 1
+        self.__data.phi_node_to_dictionary()
 
 
 # This class execute the optimization model.
@@ -948,15 +950,26 @@ class PlotData:
         plt.plot(delays)
         plt.show()
 
-    def save_data(self,path):
+    def save_data(self, path):
         with pds.ExcelWriter(path) as writer:
             self.__delay.to_excel(writer, sheet_name='Delay')
             self.__set_path.to_excel(writer, sheet_name='Set Path')
 
-    # This class changes the type of trials.
+
+# This class changes the type of trials.
 class Type(Enum):
     SINGLE = 1
     POISSON = 2
     ZIPF = 3
     ALLTOALL = 4
     RANDOM = 5
+
+
+class Mobility(Enum):
+    IS_MOBILE = 1
+    NON_MOBILE = 0
+
+
+class Model(Enum):
+    ONLINE = 1
+    OFFLINE = 0

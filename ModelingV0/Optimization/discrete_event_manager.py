@@ -63,16 +63,17 @@ show_var = False
 show_par = False
 plot_distribution = False
 save_data = False
+show_all_paths = False
 type = Type.ZIPF
 path_output = '..\output\instance_2.xlsx'
 
 def main():
     #########################################################################################################################
-    path = r'..\dataset\instance_1.json'  # args[0]
+    path = r'..\dataset\instance_2.json'  # args[0]
 
     # random and distribution.
-    avg_qtd_bulk = 10
-    num_events = 100
+    avg_qtd_bulk = 2
+    num_events = 10
     num_alpha = 0.56
 
     # single.
@@ -112,18 +113,22 @@ def discrete_events(type, source=None, sink=None, avg_qtd_bulk=0, num_events=0, 
 
 def single(source, sink):
     pd = PlotData(data)
+    handler = HandleData(data)
+
     path = create_model(source, sink)
-    data.path = path
-    data.update_data()
+    handler.path = path
+    handler.update_data()
     allocated_request(pd, path)
-    pd.show_paths()
+    if show_all_paths:
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
-    pd.plot()
+    #pd.plot()
 
 
 def bulk_distribution_poisson(avg_size_bulk, num_events):
     pd = PlotData(data)
+    handler = HandleData(data)
 
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
 
@@ -141,11 +146,12 @@ def bulk_distribution_poisson(avg_size_bulk, num_events):
             source = [source]
             sink = [sink]
             path = create_model(source, sink)
-            data.path = path
-            data.update_data()
-            pd = allocated_request(pd, path)
+            handler.path = path
+            handler.update_data()
+            allocated_request(pd, path)
 
-    pd.show_paths()
+    if show_all_paths:
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
@@ -153,6 +159,7 @@ def bulk_distribution_poisson(avg_size_bulk, num_events):
 
 def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     pd = PlotData(data)
+    handler = HandleData(data)
     init = 0
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_sources_zip(num_alpha, sum_requests(bulks), key_index_file)
@@ -172,11 +179,12 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             source = [source]
             sink = [sink]
             path = create_model(source, sink)
-            data.path = path
-            data.update_data()
-            pd = allocated_request(pd, path)
+            handler.path = path
+            handler.update_data()
+            allocated_request(pd, path)
         init = qtd_req
-    pd.show_paths()
+    if show_all_paths:
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     #pd.plot()
@@ -191,17 +199,19 @@ def get_req(zipf, qtd_previous, qtd):
 
 def all_to_all():
     pd = PlotData(data)
+    handler = HandleData(data)
 
     for s in tqdm.tqdm(key_index_file):
         for t in key_index_ue:
             source = np.array([s])
             sink = np.array([t])
             path = create_model(source, sink)
-            data.path = path
-            data.update_data()
+            handler.path = path
+            handler.update_data()
             allocated_request(pd, path)
 
-    pd.show_paths()
+    if show_all_paths:
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
@@ -209,6 +219,8 @@ def all_to_all():
 
 def random_request(qtd_bulk, num_events):
     pd = PlotData(data)
+    handler = HandleData(data)
+
     for num_blocks in range(num_events):
         sources = r.Request.generate_sources_random(qtd_bulk, num_events)
         sinks = r.Request.generate_sinks_random(qtd_bulk, num_events)
@@ -216,11 +228,12 @@ def random_request(qtd_bulk, num_events):
             source = np.array(sources[req])
             sink = np.array(sinks[req])
             path = create_model(source, sink)
-            data.path = path
-            data.update_data()
+            handler.path = path
+            handler.update_data()
             allocated_request(pd, path)
 
-    pd.show_paths()
+    if show_all_paths:
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()

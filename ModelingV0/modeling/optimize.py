@@ -913,16 +913,15 @@ class PlotData:
     __data = Data()
     __set_path = None
     __delay = None
+    __events_count = 0
 
     def __init__(self, data):
         self.__data = data
         self.__set_path = pds.DataFrame(columns=['Path', 'Delay'])
-        self.__delay = pds.DataFrame(columns=['Delay'])
+        self.__delay = pds.DataFrame(columns=['Event','Delay'])
 
-    def update_data(self, data):
-        self.__data = data
-
-    def insert_path(self, path):
+    def insert_path(self, path, event):
+        self.__events_count = event
         self.__set_path = self.__set_path.append({'Path': path.copy(), 'Delay': self.__sum_rtt(path)},
                                                  ignore_index=True)
         self.__upload_delay()
@@ -940,7 +939,7 @@ class PlotData:
 
     def __upload_delay(self):
         for i, row in self.__set_path.iterrows():
-            self.__delay = self.__delay.append({'Id': i, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
+            self.__delay = self.__delay.append({'Id': i ,'Event': self.__events_count, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
             self.__set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
 
     def plot(self):
@@ -953,7 +952,7 @@ class PlotData:
     def save_data(self, path):
         with pds.ExcelWriter(path) as writer:
             self.__delay.to_excel(writer, sheet_name='Delay')
-            self.__set_path.to_excel(writer, sheet_name='Set Path')
+            self.__set_path.to_excel(writer, sheet_name='Request')
 
 
 # This class changes the type of trials.

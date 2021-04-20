@@ -62,7 +62,7 @@ show_path = False
 show_var = False
 show_par = False
 plot_distribution = False
-save_data = False
+save_data = True
 show_all_paths = False
 type = Type.ZIPF
 path_output = '..\output\instance_2.xlsx'
@@ -181,7 +181,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             path = create_model(source, sink)
             handler.path = path
             handler.update_data()
-            allocated_request(pd, path)
+            allocated_request(pd, path, event)
         init = qtd_req
     if show_all_paths:
         pd.show_paths()
@@ -296,9 +296,8 @@ def run_model(source, sink):
     return od.solution_path(show_path)
 
 
-def allocated_request(pd, path) -> object:
-    pd.insert_path(path)
-    return pd
+def allocated_request(pd, path,event):
+    pd.insert_path(path,event)
 
 
 def calc_vars():

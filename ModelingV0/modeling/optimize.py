@@ -1,5 +1,7 @@
 import gurobipy as gp
 import statistics as s
+import statistics
+import random
 
 import matplotlib.pyplot as plt
 
@@ -23,6 +25,9 @@ NEXT_HOP = 1
 
 CONTENT = 0
 STORE = 1
+
+INCREASE = 1
+DECREASE = 0
 
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
@@ -527,10 +532,16 @@ class HandleData:
         self.__data.rtt_base_to_dictionary()
 
     def __update_rtt(self):
+
         for i in range(len(self.__data.key_index_with_ue)):
             for j in range(len(self.__data.key_index_with_ue)):
                 if self.__data.rtt_edge[i][j] != NO_EDGE:
-                    self.__data.rtt_edge[i][j] += randrange(10, 100)
+                    if random.uniform(0, 1) == INCREASE:
+                        print("increase")
+                        self.__data.rtt_edge[i][j] += randrange(1, 10)
+                    if random.uniform(0, 1) == DECREASE:
+                        print("decrease")
+                        self.__data.rtt_edge[i][j] =  abs(self.__data.rtt_edge[i][j] - randrange(1, 10))
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
@@ -943,11 +954,24 @@ class PlotData:
             self.__set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
 
     def plot(self):
-        delays = list()
-        for i, row in self.__set_path.iterrows():
-            delays.append(row['Delay'])
-        plt.plot(delays)
+        plt.title('Average delay per time')
+        plt.ylabel('Average delay')
+        plt.xlabel('Time')
+        plt.plot(self.__average_delay_per_requisitions())
         plt.show()
+
+    def __average_delay_per_requisitions(self):
+        avg_delay_event = list()
+        for event in range(self.__events_count):
+            select_event = self.__delay.loc[self.__delay['Event'] == event]
+            avg_delay_event.append(self.__calc_avg(select_event))
+        return avg_delay_event
+
+    def __calc_avg(self,select_event):
+        all_delay_event = list()
+        for i, row in select_event.iterrows():
+            all_delay_event.append(row['Delay'])
+        return np.mean(all_delay_event)
 
     def save_data(self, path):
         with pds.ExcelWriter(path) as writer:

@@ -7,7 +7,7 @@
 # pip install tqdm
 # pip install scipy
 # pip install seaborn
-#pip install openpyxl
+# pip install openpyxl
 
 
 import time
@@ -45,7 +45,7 @@ bandwidth_min_file = list()
 
 resources_node = list()
 
-rtt_base = list()
+rtt_min = list()
 
 distance_ue = list()
 distance_bs = list
@@ -57,22 +57,24 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = False
-show_path = False
+show_results = True
+show_path = True
 show_var = False
 show_par = False
-plot_distribution = False
+plot_distribution = True
+plot_data = True
 save_data = True
 show_all_paths = False
 type = Type.ZIPF
 path_output = '..\output\instance_2.xlsx'
+
 
 def main():
     #########################################################################################################################
     path = r'..\dataset\instance_2.json'  # args[0]
 
     # random and distribution.
-    avg_qtd_bulk = 2
+    avg_qtd_bulk = 5
     num_events = 10
     num_alpha = 0.56
 
@@ -123,7 +125,7 @@ def single(source, sink):
         pd.show_paths()
     if save_data:
         pd.save_data(path_output)
-    #pd.plot()
+    # pd.plot()
 
 
 def bulk_distribution_poisson(avg_size_bulk, num_events):
@@ -148,7 +150,7 @@ def bulk_distribution_poisson(avg_size_bulk, num_events):
             path = create_model(source, sink)
             handler.path = path
             handler.update_data()
-            allocated_request(pd, path)
+            allocated_request(pd, path, event)
 
     if show_all_paths:
         pd.show_paths()
@@ -187,7 +189,8 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         pd.show_paths()
     if save_data:
         pd.save_data(path_output)
-    #pd.plot()
+    if plot_data:
+        pd.plot()
 
 
 def get_req(zipf, qtd_previous, qtd):
@@ -221,7 +224,7 @@ def random_request(qtd_bulk, num_events):
     pd = PlotData(data)
     handler = HandleData(data)
 
-    for num_blocks in range(num_events):
+    for event in range(num_events):
         sources = r.Request.generate_sources_random(qtd_bulk, num_events)
         sinks = r.Request.generate_sinks_random(qtd_bulk, num_events)
         for req in tqdm.tqdm(range(qtd_bulk)):
@@ -230,7 +233,7 @@ def random_request(qtd_bulk, num_events):
             path = create_model(source, sink)
             handler.path = path
             handler.update_data()
-            allocated_request(pd, path)
+            allocated_request(pd, path, event)
 
     if show_all_paths:
         pd.show_paths()
@@ -255,22 +258,22 @@ def plot_poisson(distribution):
 
 
 def plot_zipf(distribution, alpha):
-    plt.hist(distribution, bins=np.arange(1, num_files + 1),density=True)
-    #plt.hist(distribution[distribution < 10], 10, density=True)
-    #x = np.arange(1., 10.)
-    #y = x ** (-alpha) / special.zetac(alpha)
-    #plt.yscale('log')
+    plt.hist(distribution, bins=np.arange(1, num_files + 1), density=True)
+    # plt.hist(distribution[distribution < 10], 10, density=True)
+    # x = np.arange(1., 10.)
+    # y = x ** (-alpha) / special.zetac(alpha)
+    # plt.yscale('log')
     plt.title('Zipf')
     plt.xlabel('rank')
     plt.ylabel('frequency')
-    #plt.plot(x, y / max(y), linewidth=2, color='r')
+    # plt.plot(x, y / max(y), linewidth=2, color='r')
     plt.show()
 
 
 def make_data():
     return Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj,
                 resources_file, phi,
-                bandwidth_min_file, resources_node, rtt_base, radius_mbs, radius_sbs,
+                bandwidth_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
@@ -296,8 +299,8 @@ def run_model(source, sink):
     return od.solution_path(show_path)
 
 
-def allocated_request(pd, path,event):
-    pd.insert_path(path,event)
+def allocated_request(pd, path, event=1):
+    pd.insert_path(path, event)
 
 
 def calc_vars():
@@ -336,7 +339,7 @@ def picture():
 
 
 def convert_to_object(dataset: object):
-    global alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, phi, bandwidth_min_file, resources_node, rtt_base, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, phi, bandwidth_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     alpha = dataset['alpha']
     beta = float(dataset["beta"])
@@ -361,7 +364,7 @@ def convert_to_object(dataset: object):
 
     resources_node = dataset["resources_node"]
 
-    rtt_base = dataset["rtt_base"]
+    rtt_min = dataset["rtt_min"]
 
     if num_bs is not None and num_ue is not None and num_files is not None:
         gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]

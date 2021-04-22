@@ -40,7 +40,6 @@ REVERSE = "\033[;7m"
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
-
     # Input
     alpha = 0
     beta = 0
@@ -332,7 +331,6 @@ class Data:
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
-
     path = None
 
     __data = Data()
@@ -340,7 +338,7 @@ class HandleData:
     def __init__(self, data):
         self.__data = data
 
-    def calc_vars(self, is_update = False):
+    def calc_vars(self, is_update=False):
         self.__calc_omega_user_node()
         if not is_update:
             self.__generate_rtt()
@@ -416,7 +414,11 @@ class HandleData:
                     size_f = self.__data.resources_file[f]
                     if self.__data.rtt_edge is not None:
                         rtt_ij = self.__data.rtt_edge[i][j]
-                    self.__data.bandwidth_current_edge[f][i][j] = round(size_f / rtt_ij, 2)
+                    if rtt_ij != NO_EDGE:
+                        self.__data.bandwidth_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
+                    else:
+                        self.__data.bandwidth_current_edge[f][i][j] = NO_EDGE
+
         self.__data.bandwidth_current_to_dictionary()
 
     def __calc_expected_bandwidth_edge(self):
@@ -424,7 +426,10 @@ class HandleData:
             for i in range(len(self.__data.key_index_with_ue)):
                 for j in range(len(self.__data.key_index_with_ue)):
                     size_f = self.__data.resources_file[f]
-                    self.__data.bandwidth_expected_edge[f][i][j] = round(size_f / self.__data.rtt_base[i][j], 2)
+                    if self.__data.rtt_base[i][j] != NO_EDGE:
+                        self.__data.bandwidth_expected_edge[f][i][j] = round(size_f // self.__data.rtt_base[i][j], 2)
+                    else:
+                        self.__data.bandwidth_expected_edge[f][i][j] = NO_EDGE
         self.__data.bandwidth_expected_to_dictionary()
 
     def __calc_diff_bandwidth(self):
@@ -541,7 +546,7 @@ class HandleData:
                         self.__data.rtt_edge[i][j] += randrange(1, 10)
                     if random.uniform(0, 1) == DECREASE:
                         print("decrease")
-                        self.__data.rtt_edge[i][j] =  abs(self.__data.rtt_edge[i][j] - randrange(1, 10))
+                        self.__data.rtt_edge[i][j] = abs(self.__data.rtt_edge[i][j] - randrange(1, 10))
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
@@ -929,7 +934,7 @@ class PlotData:
     def __init__(self, data):
         self.__data = data
         self.__set_path = pds.DataFrame(columns=['Path', 'Delay'])
-        self.__delay = pds.DataFrame(columns=['Event','Delay'])
+        self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
 
     def insert_path(self, path, event):
         self.__events_count = event
@@ -940,7 +945,8 @@ class PlotData:
     def __sum_rtt(self, path):
         rtt = 0
         for i, j in zip(path[1:], path[2:]):
-            rtt += self.__data.rtt_edge_dict[i, j]
+            if self.__data.rtt_edge_dict[i, j] != NO_EDGE:
+                rtt += self.__data.rtt_edge_dict[i, j]
         return rtt
 
     def show_paths(self):
@@ -950,7 +956,8 @@ class PlotData:
 
     def __upload_delay(self):
         for i, row in self.__set_path.iterrows():
-            self.__delay = self.__delay.append({'Id': i ,'Event': self.__events_count, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
+            self.__delay = self.__delay.append(
+                {'Id': i, 'Event': self.__events_count, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
             self.__set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
 
     def plot(self):
@@ -967,7 +974,7 @@ class PlotData:
             avg_delay_event.append(self.__calc_avg(select_event))
         return avg_delay_event
 
-    def __calc_avg(self,select_event):
+    def __calc_avg(self, select_event):
         all_delay_event = list()
         for i, row in select_event.iterrows():
             all_delay_event.append(row['Delay'])

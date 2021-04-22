@@ -57,24 +57,24 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = True
-show_path = True
+show_results = False
+show_path = False
 show_var = False
 show_par = False
-plot_distribution = True
-plot_data = True
-save_data = True
+plot_distribution = False
+plot_data = False
+save_data = False
 show_all_paths = False
-type = Type.ZIPF
-path_output = '..\output\instance_2.xlsx'
+type = Type.SINGLE
+path_output = r'..\output\instance_3.xlsx'
 
 
 def main():
     #########################################################################################################################
-    path = r'..\dataset\instance_2.json'  # args[0]
+    path = r'..\dataset\instance_3.json'  # args[0]
 
     # random and distribution.
-    avg_qtd_bulk = 5
+    avg_qtd_bulk = 2
     num_events = 10
     num_alpha = 0.56
 
@@ -83,19 +83,23 @@ def main():
     sink = np.array(['UE3'])
 
     #########################################################################################################################
-
+    start_time = time.time()
     dataset = u.get_data(path)
     convert_to_object(dataset)
+    print(CYAN, "READ FILE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
+    start_time = time.time()
     global data
     data = make_data()
     calc_vars()
+    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+
     start_time = time.time()
     discrete_events(type, source=source, sink=sink, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
     print(CYAN, "FULL TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
-    picture()
+    #picture()
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -182,7 +186,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             sink = [sink]
             path = create_model(source, sink)
             handler.path = path
+            start_time = time.time()
             handler.update_data()
+            print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
             allocated_request(pd, path, event)
         init = qtd_req
     if show_all_paths:
@@ -287,6 +293,7 @@ def create_model(source, sink):
 
 
 def run_model(source, sink):
+    start_time = time.time()
     od = OptimizeData(data=data, source=source, sink=sink)
     od.model = gp.Model("Orchestrator")
     od.create_vars()
@@ -296,6 +303,7 @@ def run_model(source, sink):
     if show_results:
         print(GREEN, "\nContent:", source, " to User:", sink)
         od.result()
+    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
     return od.solution_path(show_path)
 
 
@@ -342,7 +350,7 @@ def convert_to_object(dataset: object):
     global alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, phi, bandwidth_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     alpha = dataset['alpha']
-    beta = float(dataset["beta"])
+    beta = dataset["beta"]
 
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])

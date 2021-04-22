@@ -96,10 +96,10 @@ def main():
     alpha = 0.05
     beta = 100
     num_mbs = 2
-    num_sbs_per_mbs = 5
+    num_sbs_per_mbs = 3
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
-    num_files = 10
-    num_ue = 10
+    num_files = 100
+    num_ue = 300
     num_nodes = num_bs + num_ue
     size_file_max = 400
     size_file_min = 100
@@ -156,7 +156,6 @@ def generate_distance_ue():
     distance_ue = [[0.0 for i in range(num_bs)] for u in range(num_ue)]
     max_ran = ((2 * radius_mbs) * num_mbs) - INTERFERENCE
 
-    print(max_ran)
     for u in range(num_ue):
         for i in range(num_bs):
             distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
@@ -167,6 +166,7 @@ def generate_distance_ue():
             print(distance_ue[u][i], end=" ")
         print()
     print()
+
     # basear no numero de macros e definir como distÂncia maxima os extremos da rede acesso com base nos raios das mbs
     # definir distancias fixas para sbs e mbs
 
@@ -264,9 +264,15 @@ def generate_rtt_min():
             if tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS':
                 rtt_min[i][j] = rtt_min_mbs_mbs
                 rtt_min[j][i] = rtt_min_mbs_mbs
+            if (tag_i[:3] == 'MBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'MBS') :
+                rtt_min[i][j] = NO_EDGE
+                rtt_min[j][i] = NO_EDGE
             if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
                 rtt_min[i][j] = rtt_min_sbs_mbs
                 rtt_min[j][i] = rtt_min_sbs_mbs
+            if tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS':
+                rtt_min[i][j] = NO_EDGE
+                rtt_min[j][i] = NO_EDGE
             if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'SBS'):
                 rtt_min[i][j] = rtt_min_sbs_ue
                 rtt_min[j][i] = rtt_min_sbs_ue
@@ -326,15 +332,16 @@ def generate_sbs(num_mbs, num_sbs):
 
 def generate_json(path):
     data = {"alpha": alpha,
-            "beta'": beta,
-            "num_bs'": num_bs,
-            "num_ue'": num_ue,
-            "num_files'": num_files,
-            "key_index_file'": key_index_file,
-            "key_index_bs'": key_index_bs,
-            "key_index_ue'": key_index_ue,
-            "e_bs_adj'": e_bs_adj,
-            "resources_file'": resources_file,
+            "beta": beta,
+            "num_bs": num_bs,
+            "num_ue": num_ue,
+            "num_files": num_files,
+            "key_index_file": key_index_file,
+            "key_index_bs": key_index_bs,
+            "key_index_ue": key_index_ue,
+            "bandwidth_min_file": bandwidth_min_file,
+            "e_bs_adj": e_bs_adj,
+            "resources_file": resources_file,
             "phi": phi,
             "resources_node": resources_node,
             "rtt_min": rtt_min,

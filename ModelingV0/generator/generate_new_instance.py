@@ -47,6 +47,7 @@ DISTANCE_SBS_MBS = [88.02,
                     216.1
                     ]
 
+mobility_rate =0
 alpha = 0
 beta = 0
 
@@ -64,8 +65,9 @@ key_index_bs_ue = list()
 e_bs_adj = list()
 
 resources_file = list()
+size_file = list()
 phi = list()
-bandwidth_min_file = list()
+throughput_min_file = list()
 
 resources_node = list()
 
@@ -83,6 +85,8 @@ resources_node_min = 0
 
 size_file_max = 0
 size_file_min = 0
+resources_file_max = 0
+resources_file_min = 0
 
 rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
@@ -91,18 +95,21 @@ rtt_min_sbs_ue = 0
 
 def main():
     path = r"..\dataset\instance_3.json"  # args[0]
-    global alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, phi, bandwidth_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max
+    global mobility_rate,alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file,size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max,resources_file_min,resources_file_max
 
+    mobility_rate = 10
     alpha = 0.05
     beta = 100
     num_mbs = 2
     num_sbs_per_mbs = 3
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
-    num_files = 100
-    num_ue = 300
+    num_files = 10
+    num_ue = 10
     num_nodes = num_bs + num_ue
     size_file_max = 400
     size_file_min = 100
+    resources_file_max = 400
+    resources_file_min = 100
 
     resources_node_max = 2048
     resources_node_min = 1024
@@ -117,22 +124,23 @@ def main():
     generate_e_bs_adj()
     generate_distance_ue()
     generate_resources_file()
+    generate_size_file()
     generate_resources_node()
     generate_gama()
     generate_phi()
-    generate_bandwidth_min()
+    generate_throughput_min()
 
     generate_json(path)
 
-def generate_bandwidth_min():
-    global bandwidth_min_file
-    bandwidth_min_file = [0 for f in range(num_files)]
+def generate_throughput_min():
+    global throughput_min_file
+    throughput_min_file = [0 for f in range(num_files)]
     for f in range(num_files):
-        bandwidth_min_file[f] = 25
+        throughput_min_file[f] = 25
 
-    print("BANDWIDTH MÍNIMA DO CONTEÚDO.")
+    print("throughput MÍNIMA DO CONTEÚDO.")
     for f in range(num_files):
-        print(bandwidth_min_file[f], end=" ")
+        print(throughput_min_file[f], end=" ")
     print()
 
 def generate_gama():
@@ -247,13 +255,23 @@ def generate_resources_file():
     global resources_file
     resources_file = [0 for f in range(num_files)]
     for f in range(num_files):
-        resources_file[f] = np.random.randint(size_file_min, size_file_max)
+        resources_file[f] = np.random.randint(resources_file_min, resources_file_max)
 
-    print("TAMANHO DO CONTEÚDO.")
+    print("RECURSOS DO CONTEÚDO.")
     for f in range(num_files):
         print(resources_file[f], end=" ")
     print()
 
+def generate_size_file():
+    global size_file
+    size_file = [0 for f in range(num_files)]
+    for f in range(num_files):
+        size_file[f] = np.random.randint(size_file_min, size_file_max)
+
+    print("TAMANHO DO CONTEÚDO.")
+    for f in range(num_files):
+        print(size_file[f], end=" ")
+    print()
 
 def generate_rtt_min():
     global rtt_min
@@ -331,7 +349,8 @@ def generate_sbs(num_mbs, num_sbs):
 
 
 def generate_json(path):
-    data = {"alpha": alpha,
+    data = {"mobility_rate":mobility_rate,
+            "alpha": alpha,
             "beta": beta,
             "num_bs": num_bs,
             "num_ue": num_ue,
@@ -339,9 +358,10 @@ def generate_json(path):
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,
-            "bandwidth_min_file": bandwidth_min_file,
+            "throughput_min_file": throughput_min_file,
             "e_bs_adj": e_bs_adj,
             "resources_file": resources_file,
+            "size_file": size_file,
             "phi": phi,
             "resources_node": resources_node,
             "rtt_min": rtt_min,

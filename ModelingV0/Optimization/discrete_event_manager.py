@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 from utils import utils as u
 from simulation import request as r
 
+mobility_rate =0
+
 alpha = 0
 beta = 0
 
@@ -40,8 +42,9 @@ key_index_ue = list()
 e_bs_adj = list()
 
 resources_file = list()
+size_file = list()
 phi = list()
-bandwidth_min_file = list()
+throughput_min_file = list()
 
 resources_node = list()
 
@@ -57,16 +60,17 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = False
-show_path = False
+show_results = True
+show_path = True
 show_var = False
 show_par = False
 plot_distribution = False
 plot_data = False
 save_data = False
 show_all_paths = False
-type = Type.SINGLE
-path_output = r'..\output\instance_3.xlsx'
+type = Type.ZIPF
+mobility = Mobility.IS_MOBILE
+path_output = r'..\output\instance_2.xlsx'
 
 
 def main():
@@ -79,8 +83,8 @@ def main():
     num_alpha = 0.56
 
     # single.
-    source = np.array(['F1'])
-    sink = np.array(['UE3'])
+    source = np.array(['F5'])
+    sink = np.array(['UE11'])
 
     #########################################################################################################################
     start_time = time.time()
@@ -277,9 +281,9 @@ def plot_zipf(distribution, alpha):
 
 
 def make_data():
-    return Data(alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj,
-                resources_file, phi,
-                bandwidth_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
+    return Data(mobility,mobility_rate,alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj,
+                resources_file,size_file, phi,
+                throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
@@ -347,7 +351,9 @@ def picture():
 
 
 def convert_to_object(dataset: object):
-    global alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, phi, bandwidth_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+
+    mobility_rate = dataset["mobility_rate"]
 
     alpha = dataset['alpha']
     beta = dataset["beta"]
@@ -363,12 +369,13 @@ def convert_to_object(dataset: object):
     e_bs_adj = dataset["e_bs_adj"]
 
     resources_file = dataset["resources_file"]
+    size_file = dataset["size_file"]
 
     if num_bs is not None and num_files is not None:
         phi = [[0 for i in range(num_bs)] for f in range(num_files)]
         phi = dataset["phi"]
 
-    bandwidth_min_file = dataset["bandwidth_min_file"]
+    throughput_min_file = dataset["throughput_min_file"]
 
     resources_node = dataset["resources_node"]
 

@@ -32,6 +32,7 @@ class Request:
 
     @staticmethod
     def generate_sources_zip(num_alpha, requests, key_files):
+        # 1/n**a
         x = np.arange(1, len(key_files) + 1)
         weights = x ** (-num_alpha)
         weights /= weights.sum()

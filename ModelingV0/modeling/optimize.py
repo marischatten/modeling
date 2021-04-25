@@ -29,6 +29,9 @@ STORE = 1
 INCREASE = 1
 DECREASE = 0
 
+MOBILITY_RATE = 10
+
+
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
@@ -38,8 +41,33 @@ BOLD = "\033[;1m"
 REVERSE = "\033[;7m"
 
 
+# This class changes the type of trials.
+class Type(Enum):
+    SINGLE = 1
+    POISSON = 2
+    ZIPF = 3
+    ALLTOALL = 4
+    RANDOM = 5
+
+
+class Mobility(Enum):
+    IS_MOBILE = 1
+    NON_MOBILE = 0
+
+
+class Model(Enum):
+    ONLINE = 1
+    OFFLINE = 0
+
+
 # This class manages and handles the data of an instance of the problem.
 class Data:
+
+    sources = list()
+    sinks = list()
+
+    mobility = Mobility
+    mobility_rate = 0
     # Input
     alpha = 0
     beta = 0
@@ -66,17 +94,17 @@ class Data:
 
     # fr \in R
     resources_file = list()
-
+    size_file = list()
     # phi_node \in R
     phi_node = list()
 
     # bwf \in R
-    bandwidth_min_file = list()
+    throughput_min_file = list()
 
     # rt_i \in R
     resources_node = list()
 
-    rtt_base = 0
+    rtt_min = 0
 
     # rtt_ij \in R
     rtt_edge = None
@@ -99,13 +127,13 @@ class Data:
     omega_user_node = None
 
     # bwc_ij \in R
-    bandwidth_current_edge = None
+    throughput_current_edge = None
 
     # bwe_ij \in R
-    bandwidth_expected_edge = None
+    throughput_expected_edge = None
 
     # bwdiff_fij \in R
-    bandwidth_diff_edge = None
+    throughput_diff_edge = None
 
     # rr_i \in R
     current_resources_node = None
@@ -114,27 +142,30 @@ class Data:
     weight_file_edge = None
 
     weight_dict = dict()
-    bandwidth_current_edge_dict = dict()
-    bandwidth_expected_edge_dict = dict()
-    bandwidth_diff_edge_dict = dict()
+    throughput_current_edge_dict = dict()
+    throughput_expected_edge_dict = dict()
+    throughput_diff_edge_dict = dict()
     resources_file_dict = dict()
+    size_file_dict = dict()
     resources_node_dict = dict()
     current_resources_node_dict = dict()
     phi_node_dict = dict()
-    bandwidth_min_file_dict = dict()
+    throughput_min_file_dict = dict()
     gama_file_node_dict = dict()
     omega_user_node_dict = dict()
     e_bs_adj_dict = dict()
     psi_edge_dict = dict()
     rtt_edge_dict = dict()
-    rtt_base_dict = dict()
+    rtt_min_dict = dict()
     distance_ue_dict = dict()
 
-    def __init__(self, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key_f=None, key_i=None, key_u=None,
+    def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 rf=None, phi_node=None, bwf=None, rt_i=None, rtt_base=None, radius_mbs=0, radius_sbs=0,
+                 rf=None, sf=None, phi_node=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
+        self.mobility = mobility
+        self.mobility_rate = mr
         self.alpha = alpha
         self.beta = beta
 
@@ -155,18 +186,19 @@ class Data:
         self.e_bs_adj = e_bs_adj
 
         self.resources_file = rf
+        self.size_file = sf
         self.phi_node = phi_node
-        self.bandwidth_min_file = bwf
+        self.throughput_min_file = bwf
         self.resources_node = rt_i
 
-        self.rtt_base = rtt_base
+        self.rtt_min = rtt_min
         self.radius_mbs = radius_mbs
         self.radius_sbs = radius_sbs
         self.distance_ue = dis_ue
         self.distance_bs = dis_bs
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
-            self.bandwidth_current_edge = [
+            self.throughput_current_edge = [
                 [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
                  range(self.num_nodes + self.num_files)]
                 for f
@@ -174,14 +206,14 @@ class Data:
                 range(self.num_files)]
             self.current_resources_node = [0 for i in range(self.num_nodes)]
 
-            self.bandwidth_expected_edge = [
+            self.throughput_expected_edge = [
                 [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
                  range(self.num_nodes + self.num_files)]
                 for f
                 in
                 range(self.num_files)]
 
-            self.bandwidth_diff_edge = [
+            self.throughput_diff_edge = [
                 [[0.0 for i in range(self.num_nodes + self.num_files)] for j in range(self.num_nodes + self.num_files)]
                 for f in
                 range(self.num_files)]
@@ -202,12 +234,13 @@ class Data:
 
             self.weight_to_dictionary()
             self.__resources_file_to_dictionary()
+            self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
             self.phi_node_to_dictionary()
-            self.__bandwidth_min_file_to_dictionary()
+            self.__throughput_min_file_to_dictionary()
             self.__gama_file_node_to_dictionary()
             self.__e_bs_adj_to_dictionary()
-            self.rtt_base_to_dictionary()
+            self.rtt_min_to_dictionary()
             self.distance_ue_to_dictionary()
 
     # PARAMETERS TO DICTIONARY
@@ -223,10 +256,15 @@ class Data:
             tag = self.key_index_file[f]
             self.resources_file_dict[tag] = self.resources_file[f]
 
-    def __bandwidth_min_file_to_dictionary(self):
+    def __size_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
-            self.bandwidth_min_file_dict[tag] = self.bandwidth_min_file[f]
+            self.size_file_dict[tag] = self.size_file[f]
+
+    def __throughput_min_file_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            tag = self.key_index_file[f]
+            self.throughput_min_file_dict[tag] = self.throughput_min_file[f]
 
     def __resources_node_to_dictionary(self):
         for i in range(len(self.key_index_bs)):
@@ -254,12 +292,12 @@ class Data:
                 tag_dest = self.key_index_with_ue[j]
                 self.rtt_edge_dict[tag_orig, tag_dest] = self.rtt_edge[i][j]
 
-    def rtt_base_to_dictionary(self):
+    def rtt_min_to_dictionary(self):
         for i in range(len(self.key_index_with_ue)):
             for j in range(len(self.key_index_with_ue)):
                 tag_orig = self.key_index_with_ue[i]
                 tag_dest = self.key_index_with_ue[j]
-                self.rtt_base_dict[tag_orig, tag_dest] = self.rtt_base[i][j]
+                self.rtt_min_dict[tag_orig, tag_dest] = self.rtt_min[i][j]
 
     def distance_ue_to_dictionary(self):
         for u in range(len(self.key_index_ue)):
@@ -276,34 +314,34 @@ class Data:
                 tag_bs = self.key_index_bs[i]
                 self.omega_user_node_dict[tag_ue, tag_bs] = self.omega_user_node[u][i]
 
-    def bandwidth_expected_to_dictionary(self):
+    def throughput_expected_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
                 for j in range(len(self.key_index_all)):
                     tag_file = self.key_index_file[f]
                     tag_orig = self.key_index_all[i]
                     tag_dest = self.key_index_all[j]
-                    self.bandwidth_expected_edge_dict[tag_file, tag_orig, tag_dest] = \
-                        self.bandwidth_expected_edge[f][i][j]
+                    self.throughput_expected_edge_dict[tag_file, tag_orig, tag_dest] = \
+                        self.throughput_expected_edge[f][i][j]
 
-    def bandwidth_current_to_dictionary(self):
+    def throughput_current_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
                 for j in range(len(self.key_index_all)):
                     tag_file = self.key_index_file[f]
                     tag_orig = self.key_index_all[i]
                     tag_dest = self.key_index_all[j]
-                    self.bandwidth_current_edge_dict[tag_file, tag_orig, tag_dest] = self.bandwidth_current_edge[f][i][
+                    self.throughput_current_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_current_edge[f][i][
                         j]
 
-    def bandwidth_diff_to_dictionary(self):
+    def throughput_diff_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_with_ue)):
                 for j in range(len(self.key_index_with_ue)):
                     tag_file = self.key_index_file[f]
                     tag_orig = self.key_index_with_ue[i]
                     tag_dest = self.key_index_with_ue[j]
-                    self.bandwidth_diff_edge_dict[tag_file, tag_orig, tag_dest] = self.bandwidth_diff_edge[f][i][j]
+                    self.throughput_diff_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_diff_edge[f][i][j]
 
     def current_resources_node_to_dictionary(self):
         for i in range(len(self.key_index_bs)):
@@ -342,9 +380,9 @@ class HandleData:
         self.__calc_omega_user_node()
         if not is_update:
             self.__generate_rtt()
-        self.__calc_expected_bandwidth_edge()
-        self.__calc_current_bandwidth_edge()
-        self.__calc_diff_bandwidth()
+        self.__calc_expected_throughput_edge()
+        self.__calc_current_throughput_edge()
+        self.__calc_diff_throughput()
         self.__calc_psi_edge()
         self.__calc_current_resources_node()
         self.__calc_weight_file_edge()
@@ -373,7 +411,7 @@ class HandleData:
         for i, tag_i in enumerate(self.__data.key_index_bs):
             for j, tag_j in enumerate(self.__data.key_index_bs):
                 if self.__data.e_bs_adj[i][j] == 1:
-                    self.__data.rtt_edge[i][j] = self.__data.rtt_base[i][j]
+                    self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
                 else:
                     self.__data.rtt_edge[i][j] = NO_EDGE
 
@@ -381,10 +419,10 @@ class HandleData:
         for i, tag_i in enumerate(self.__data.key_index_with_ue):
             for j, tag_j in enumerate(self.__data.key_index_with_ue):
                 if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
-                    rtt = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j, self.__data.rtt_base[i][j])
+                    rtt = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j, self.__data.rtt_min[i][j])
                     self.__data.rtt_edge[i][j] = self.__data.rtt_edge[j][i] = round(rtt, 2)
 
-    def __calc_rtt_bs_to_ue(self, tag_i, i, tag_j, j, rtt_base):
+    def __calc_rtt_bs_to_ue(self, tag_i, i, tag_j, j, rtt_min):
         rtt = 0
         if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
             if tag_i[:2] != tag_j[:2]:
@@ -392,53 +430,53 @@ class HandleData:
                     ue = tag_i
                     bs = tag_j
                     if self.__data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_base * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+                        rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
                     else:
                         rtt = NO_EDGE
                 if tag_j[:2] == 'UE':
                     ue = tag_j
                     bs = tag_i
                     if self.__data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_base * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+                        rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
                     else:
                         rtt = NO_EDGE
             else:
                 rtt = NO_EDGE
         return rtt
 
-    def __calc_current_bandwidth_edge(self):
+    def __calc_current_throughput_edge(self):
         rtt_ij = 0
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_with_ue)):
                 for j in range(len(self.__data.key_index_with_ue)):
-                    size_f = self.__data.resources_file[f]
+                    size_f = self.__data.size_file[f]
                     if self.__data.rtt_edge is not None:
                         rtt_ij = self.__data.rtt_edge[i][j]
                     if rtt_ij != NO_EDGE:
-                        self.__data.bandwidth_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
+                        self.__data.throughput_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
                     else:
-                        self.__data.bandwidth_current_edge[f][i][j] = NO_EDGE
+                        self.__data.throughput_current_edge[f][i][j] = NO_EDGE
 
-        self.__data.bandwidth_current_to_dictionary()
+        self.__data.throughput_current_to_dictionary()
 
-    def __calc_expected_bandwidth_edge(self):
+    def __calc_expected_throughput_edge(self):
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_with_ue)):
                 for j in range(len(self.__data.key_index_with_ue)):
-                    size_f = self.__data.resources_file[f]
-                    if self.__data.rtt_base[i][j] != NO_EDGE:
-                        self.__data.bandwidth_expected_edge[f][i][j] = round(size_f // self.__data.rtt_base[i][j], 2)
+                    size_f = self.__data.size_file[f]
+                    if self.__data.rtt_min[i][j] != NO_EDGE:
+                        self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
                     else:
-                        self.__data.bandwidth_expected_edge[f][i][j] = NO_EDGE
-        self.__data.bandwidth_expected_to_dictionary()
+                        self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
+        self.__data.throughput_expected_to_dictionary()
 
-    def __calc_diff_bandwidth(self):
+    def __calc_diff_throughput(self):
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_with_ue)):
                 for j in range(len(self.__data.key_index_with_ue)):
-                    self.__data.bandwidth_diff_edge[f][i][j] = round(
-                        self.__data.bandwidth_expected_edge[f][i][j] - self.__data.bandwidth_current_edge[f][i][j], 2)
-        self.__data.bandwidth_diff_to_dictionary()
+                    self.__data.throughput_diff_edge[f][i][j] = round(
+                        self.__data.throughput_expected_edge[f][i][j] - self.__data.throughput_current_edge[f][i][j], 2)
+        self.__data.throughput_diff_to_dictionary()
 
     def __calc_current_resources_node(self):
         for i in range(len(self.__data.key_index_bs)):
@@ -476,8 +514,8 @@ class HandleData:
                                                   dest_name):  # Existe aresta de origem em BS para o destino UE ou origem em BS para o destino BS.
                                 rt_i = self.__data.resources_node[i]
                                 rr_i = self.__data.current_resources_node[i]
-                                bwc_fij = self.__data.bandwidth_current_edge[f][i][j]
-                                bwe_fij = self.__data.bandwidth_expected_edge[f][i][j]
+                                bwc_fij = self.__data.throughput_current_edge[f][i][j]
+                                bwe_fij = self.__data.throughput_expected_edge[f][i][j]
                                 weight = self.__calc_weight(rr_i, rt_i, bwc_fij, bwe_fij)
                                 self.__data.weight_file_edge[f][i][j] = round(weight, 4)
                             else:  # Não existe aresta de origem em BS parao destino UE.
@@ -488,7 +526,7 @@ class HandleData:
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
-                    if self.__data.bandwidth_diff_edge[f][i][j] >= self.__data.beta:
+                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
                         self.__data.psi_edge[f][i][j] = 1
         self.__data.psi_edge_to_dictionary()
 
@@ -524,6 +562,8 @@ class HandleData:
 
     # This method update data of the problem.
     def update_data(self):
+        if self.__data.mobility.IS_MOBILE:
+            self.__update_ue_position()
         self.__update_rtt_min()
         self.__update_rtt()
         self.__update_phi_node()
@@ -532,9 +572,9 @@ class HandleData:
     def __update_rtt_min(self):
         for i in range(len(self.__data.key_index_with_ue)):
             for j in range(len(self.__data.key_index_with_ue)):
-                if self.__data.rtt_edge[i][j] <= self.__data.rtt_base[i][j]:
-                    self.__data.rtt_base[i][j] = self.__data.rtt_edge[i][j]
-        self.__data.rtt_base_to_dictionary()
+                if self.__data.rtt_edge[i][j] <= self.__data.rtt_min[i][j]:
+                    self.__data.rtt_min[i][j] = self.__data.rtt_edge[i][j]
+        self.__data.rtt_min_to_dictionary()
 
     def __update_rtt(self):
 
@@ -556,15 +596,20 @@ class HandleData:
                     self.__data.phi_node[i][j] += 1
         self.__data.phi_node_to_dictionary()
 
+    def __update_ue_position(self):
+        for u in range(len(self.__data.key_index_ue)):
+            for i in range(len(self.__data.key_index_bs)):
+                self.__data.distance_ue[u][i] += np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate, 1)
+
 
 # This class execute the optimization model.
 class OptimizeData:
     __data = Data()
 
     model = None
-    __x = None
-    __s = ""
-    __t = ""
+    x = None
+    s = ""
+    t = ""
     __path = list()
 
     def __init__(self, data, source, sink):
@@ -577,12 +622,12 @@ class OptimizeData:
 
     # n_fij \in {0,1}
     def create_vars(self):
-        self.x = self.model.addVars(self.data.key_index_file, self.data.key_index_all, self.data.key_index_all,
+        self.x = self.model.addVars(self.s, self.data.key_index_all, self.data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
     def set_function_objective(self):
         self.model.setObjective(
-            gp.quicksum(self.x[f, i, j] * self.data.weight_dict[f, i, j] for f in self.data.key_index_file for i in
+            gp.quicksum(self.x[f, i, j] * self.data.weight_dict[f, i, j] for f in self.s for i in
                         self.data.key_index_all for j in self.data.key_index_all),
             sense=gp.GRB.MINIMIZE)
 
@@ -612,9 +657,9 @@ class OptimizeData:
                               self.data.key_index_bs)
 
     def __set_constraint_throughput(self):
-        self.model.addConstrs(self.data.bandwidth_expected_edge_dict[f, i, j] * self.x[f, i, j]
-                              >= self.data.bandwidth_current_edge_dict[f, i, j] * self.x[f, i, j] for f in
-                              self.data.key_index_file for i in self.data.key_index_all for j in
+        self.model.addConstrs(self.data.throughput_expected_edge_dict[f, i, j] * self.x[f, i, j]
+                              >= self.data.throughput_current_edge_dict[f, i, j] * self.x[f, i, j] for f in
+                              self.s for i in self.data.key_index_all for j in
                               self.data.key_index_all)
 
     def __set_constraint_flow_conservation(self):
@@ -630,13 +675,13 @@ class OptimizeData:
         for f in self.s:
             self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.data.key_index_bs)
                                  - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.data.key_index_bs)
-                                 == self.data.bandwidth_min_file_dict[f], 'c5')
+                                 == self.data.throughput_min_file_dict[f], 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
         for f in self.s:
             self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.data.key_index_bs)
                                  - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.data.key_index_bs)
-                                 == - self.data.bandwidth_min_file_dict[f], 'c6')
+                                 == - self.data.throughput_min_file_dict[f], 'c6')
 
     def execute(self, log):
         # self.model.reset()
@@ -711,9 +756,15 @@ class LogData:
         print()
 
     def __log_resources_file_dict(self):
-        print("RESOURCES FILE.")
+        print("SIZE FILE.")
         for k in self.data.resources_file_dict.keys():
             print(k, self.data.resources_file_dict[k])
+        print()
+
+    def __log_size_file_dict(self):
+        print("SIZE FILE.")
+        for k in self.data.size_file_dict.keys():
+            print(k, self.data.size_file_dict[k])
         print()
 
     def __log_resources_node_dict(self):
@@ -736,24 +787,24 @@ class LogData:
             print(k, self.data.phi_node_dict[k])
         print()
 
-    def __log_bandwidth_min_dict(self):
-        print("MINIMAL BANDWIDTH.")
-        for k in self.data.bandwidth_min_file_dict.keys():
-            print(k, self.data.bandwidth_min_file_dict[k])
+    def __log_throughput_min_dict(self):
+        print("MINIMAL throughput.")
+        for k in self.data.throughput_min_file_dict.keys():
+            print(k, self.data.throughput_min_file_dict[k])
         print()
 
-    def __log_rtt_base(self):
+    def __log_rtt_min(self):
         print("BASE RTT.")
         for i in range(len(self.data.key_index_with_ue)):
             for j in range(len(self.data.key_index_with_ue)):
-                print(self.data.rtt_base[i][j], end=" ")
+                print(self.data.rtt_min[i][j], end=" ")
             print()
         print()
 
-    def __log_rtt_base_dict(self):
+    def __log_rtt_min_dict(self):
         print("BASE RTT.")
-        for k in self.data.rtt_base_dict.keys():
-            print(k, self.data.rtt_base_dict[k])
+        for k in self.data.rtt_min_dict.keys():
+            print(k, self.data.rtt_min_dict[k])
         print()
 
     def __log_gama_file_node(self):
@@ -792,54 +843,54 @@ class LogData:
         for k in self.data.omega_user_node_dict.keys():
             print(k, self.data.omega_user_node_dict[k])
 
-    def __log_expected_bandwidth_edge(self):
-        print("EXPECTED BANDWIDTH.")
-        if self.data.bandwidth_expected_edge is not None:
+    def __log_expected_throughput_edge(self):
+        print("EXPECTED throughput.")
+        if self.data.throughput_expected_edge is not None:
             for f, filename in enumerate(self.data.key_index_file):
                 print(filename.upper())
                 for i in range(len(self.data.key_index_all)):
                     for j in range(len(self.data.key_index_all)):
-                        print(self.data.bandwidth_expected_edge[f][i][j], end=" ")
+                        print(self.data.throughput_expected_edge[f][i][j], end=" ")
                     print()
                 print()
         print()
 
-    def __log_expected_bandwidth_edge_dict(self):
-        print("EXPECTED BANDWIDTH.")
-        for k in self.data.bandwidth_expected_edge_dict.keys():
-            print(k, self.data.bandwidth_expected_edge_dict[k])
+    def __log_expected_throughput_edge_dict(self):
+        print("EXPECTED throughput.")
+        for k in self.data.throughput_expected_edge_dict.keys():
+            print(k, self.data.throughput_expected_edge_dict[k])
 
-    def __log_current_bandwidth_edge(self):
-        print("CURRENT BANDWIDTH.")
+    def __log_current_throughput_edge(self):
+        print("CURRENT throughput.")
         for f, filename in enumerate(self.data.key_index_file):
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
                 for j in range(len(self.data.key_index_all)):
-                    print(self.data.bandwidth_current_edge[f][i][j], end=" ")
+                    print(self.data.throughput_current_edge[f][i][j], end=" ")
                 print()
             print()
         print()
 
-    def __log_current_bandwidth_edge_dict(self):
-        print("CURRENT BANDWIDTH.")
-        for k in self.data.bandwidth_current_edge_dict.keys():
-            print(k, self.data.bandwidth_current_edge_dict[k])
+    def __log_current_throughput_edge_dict(self):
+        print("CURRENT throughput.")
+        for k in self.data.throughput_current_edge_dict.keys():
+            print(k, self.data.throughput_current_edge_dict[k])
 
-    def __log_diff_bandwidth_edge(self):
-        print("DIFFERENCE BANDWIDTH")
+    def __log_diff_throughput_edge(self):
+        print("DIFFERENCE throughput")
         for f, filename in enumerate(self.data.key_index_file):
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
                 for j in range(len(self.data.key_index_all)):
-                    print(self.data.bandwidth_diff_edge[f][i][j], end=" ")
+                    print(self.data.throughput_diff_edge[f][i][j], end=" ")
                 print()
             print()
         print()
 
-    def __log_diff_bandwidth_edge_dict(self):
-        print("DIFFERENCE BANDWIDTH")
-        for k in self.data.bandwidth_diff_edge_dict.keys():
-            print(k, self.data.bandwidth_diff_edge_dict[k])
+    def __log_diff_throughput_edge_dict(self):
+        print("DIFFERENCE throughput")
+        for k in self.data.throughput_diff_edge_dict.keys():
+            print(k, self.data.throughput_diff_edge_dict[k])
 
     def __log_psi_edge(self):
         print("DIFFERENCE INSIDE BOUND BETA (beta).")
@@ -891,14 +942,15 @@ class LogData:
         self.__log_phi_node()
 
         self.__log_resources_file_dict()
-        self.__log_bandwidth_min_dict()
+        self.__log_size_file_dict()
+        self.__log_throughput_min_dict()
 
         self.__log_resources_node_dict()
         self.__log_phi_node_dict()
 
-        self.__log_rtt_base()
+        self.__log_rtt_min()
         self.__log_rtt_edge()
-        # self.__log_rtt_base_dict()
+        # self.__log_rtt_min_dict()
         # self.__log_rtt_edge_dict()
         self.__log_gama_file_node()
         self.__log_e_bs_adj_dict()
@@ -906,9 +958,9 @@ class LogData:
     def show_vars_matrix(self):
         print("VARS.\n")
         self.__log_omega_user_node()
-        self.__log_expected_bandwidth_edge()
-        self.__log_current_bandwidth_edge()
-        self.__log_diff_bandwidth_edge()
+        self.__log_expected_throughput_edge()
+        self.__log_current_throughput_edge()
+        self.__log_diff_throughput_edge()
         self.__log_current_resources_node()
         self.__log_psi_edge()
         self.__log_weight_file_edge()
@@ -916,9 +968,9 @@ class LogData:
     def show_vars_dict(self):
         print("VARS.\n")
         self.__log_omega_user_node_dict()
-        self.__log_expected_bandwidth_edge_dict()
-        self.__log_current_bandwidth_edge_dict()
-        self.__log_diff_bandwidth_edge_dict()
+        self.__log_expected_throughput_edge_dict()
+        self.__log_current_throughput_edge_dict()
+        self.__log_diff_throughput_edge_dict()
         self.__log_current_resources_node_dict()
         self.__log_psi_edge_dict()
         self.__log_weight_dict()
@@ -984,22 +1036,3 @@ class PlotData:
         with pds.ExcelWriter(path) as writer:
             self.__delay.to_excel(writer, sheet_name='Delay')
             self.__set_path.to_excel(writer, sheet_name='Request')
-
-
-# This class changes the type of trials.
-class Type(Enum):
-    SINGLE = 1
-    POISSON = 2
-    ZIPF = 3
-    ALLTOALL = 4
-    RANDOM = 5
-
-
-class Mobility(Enum):
-    IS_MOBILE = 1
-    NON_MOBILE = 0
-
-
-class Model(Enum):
-    ONLINE = 1
-    OFFLINE = 0

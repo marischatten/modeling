@@ -1,6 +1,6 @@
 {
     "alpha" : 0.5,
-    "beta": 10.0,
+    "beta": 10,
 
     "phi" : [
         [1,0],
@@ -16,11 +16,11 @@
     "key_index_bs": ["SBS1", "SBS2"],
     "key_index_ue": ["UE1", "UE2", "UE3"],
 
-    "resources_file": [100.0, 200.0, 200.0],
+    "resources_file": [100, 200, 200],
 
-    "bandwidth_min_file": [10.0, 13.0, 5.0],
+    "throughput_min_file": [10, 13, 5],
 
-    "resources_node": [800.0, 800.0],
+    "resources_node": [800, 800],
 
     "rtt_base" : [
         [10,10,10,10,10],

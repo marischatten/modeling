@@ -61,7 +61,7 @@ data = None
 
 show_log = 0
 show_results = False
-show_path = False
+show_path = True
 show_var = False
 show_par = False
 plot_distribution = False
@@ -69,11 +69,11 @@ plot_data = False
 show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
-path_output = r'..\output\data\instance_1.xlsx'
-save_data = False
-path_graph = r'..\output\graph\instance_1.png'
-plot_graph = False
-path_dataset = r'..\dataset\instance_1.json'
+path_output = r'..\output\data\instance_3.xlsx'
+save_data = True
+path_graph = r'..\output\graph\instance_3.png'
+plot_graph = True
+path_dataset = r'..\dataset\instance_3.json'
 def main():
     #########################################################################################################################
     # random and distribution.

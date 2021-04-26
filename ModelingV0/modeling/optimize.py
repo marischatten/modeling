@@ -792,7 +792,7 @@ class LogData:
         print()
 
     def __log_throughput_min_dict(self):
-        print("MINIMAL throughput.")
+        print("MINIMAL THROUGHPUT.")
         for k in self.data.throughput_min_file_dict.keys():
             print(k, self.data.throughput_min_file_dict[k])
         print()
@@ -848,7 +848,7 @@ class LogData:
             print(k, self.data.omega_user_node_dict[k])
 
     def __log_expected_throughput_edge(self):
-        print("EXPECTED throughput.")
+        print("EXPECTED THROUGHPUT.")
         if self.data.throughput_expected_edge is not None:
             for f, filename in enumerate(self.data.key_index_file):
                 print(filename.upper())
@@ -860,12 +860,12 @@ class LogData:
         print()
 
     def __log_expected_throughput_edge_dict(self):
-        print("EXPECTED throughput.")
+        print("EXPECTED THROUGHPUT.")
         for k in self.data.throughput_expected_edge_dict.keys():
             print(k, self.data.throughput_expected_edge_dict[k])
 
     def __log_current_throughput_edge(self):
-        print("CURRENT throughput.")
+        print("CURRENT THROUGHPUT.")
         for f, filename in enumerate(self.data.key_index_file):
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
@@ -876,12 +876,12 @@ class LogData:
         print()
 
     def __log_current_throughput_edge_dict(self):
-        print("CURRENT throughput.")
+        print("CURRENT THROUGHPUT.")
         for k in self.data.throughput_current_edge_dict.keys():
             print(k, self.data.throughput_current_edge_dict[k])
 
     def __log_diff_throughput_edge(self):
-        print("DIFFERENCE throughput")
+        print("DIFFERENCE THROUGHPUT")
         for f, filename in enumerate(self.data.key_index_file):
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
@@ -892,7 +892,7 @@ class LogData:
         print()
 
     def __log_diff_throughput_edge_dict(self):
-        print("DIFFERENCE throughput")
+        print("DIFFERENCE THROUGHPUT")
         for k in self.data.throughput_diff_edge_dict.keys():
             print(k, self.data.throughput_diff_edge_dict[k])
 

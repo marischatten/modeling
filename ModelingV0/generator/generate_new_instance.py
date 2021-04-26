@@ -139,6 +139,7 @@ def main():
 
     generate_json(path)
 
+
 def generate_throughput_min():
     global throughput_min_file
     throughput_min_file = [0 for f in range(num_files)]
@@ -149,6 +150,7 @@ def generate_throughput_min():
     for f in range(num_files):
         print(throughput_min_file[f], end=" ")
     print()
+
 
 def generate_gama():
     global gama
@@ -173,7 +175,7 @@ def generate_distance_ue():
 
     for u in range(num_ue):
         for i in range(num_mbs,num_bs):
-            dist = s.NormalDist(radius_sbs, 2*radius_mbs).samples(1, seed=None)[0]
+            dist = s.NormalDist(radius_sbs, radius_sbs).samples(1, seed=None)[0]
             if dist > max_ran:
                 dist = max_ran
             # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
@@ -182,6 +184,8 @@ def generate_distance_ue():
     for u in range(num_ue):
         for i in range(num_mbs):
             distance_ue[u][i] = float(radius_mbs + 1)
+
+
 
     print("DISTÂNCIA ENTRE UE E SBS.")
     for u in range(len(key_index_ue)):
@@ -278,6 +282,7 @@ def generate_resources_file():
         print(resources_file[f], end=" ")
     print()
 
+
 def generate_size_file():
     global size_file
     size_file = [0 for f in range(num_files)]
@@ -288,6 +293,7 @@ def generate_size_file():
     for f in range(num_files):
         print(size_file[f], end=" ")
     print()
+
 
 def generate_rtt_min():
     global rtt_min

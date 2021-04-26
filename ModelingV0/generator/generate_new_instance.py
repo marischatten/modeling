@@ -13,6 +13,7 @@ import time
 import tqdm
 import seaborn as sns
 from scipy import special
+import statistics as s
 
 import ortools.linear_solver.pywraplp as otlp
 from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
@@ -98,13 +99,13 @@ def main():
     global mobility_rate,alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file,size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max,resources_file_min,resources_file_max
 
     mobility_rate = 10
-    alpha = 0.05
+    alpha = 0.5
     beta = 100
     num_mbs = 2
     num_sbs_per_mbs = 3
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
     num_files = 10
-    num_ue = 10
+    num_ue = 11
     num_nodes = num_bs + num_ue
     size_file_max = 400
     size_file_min = 100
@@ -114,21 +115,27 @@ def main():
     resources_node_max = 2048
     resources_node_min = 1024
     radius_mbs = 300
-    radius_sbs = 70
+    radius_sbs = 150
     rtt_min_mbs_mbs = 1.0
     rtt_min_sbs_mbs = 3.0
     rtt_min_sbs_ue = 5.0
 
     generate_nodes(num_files, num_mbs, num_sbs_per_mbs, num_ue)
-    generate_rtt_min()
-    generate_e_bs_adj()
-    generate_distance_ue()
     generate_resources_file()
     generate_size_file()
+    generate_throughput_min()
+
+    generate_rtt_min()
+    generate_distance_ue()
+    generate_e_bs_adj()
+
     generate_resources_node()
     generate_gama()
     generate_phi()
-    generate_throughput_min()
+
+    generate_rtt_min()
+    generate_distance_ue()
+    generate_e_bs_adj()
 
     generate_json(path)
 
@@ -138,7 +145,7 @@ def generate_throughput_min():
     for f in range(num_files):
         throughput_min_file[f] = 25
 
-    print("throughput MÍNIMA DO CONTEÚDO.")
+    print("THROUGHPUT MÍNIMA DO CONTEÚDO.")
     for f in range(num_files):
         print(throughput_min_file[f], end=" ")
     print()
@@ -165,8 +172,16 @@ def generate_distance_ue():
     max_ran = ((2 * radius_mbs) * num_mbs) - INTERFERENCE
 
     for u in range(num_ue):
-        for i in range(num_bs):
-            distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
+        for i in range(num_mbs,num_bs):
+            dist = s.NormalDist(radius_sbs, 2*radius_mbs).samples(1, seed=None)[0]
+            if dist > max_ran:
+                dist = max_ran
+            # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
+            distance_ue[u][i] = float(np.around(abs(dist), 2))
+
+    for u in range(num_ue):
+        for i in range(num_mbs):
+            distance_ue[u][i] = float(radius_mbs + 1)
 
     print("DISTÂNCIA ENTRE UE E SBS.")
     for u in range(len(key_index_ue)):
@@ -187,18 +202,20 @@ def generate_e_bs_adj():
 
     for i in range(num_mbs):
         for j in range(num_mbs):
-            e_bs_adj[i][j] = 1
+            if i != j:
+                e_bs_adj[i][j] = 1
 
     for i in range(num_mbs):
         for j in range(control, num_bs):
-            if count < num_sbs_per_mbs:
-                e_bs_adj[i][j] = 1
-                e_bs_adj[j][i] = 1
-                count += 1
+            if i != j:
+                if count < num_sbs_per_mbs:
+                    e_bs_adj[i][j] = 1
+                    e_bs_adj[j][i] = 1
+                    count += 1
         control += count
         count = 0
 
-    print("ADJACENCIA ENTRE BS.")
+    print("ADJACÊNCIA ENTRE BS.")
     for i in range(len(key_index_bs)):
         for j in range(len(key_index_bs)):
             print(e_bs_adj[i][j], end=" ")
@@ -226,7 +243,6 @@ def generate_phi():
     global phi
     use = 0
     phi = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]
-
 
     for f in range(num_files):
         for i in range(num_bs):
@@ -279,26 +295,30 @@ def generate_rtt_min():
 
     for i, tag_i in enumerate(key_index_bs_ue):
         for j, tag_j in enumerate(key_index_bs_ue):
-            if tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS':
-                rtt_min[i][j] = rtt_min_mbs_mbs
-                rtt_min[j][i] = rtt_min_mbs_mbs
-            if (tag_i[:3] == 'MBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'MBS') :
-                rtt_min[i][j] = NO_EDGE
-                rtt_min[j][i] = NO_EDGE
-            if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
-                rtt_min[i][j] = rtt_min_sbs_mbs
-                rtt_min[j][i] = rtt_min_sbs_mbs
-            if tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS':
-                rtt_min[i][j] = NO_EDGE
-                rtt_min[j][i] = NO_EDGE
-            if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'SBS'):
-                rtt_min[i][j] = rtt_min_sbs_ue
-                rtt_min[j][i] = rtt_min_sbs_ue
-            if tag_i[:2] == 'UE' and tag_j[:2] == 'UE':
+            if i != j:
+                if tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS':
+                    rtt_min[i][j] = rtt_min_mbs_mbs
+                    rtt_min[j][i] = rtt_min_mbs_mbs
+                if (tag_i[:3] == 'MBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'MBS') :
+                    rtt_min[i][j] = NO_EDGE
+                    rtt_min[j][i] = NO_EDGE
+                if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
+                    rtt_min[i][j] = rtt_min_sbs_mbs
+                    rtt_min[j][i] = rtt_min_sbs_mbs
+                if tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS':
+                    rtt_min[i][j] = NO_EDGE
+                    rtt_min[j][i] = NO_EDGE
+                if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'SBS'):
+                    rtt_min[i][j] = rtt_min_sbs_ue
+                    rtt_min[j][i] = rtt_min_sbs_ue
+                if tag_i[:2] == 'UE' and tag_j[:2] == 'UE':
+                    rtt_min[i][j] = NO_EDGE
+                    rtt_min[j][i] = NO_EDGE
+            else:
                 rtt_min[i][j] = NO_EDGE
                 rtt_min[j][i] = NO_EDGE
 
-    print("RTT MíNIMO POR ENLACE.")
+    print("RTT MÍNIMO POR ENLACE.")
     for i in range(num_nodes):
         for j in range(num_nodes):
             print(rtt_min[i][j], end=" ")
@@ -358,16 +378,16 @@ def generate_json(path):
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,
-            "throughput_min_file": throughput_min_file,
-            "e_bs_adj": e_bs_adj,
             "resources_file": resources_file,
             "size_file": size_file,
-            "phi": phi,
+            "throughput_min_file": throughput_min_file,
             "resources_node": resources_node,
+            "gama": gama,
+            "phi": phi,
             "rtt_min": rtt_min,
             "distance_ue": distance_ue,
             "distance_bs": distance_bs,
-            "gama": gama,
+            "e_bs_adj": e_bs_adj,
             "radius_mbs": radius_mbs,
             "radius_sbs": radius_sbs
             }

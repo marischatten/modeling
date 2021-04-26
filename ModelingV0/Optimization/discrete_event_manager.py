@@ -60,23 +60,22 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = True
-show_path = True
+show_results = False
+show_path = False
 show_var = False
 show_par = False
 plot_distribution = False
 plot_data = False
-save_data = False
 show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
-path_output = r'..\output\instance_2.xlsx'
-
-
+path_output = r'..\output\data\instance_1.xlsx'
+save_data = False
+path_graph = r'..\output\graph\instance_1.png'
+plot_graph = False
+path_dataset = r'..\dataset\instance_1.json'
 def main():
     #########################################################################################################################
-    path = r'..\dataset\instance_3.json'  # args[0]
-
     # random and distribution.
     avg_qtd_bulk = 2
     num_events = 10
@@ -88,7 +87,7 @@ def main():
 
     #########################################################################################################################
     start_time = time.time()
-    dataset = u.get_data(path)
+    dataset = u.get_data(path_dataset)
     convert_to_object(dataset)
     print(CYAN, "READ FILE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
@@ -103,7 +102,8 @@ def main():
                     num_alpha=num_alpha)
     print(CYAN, "FULL TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
-    #picture()
+    if plot_graph:
+        picture()
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -336,18 +336,15 @@ def picture():
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
     for i, name in enumerate(key_nodes):
-        g.add_vertex(name)
+        g.add_vertices(name)
 
-    for f, filename in enumerate(key_index_file):
-        for i, name_orig in enumerate(key_nodes):
-            for j, name_dest in enumerate(key_nodes):
-                if data.weight_dict is not None:
-                    if data.weight_dict[filename, name_orig, name_dest] <= 9999:
-                        g.add_edge(name_orig, name_dest)
+    for i, name_orig in enumerate(key_nodes):
+        for j, name_dest in enumerate(key_nodes):
+            if data.weight_dict is not None:
+                if data.weight_file_edge[0][i][j] < NO_EDGE:
+                    g.add_edge(name_orig, name_dest)
 
-    # print(g.get_adjacency())
-    # ig.plot(g, layout="kk", vertex_label=range(g.vcount()))
-    # g.save('..\output\instance_1.pdf')
+    ig.plot(g, vertex_label=key_nodes, vertex_color="white",target= path_graph)
 
 
 def convert_to_object(dataset: object):

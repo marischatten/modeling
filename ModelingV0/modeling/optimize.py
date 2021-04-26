@@ -228,7 +228,7 @@ class Data:
                 for f in
                 range(self.num_files)]
 
-            self.omega_user_node = [[0.0 for i in range(self.num_bs)] for u in range(self.num_ue)]
+            self.omega_user_node = [[0 for i in range(self.num_bs)] for u in range(self.num_ue)]
 
             self.gama_file_node = gama_file_node
 
@@ -388,12 +388,16 @@ class HandleData:
         self.__calc_weight_file_edge()
 
     def __calc_omega_user_node(self):
+
         for u in range(len(self.__data.key_index_ue)):
-            for i in range(len(self.__data.key_index_bs)):
-                if self.__data.distance_ue[u][i] <= self.__data.radius_sbs:
-                    self.__data.omega_user_node[u][i] = 1
-                else:
+            for i,tag_i in enumerate(self.__data.key_index_bs):
+                if tag_i[:3] == 'MBS':
+                    # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
                     self.__data.omega_user_node[u][i] = 0
+                else:
+                    if self.__data.distance_ue[u][i] <= self.__data.radius_sbs:
+                        self.__data.omega_user_node[u][i] = 1
+
         self.__data.omega_user_node_to_dictionary()
 
     def __generate_rtt(self):
@@ -997,8 +1001,9 @@ class PlotData:
     def __sum_rtt(self, path):
         rtt = 0
         for i, j in zip(path[1:], path[2:]):
-            if self.__data.rtt_edge_dict[i, j] != NO_EDGE:
-                rtt += self.__data.rtt_edge_dict[i, j]
+            if self.__data.rtt_edge_dict[i, j] >= NO_EDGE:
+                continue
+            rtt += self.__data.rtt_edge_dict[i, j]
         return rtt
 
     def show_paths(self):

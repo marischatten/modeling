@@ -48,7 +48,7 @@ DISTANCE_SBS_MBS = [88.02,
                     216.1
                     ]
 
-mobility_rate =0
+mobility_rate = 0
 alpha = 0
 beta = 0
 
@@ -62,7 +62,7 @@ key_index_file = list()
 key_index_bs = list()
 key_index_ue = list()
 key_index_bs_ue = list()
-
+key_index_all = list()
 e_bs_adj = list()
 
 resources_file = list()
@@ -96,17 +96,17 @@ rtt_min_sbs_ue = 0
 
 def main():
     path = r"..\dataset\instance_3.json"  # args[0]
-    global mobility_rate,alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file,size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max,resources_file_min,resources_file_max
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, key_index_all
 
     mobility_rate = 10
     alpha = 0.5
-    beta = 100
+    beta = 50
     num_mbs = 2
     num_sbs_per_mbs = 3
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
     num_files = 10
     num_ue = 11
-    num_nodes = num_bs + num_ue
+    num_nodes = num_bs + num_ue + num_files
     size_file_max = 400
     size_file_min = 100
     resources_file_max = 400
@@ -121,11 +121,11 @@ def main():
     rtt_min_sbs_ue = 5.0
 
     generate_nodes(num_files, num_mbs, num_sbs_per_mbs, num_ue)
+    key_index_all = key_index_bs + key_index_ue + key_index_file
     generate_resources_file()
     generate_size_file()
     generate_throughput_min()
 
-    generate_rtt_min()
     generate_distance_ue()
     generate_e_bs_adj()
 
@@ -133,9 +133,9 @@ def main():
     generate_gama()
     generate_phi()
 
-    generate_rtt_min()
     generate_distance_ue()
     generate_e_bs_adj()
+    generate_rtt_min()
 
     generate_json(path)
 
@@ -174,8 +174,8 @@ def generate_distance_ue():
     max_ran = ((2 * radius_mbs) * num_mbs) - INTERFERENCE
 
     for u in range(num_ue):
-        for i in range(num_mbs,num_bs):
-            dist = s.NormalDist(radius_sbs, radius_sbs).samples(1, seed=None)[0]
+        for i in range(num_mbs, num_bs):
+            dist = s.NormalDist(-radius_sbs, radius_sbs).samples(1, seed=None)[0]
             if dist > max_ran:
                 dist = max_ran
             # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
@@ -184,8 +184,6 @@ def generate_distance_ue():
     for u in range(num_ue):
         for i in range(num_mbs):
             distance_ue[u][i] = float(radius_mbs + 1)
-
-
 
     print("DISTÂNCIA ENTRE UE E SBS.")
     for u in range(len(key_index_ue)):
@@ -252,7 +250,7 @@ def generate_phi():
         for i in range(num_bs):
             sum_files = 0
             if gama[f][i] == 1:
-                rep = int(np.random.randint(1,2))
+                rep = int(np.random.randint(1, 2))
 
                 for file in range(num_files):
                     if 0 != phi[file][i]:
@@ -297,29 +295,34 @@ def generate_size_file():
 
 def generate_rtt_min():
     global rtt_min
-    rtt_min = [[0.0 for i in range(num_nodes)] for j in range(num_nodes)]
-
-    for i, tag_i in enumerate(key_index_bs_ue):
-        for j, tag_j in enumerate(key_index_bs_ue):
+    rtt_min = [[NO_EDGE for i in range(num_nodes)] for j in range(num_nodes)]
+    for i, tag_i in enumerate(key_index_all):
+        for j, tag_j in enumerate(key_index_all):
             if i != j:
                 if tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS':
-                    rtt_min[i][j] = rtt_min_mbs_mbs
-                    rtt_min[j][i] = rtt_min_mbs_mbs
-                if (tag_i[:3] == 'MBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'MBS') :
-                    rtt_min[i][j] = NO_EDGE
-                    rtt_min[j][i] = NO_EDGE
+                    if coverage_bs_to_bs(tag_i,tag_j):
+                        rtt_min[i][j] = rtt_min_mbs_mbs
+                        rtt_min[j][i] = rtt_min_mbs_mbs
+                    else:
+                        rtt_min[i][j] = NO_EDGE
+                        rtt_min[j][i] = NO_EDGE
                 if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
-                    rtt_min[i][j] = rtt_min_sbs_mbs
-                    rtt_min[j][i] = rtt_min_sbs_mbs
-                if tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS':
-                    rtt_min[i][j] = NO_EDGE
-                    rtt_min[j][i] = NO_EDGE
-                if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE') or (tag_i[:2] == 'UE' and tag_j[:3] == 'SBS'):
-                    rtt_min[i][j] = rtt_min_sbs_ue
-                    rtt_min[j][i] = rtt_min_sbs_ue
-                if tag_i[:2] == 'UE' and tag_j[:2] == 'UE':
-                    rtt_min[i][j] = NO_EDGE
-                    rtt_min[j][i] = NO_EDGE
+                    if coverage_bs_to_bs(tag_i,tag_j):
+                        rtt_min[i][j] = rtt_min_sbs_mbs
+                        rtt_min[j][i] = rtt_min_sbs_mbs
+                    else:
+                        rtt_min[i][j] = NO_EDGE
+                        rtt_min[j][i] = NO_EDGE
+                if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
+                    if coverage_bs_ue(tag_i,tag_j):
+                        rtt_min[i][j] = rtt_min_sbs_ue
+                    else:
+                        rtt_min[i][j] = NO_EDGE
+                if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
+                    if caching_to_bs(tag_i,tag_j):
+                        rtt_min[i][j] = 0
+                    else:
+                        rtt_min[i][j] = NO_EDGE
             else:
                 rtt_min[i][j] = NO_EDGE
                 rtt_min[j][i] = NO_EDGE
@@ -327,9 +330,43 @@ def generate_rtt_min():
     print("RTT MÍNIMO POR ENLACE.")
     for i in range(num_nodes):
         for j in range(num_nodes):
-            print(rtt_min[i][j], end=" ")
+            if rtt_min[i][j] == NO_EDGE:
+                print(' ထ ', end=" ")
+            else:
+                print(rtt_min[i][j], end=" ")
         print()
     print()
+
+
+def coverage_bs_to_bs(source, sink):
+    e_bs_adj_dict = dict()
+    for i in range(len(key_index_bs)):
+        for j in range(len(key_index_bs)):
+            tag_orig = key_index_bs[i]
+            tag_dest = key_index_bs[j]
+            e_bs_adj_dict[tag_orig, tag_dest] = e_bs_adj[i][j]
+    return e_bs_adj_dict[source,sink] == 1
+
+
+def coverage_bs_ue(source,sink):
+    distance_ue_dict = dict()
+    for u in range(len(key_index_ue)):
+        for i in range(len(key_index_bs)):
+            tag_ue = key_index_ue[u]
+            tag_bs = key_index_bs[i]
+            distance_ue_dict[tag_ue, tag_bs] = distance_ue[u][i]
+
+    return distance_ue_dict[sink,source] <= radius_sbs
+
+
+def caching_to_bs(source,sink):
+    gama_dict = dict()
+    for f in range(len(key_index_file)):
+        for i in range(len(key_index_bs)):
+            tag_file = key_index_file[f]
+            tag_bs = key_index_bs[i]
+            gama_dict[tag_file, tag_bs] = gama[f][i]
+    return gama_dict[source, sink] == 1
 
 
 def generate_nodes(num_contents, num_mbs, num_sbs, num_users):
@@ -375,7 +412,7 @@ def generate_sbs(num_mbs, num_sbs):
 
 
 def generate_json(path):
-    data = {"mobility_rate":mobility_rate,
+    data = {"mobility_rate": mobility_rate,
             "alpha": alpha,
             "beta": beta,
             "num_bs": num_bs,

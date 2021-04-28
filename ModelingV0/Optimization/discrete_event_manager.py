@@ -13,7 +13,6 @@
 import time
 import tqdm
 import seaborn as sns
-from scipy import special
 
 import ortools.linear_solver.pywraplp as otlp
 from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
@@ -26,7 +25,7 @@ import matplotlib.pyplot as plt
 from utils import utils as u
 from simulation import request as r
 
-mobility_rate =0
+mobility_rate = 10
 
 alpha = 0
 beta = 0
@@ -60,35 +59,43 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = False
+show_results = True
 show_path = True
 show_var = False
 show_par = False
-plot_distribution = False
-plot_data = False
+plot_distribution = True
+plot_data = True
 show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
-path_output = r'..\output\data\instance_3.xlsx'
+
+path_dataset = r'..\dataset\instance_2.json'
+
 save_data = True
-path_graph = r'..\output\graph\instance_3.png'
-plot_graph = True
-path_dataset = r'..\dataset\instance_3.json'
+path_output = r'..\output\data\instance_2.xlsx'
+plot_graph = False
+path_graph = r'..\output\graph\instance_2.png'
+
+# random and distribution.
+avg_qtd_bulk = 2
+num_events = 10
+num_alpha = 0.56
+
+# single.
+s = np.array(['F1'])
+t = np.array(['UE1'])
+
+
 def main():
     #########################################################################################################################
-    # random and distribution.
-    avg_qtd_bulk = 2
-    num_events = 10
-    num_alpha = 0.56
-
-    # single.
-    source = np.array(['F5'])
-    sink = np.array(['UE11'])
-
+    path_config = r''
+    if path_config != '':
+        config = u.get_data(path_config)
+        load_config(config)
     #########################################################################################################################
     start_time = time.time()
     dataset = u.get_data(path_dataset)
-    convert_to_object(dataset)
+    load_dataset(dataset)
     print(CYAN, "READ FILE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
     start_time = time.time()
@@ -98,7 +105,7 @@ def main():
     print(CYAN, "LOADING DATA TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
     start_time = time.time()
-    discrete_events(type, source=source, sink=sink, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
+    discrete_events(type, source=s, sink=t, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
     print(CYAN, "FULL TIME --- %s seconds ---" % (time.time() - start_time), RESET)
 
@@ -128,7 +135,7 @@ def single(source, sink):
     path = create_model(source, sink)
     handler.path = path
     handler.update_data()
-    allocated_request(pd, path)
+    allocated_request(pd, path,source,sink)
     if show_all_paths:
         pd.show_paths()
     if save_data:
@@ -188,12 +195,17 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
             source = [source]
             sink = [sink]
-            path = create_model(source, sink)
-            handler.path = path
-            start_time = time.time()
-            handler.update_data()
-            print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-            allocated_request(pd, path, event)
+
+            if is_unique(pd, source, sink):
+                path = create_model(source, sink)
+                handler.path = path
+
+                if path is not None:
+                    start_time = time.time()
+                    handler.update_data()
+                    print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+                    allocated_request(pd, path, source, sink, event, req)
+            update_model(pd, handler, source, sink)
         init = qtd_req
     if show_all_paths:
         pd.show_paths()
@@ -201,6 +213,30 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         pd.save_data(path_output)
     if plot_data:
         pd.plot()
+
+
+def is_unique(pd, source, sink):
+    for i, row in pd.set_path.iterrows():
+        if source == row['Source'] and sink == row['Sink']:
+            return False
+    return True
+
+
+def update_model(pd, handler, last_source, last_sink):
+    for i, row in pd.set_path.iterrows():
+        if last_source == row['Source'] and last_sink == row['Sink']:
+            pass
+        else:
+            path = create_model(row['Source'], row['Sink'], True)
+            handler.path = path
+            if path != row['Path']: #verificar se essa condição é adequada, como usar o diff?
+                print("SHIFT.")
+                handler.old_path = row['Path']
+                handler.update_data(True)
+                reallocated_request(pd, path, i)
+            else:
+                print("NON-SHIFT.")
+
 
 
 def get_req(zipf, qtd_previous, qtd):
@@ -281,38 +317,51 @@ def plot_zipf(distribution, alpha):
 
 
 def make_data():
-    return Data(mobility,mobility_rate,alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj,
-                resources_file,size_file, phi,
+    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+                key_index_ue, e_bs_adj,
+                resources_file, size_file, phi,
                 throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
 
-def create_model(source, sink):
+def create_model(source, sink, reoptimize=False):
     if show_par:
         show_parameters()
     if show_var:
         show_vars()
-    return run_model(source, sink)
+    return run_model(source, sink, reoptimize)
 
 
-def run_model(source, sink):
+def run_model(source, sink, reoptimize):
     start_time = time.time()
     od = OptimizeData(data=data, source=source, sink=sink)
     od.model = gp.Model("Orchestrator")
     od.create_vars()
     od.set_function_objective()
+    #od.set_function_objective2()
     od.create_constraints()
     od.execute(show_log)
     if show_results:
         print(GREEN, "\nContent:", source, " to User:", sink)
         od.result()
-    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-    return od.solution_path(show_path)
+    if reoptimize:
+        print(CYAN, "REOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+    else:
+        print(CYAN, "\nOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+    if od.model.status == gp.GRB.OPTIMAL:
+        path = od.solution_path(show_path)
+    else:
+        path = None
+    return path
 
 
-def allocated_request(pd, path, event=1):
-    pd.insert_path(path, event)
+def reallocated_request(pd, path, req):
+    pd.update_path(path, req)
+
+
+def allocated_request(pd, path, source, sink, req=1, event=1):
+    pd.insert_path(path, source, sink, event, req)
 
 
 def calc_vars():
@@ -332,6 +381,8 @@ def show_vars():
 
 
 def picture():
+    color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
+
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -344,10 +395,12 @@ def picture():
                 if data.weight_file_edge[0][i][j] < NO_EDGE:
                     g.add_edge(name_orig, name_dest)
 
-    ig.plot(g, vertex_label=key_nodes, vertex_color="white",target= path_graph)
+    g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
+    ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+            bbox=(600, 600), )
 
 
-def convert_to_object(dataset: object):
+def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     mobility_rate = dataset["mobility_rate"]
@@ -392,6 +445,33 @@ def convert_to_object(dataset: object):
 
     radius_mbs = int(dataset["radius_mbs"])
     radius_sbs = int(dataset["radius_sbs"])
+
+
+def load_config(config: object):
+    show_log = config["show_log"]
+    show_results = config["show_results"]
+    show_path = config["show_path"]
+    show_var = config["show_var"]
+    show_par = config["show_par"]
+    plot_distribution = config["plot_distribution"]
+    plot_data = config["plot_data"]
+    show_all_paths = config["show_all_paths"]
+    type = config["type"]
+    mobility = config["mobility"]
+    path_dataset = config["path_dataset"]
+    save_data = config["save_data"]
+    path_output = config["path_output"]
+    plot_graph = config["plot_graph"]
+    path_graph = config["path_graph"]
+
+    # random and distribution.
+    avg_qtd_bulk = config["avg_qtd_bulk"]
+    num_events = config["num_events"]
+    num_alpha = config["num_alpha"]
+
+    # single.
+    source = config["source"]
+    sink = config["sink"]
 
 
 if __name__ == "__main__":

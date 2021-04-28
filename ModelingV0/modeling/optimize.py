@@ -31,7 +31,6 @@ DECREASE = 0
 
 MOBILITY_RATE = 10
 
-
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
@@ -62,10 +61,6 @@ class Model(Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
-
-    sources = list()
-    sinks = list()
-
     mobility = Mobility
     mobility_rate = 0
     # Input
@@ -140,8 +135,13 @@ class Data:
 
     # c_fij \in R
     weight_file_edge = None
+    weight_network = None
+    weight_resources = None
 
     weight_dict = dict()
+    weight_network_dict = dict()
+    weight_resources_dict = dict()
+
     throughput_current_edge_dict = dict()
     throughput_expected_edge_dict = dict()
     throughput_diff_edge_dict = dict()
@@ -159,7 +159,8 @@ class Data:
     rtt_min_dict = dict()
     distance_ue_dict = dict()
 
-    def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, key_f=None, key_i=None, key_u=None,
+    def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
+                 key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  rf=None, sf=None, phi_node=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
@@ -204,7 +205,7 @@ class Data:
                 for f
                 in
                 range(self.num_files)]
-            self.current_resources_node = [0 for i in range(self.num_nodes)]
+            self.current_resources_node = [0 for i in range(self.num_bs)]
 
             self.throughput_expected_edge = [
                 [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
@@ -331,8 +332,9 @@ class Data:
                     tag_file = self.key_index_file[f]
                     tag_orig = self.key_index_all[i]
                     tag_dest = self.key_index_all[j]
-                    self.throughput_current_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_current_edge[f][i][
-                        j]
+                    self.throughput_current_edge_dict[tag_file, tag_orig, tag_dest] = \
+                        self.throughput_current_edge[f][i][
+                            j]
 
     def throughput_diff_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -348,15 +350,6 @@ class Data:
             tag = self.key_index_bs[i]
             self.current_resources_node_dict[tag] = self.current_resources_node[i]
 
-    def weight_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_all)):
-                for j in range(len(self.key_index_all)):
-                    tag_file = self.key_index_file[f]
-                    tag_orig = self.key_index_all[i]
-                    tag_dest = self.key_index_all[j]
-                    self.weight_dict[tag_file, tag_orig, tag_dest] = self.weight_file_edge[f][i][j]
-
     def psi_edge_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -366,10 +359,34 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
 
+    def weight_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            for i in range(len(self.key_index_all)):
+                for j in range(len(self.key_index_all)):
+                    tag_file = self.key_index_file[f]
+                    tag_orig = self.key_index_all[i]
+                    tag_dest = self.key_index_all[j]
+                    self.weight_dict[tag_file, tag_orig, tag_dest] = self.weight_file_edge[f][i][j]
+
+    def weight_network_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            for i in range(len(self.key_index_all)):
+                for j in range(len(self.key_index_all)):
+                    tag_file = self.key_index_file[f]
+                    tag_orig = self.key_index_all[i]
+                    tag_dest = self.key_index_all[j]
+                    self.weight_network_dict[tag_file, tag_orig, tag_dest] = self.weight_network[f][i][j]
+
+    def weight_resources_to_dictionary(self):
+        for i in range(len(self.key_index_bs)):
+            tag = self.key_index_bs[i]
+            self.weight_resources_dict[tag] = self.weight_resources[i]
+
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
     path = None
+    old_path = None
 
     __data = Data()
 
@@ -387,10 +404,13 @@ class HandleData:
         self.__calc_current_resources_node()
         self.__calc_weight_file_edge()
 
+        self.__calc_weight_network()
+        self.__calc_weight_resources()
+
     def __calc_omega_user_node(self):
 
         for u in range(len(self.__data.key_index_ue)):
-            for i,tag_i in enumerate(self.__data.key_index_bs):
+            for i, tag_i in enumerate(self.__data.key_index_bs):
                 if tag_i[:3] == 'MBS':
                     # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
                     self.__data.omega_user_node[u][i] = 0
@@ -401,77 +421,74 @@ class HandleData:
         self.__data.omega_user_node_to_dictionary()
 
     def __generate_rtt(self):
-        self.__data.rtt_edge = [[0.0 for i in range(self.__data.num_nodes)] for j in range(self.__data.num_nodes)]
-        for i in range(len(self.__data.key_index_with_ue)):
-            for j in range(len(self.__data.key_index_with_ue)):
-                if i == j:
-                    self.__data.rtt_edge[i][j] = NO_EDGE
+        self.__data.rtt_edge = [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                                range(self.__data.num_nodes + self.__data.num_files)]
 
-        self.__generate_rtt_bs_to_bs()
-        self.__generate_rtt_bs_to_ue()
-        self.__data.rtt_edge_to_dictionary()
-
-    def __generate_rtt_bs_to_bs(self):
-        for i, tag_i in enumerate(self.__data.key_index_bs):
-            for j, tag_j in enumerate(self.__data.key_index_bs):
-                if self.__data.e_bs_adj[i][j] == 1:
-                    self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
+        for i, tag_i in enumerate(self.__data.key_index_all):
+            for j, tag_j in enumerate(self.__data.key_index_all):
+                if i != j:
+                    if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
+                            tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
+                        if self.__is_coverage_bs_to_bs(tag_i, tag_j):
+                            self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
+                            self.__data.rtt_edge[j][i] = self.__data.rtt_min[j][i]
+                        else:
+                            self.__data.rtt_edge[i][j] = NO_EDGE
+                            self.__data.rtt_edge[j][i] = NO_EDGE
+                    if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
+                        if self.__is_coverage_bs_to_ue(tag_i, tag_j):
+                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j,
+                                                                                  self.__data.rtt_min[i][j])
+                        else:
+                            self.__data.rtt_edge[i][j] = NO_EDGE
+                    if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
+                        if self.__is_caching(tag_i, tag_j):
+                            self.__data.rtt_edge[i][j] = 0
+                        else:
+                            self.__data.rtt_edge[i][j] = NO_EDGE
                 else:
                     self.__data.rtt_edge[i][j] = NO_EDGE
+                    self.__data.rtt_edge[j][i] = NO_EDGE
 
-    def __generate_rtt_bs_to_ue(self):
-        for i, tag_i in enumerate(self.__data.key_index_with_ue):
-            for j, tag_j in enumerate(self.__data.key_index_with_ue):
-                if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
-                    rtt = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j, self.__data.rtt_min[i][j])
-                    self.__data.rtt_edge[i][j] = self.__data.rtt_edge[j][i] = round(rtt, 2)
+        self.__data.rtt_edge_to_dictionary()
 
-    def __calc_rtt_bs_to_ue(self, tag_i, i, tag_j, j, rtt_min):
+    def __calc_rtt_bs_to_ue(self, bs, i, ue, j, rtt_min):
         rtt = 0
-        if self.__data.rtt_edge[i][j] == 0.0 and self.__data.rtt_edge[i][j] != NO_EDGE:
-            if tag_i[:2] != tag_j[:2]:
-                if tag_i[:2] == 'UE':
-                    ue = tag_i
-                    bs = tag_j
-                    if self.__data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
-                    else:
-                        rtt = NO_EDGE
-                if tag_j[:2] == 'UE':
-                    ue = tag_j
-                    bs = tag_i
-                    if self.__data.omega_user_node_dict[ue, bs] == 1:
-                        rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
-                    else:
-                        rtt = NO_EDGE
-            else:
-                rtt = NO_EDGE
+        if self.__data.omega_user_node_dict[ue, bs] == 1:
+            rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+        else:
+            rtt = NO_EDGE
         return rtt
 
     def __calc_current_throughput_edge(self):
         rtt_ij = 0
         for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_with_ue)):
-                for j in range(len(self.__data.key_index_with_ue)):
+            for i in range(len(self.__data.key_index_all)):
+                for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
                     if self.__data.rtt_edge is not None:
                         rtt_ij = self.__data.rtt_edge[i][j]
-                    if rtt_ij != NO_EDGE:
-                        self.__data.throughput_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
-                    else:
+                    if rtt_ij == NO_EDGE:
+                        self.__data.throughput_current_edge[f][i][j] = 0
+                    if rtt_ij == 0:
                         self.__data.throughput_current_edge[f][i][j] = NO_EDGE
+                    else:
+                        self.__data.throughput_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
 
         self.__data.throughput_current_to_dictionary()
 
     def __calc_expected_throughput_edge(self):
         for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_with_ue)):
-                for j in range(len(self.__data.key_index_with_ue)):
+            for i in range(len(self.__data.key_index_all)):
+                for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
-                    if self.__data.rtt_min[i][j] != NO_EDGE:
-                        self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
-                    else:
+                    if self.__data.rtt_min[i][j] == NO_EDGE:
+                        self.__data.throughput_expected_edge[f][i][j] = 0
+                    if self.__data.rtt_min[i][j] == 0:
                         self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
+                    else:
+                        self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
+
         self.__data.throughput_expected_to_dictionary()
 
     def __calc_diff_throughput(self):
@@ -491,6 +508,14 @@ class HandleData:
                         i]
             self.__data.current_resources_node[i] = file
         self.__data.current_resources_node_to_dictionary()
+
+    def __calc_psi_edge(self):
+        for f in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_all)):
+                for j in range(len(self.__data.key_index_all)):
+                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
+                        self.__data.psi_edge[f][i][j] = 1
+        self.__data.psi_edge_to_dictionary()
 
     def __calc_weight_file_edge(self):
         global NO_EDGE
@@ -526,15 +551,52 @@ class HandleData:
                                 self.__data.weight_file_edge[f][i][j] = NO_EDGE
         self.__data.weight_to_dictionary()
 
-    def __calc_psi_edge(self):
-        for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_all)):
-                for j in range(len(self.__data.key_index_all)):
-                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
-                        self.__data.psi_edge[f][i][j] = 1
-        self.__data.psi_edge_to_dictionary()
+    def __calc_weight_network(self):
+        self.__data.weight_network = [[[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                                       range(self.__data.num_nodes + self.__data.num_files)] for
+                                      f in range(self.__data.num_files)]
+        for f, tag_f in enumerate(self.__data.key_index_file):
+            for i, tag_i in enumerate(self.__data.key_index_all):
+                for j, tag_j in enumerate(self.__data.key_index_all):
+                    thp_c = self.__data.throughput_current_edge_dict[tag_f, tag_j, tag_j]
+                    thp_e = self.__data.throughput_expected_edge_dict[tag_f, tag_j, tag_j]
+
+                    if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS') or (
+                            tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
+                        if self.__is_coverage_bs_to_bs(tag_i, tag_j):
+                            self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
+
+                    if tag_i[:3] == 'SBS' and tag_j[:2] == 'UE':
+                        if self.__is_coverage_bs_to_ue2(tag_j, tag_i):
+                            self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
+
+                    if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
+                        if self.__is_caching(tag_i, tag_j):
+                            self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
+
+        self.__data.weight_network_to_dictionary()
+
+    def __weight_network(self, thp_c, thp_e):
+        if thp_c == 0 or thp_e == 0:
+            return NO_EDGE
+        return thp_c / thp_e
+
+    def __calc_weight_resources(self):
+        self.__data.weight_resources = [0.0 for i in range(self.__data.num_bs)]
+
+        for i, tag_i in enumerate(self.__data.key_index_bs):
+            rri = self.__data.current_resources_node_dict[tag_i]
+            rti = self.__data.resources_node_dict[tag_i]
+            self.__data.weight_resources[i] = self.__weight_resource(rri, rti)
+
+        self.__data.weight_resources_to_dictionary()
+
+    def __weight_resource(self, rri, rti):
+        return rri / rti
 
     def __calc_weight(self, rr_i, rt_i, bwc_fij, bwe_fij):
+        if bwc_fij== 0 or bwe_fij ==0:
+            return NO_EDGE
         return (self.__data.alpha * (rr_i / rt_i)) + ((1 - self.__data.alpha) * (bwc_fij / bwe_fij))
 
     def __is_caching(self, file, bs):
@@ -564,13 +626,19 @@ class HandleData:
     def __is_coverage_bs_to_ue(self, orig, dest):
         return self.__data.omega_user_node_dict[dest, orig] == 1
 
+    def __is_coverage_bs_to_ue2(self, u, bs):
+        return self.__data.omega_user_node_dict[u, bs] == 1
+
     # This method update data of the problem.
-    def update_data(self):
+    def update_data(self, is_shift=False):
         if self.__data.mobility.IS_MOBILE:
             self.__update_ue_position()
         self.__update_rtt_min()
         self.__update_rtt()
-        self.__update_phi_node()
+        if is_shift:
+            self.__update_phi_node()
+        else:
+            self.__insert_phi_node()
         self.calc_vars(True)
 
     def __update_rtt_min(self):
@@ -581,19 +649,25 @@ class HandleData:
         self.__data.rtt_min_to_dictionary()
 
     def __update_rtt(self):
-
         for i in range(len(self.__data.key_index_with_ue)):
             for j in range(len(self.__data.key_index_with_ue)):
                 if self.__data.rtt_edge[i][j] != NO_EDGE:
                     if random.uniform(0, 1) == INCREASE:
-                        print("increase")
                         self.__data.rtt_edge[i][j] += randrange(1, 10)
                     if random.uniform(0, 1) == DECREASE:
-                        print("decrease")
                         self.__data.rtt_edge[i][j] = abs(self.__data.rtt_edge[i][j] - randrange(1, 10))
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
+        for i, file in enumerate(self.__data.key_index_file):
+            for j, bs in enumerate(self.__data.key_index_bs):
+                if file == self.old_path[CONTENT] and bs == self.old_path[STORE]:
+                    self.__data.phi_node[i][j] -= 1
+                if file == self.path[CONTENT] and bs == self.path[STORE]:
+                    self.__data.phi_node[i][j] += 1
+        self.__data.phi_node_to_dictionary()
+
+    def __insert_phi_node(self):
         for i, file in enumerate(self.__data.key_index_file):
             for j, bs in enumerate(self.__data.key_index_bs):
                 if file == self.path[CONTENT] and bs == self.path[STORE]:
@@ -603,7 +677,8 @@ class HandleData:
     def __update_ue_position(self):
         for u in range(len(self.__data.key_index_ue)):
             for i in range(len(self.__data.key_index_bs)):
-                self.__data.distance_ue[u][i] += np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate, 1)
+                self.__data.distance_ue[u][i] += np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate,
+                                                                  1)
 
 
 # This class execute the optimization model.
@@ -634,6 +709,17 @@ class OptimizeData:
             gp.quicksum(self.x[f, i, j] * self.data.weight_dict[f, i, j] for f in self.s for i in
                         self.data.key_index_all for j in self.data.key_index_all),
             sense=gp.GRB.MINIMIZE)
+
+    def set_function_objective2(self):
+        for f in self.s:
+            for i in self.data.key_index_all:
+                for j in self.data.key_index_all:
+                    self.model.setObjective(
+                        (self.__data.alpha * self.__data.weight_resources_dict[i] * self.x[f, i, j])
+                        + ((1 - self.__data.alpha) * gp.quicksum(
+                            (self.__data.weight_network_dict[f, i, j] * self.x[f, i, j]) * self.data.psi_edge_dict[
+                                f, i, j])),
+                        sense=gp.GRB.MINIMIZE)
 
     def create_model_in_ortools(self):
         pass
@@ -747,9 +833,12 @@ class LogData:
     # PARAMETERS
     def __log_rtt_edge(self):
         print("EDGE RTT.")
-        for i in range(len(self.data.key_index_with_ue)):
-            for j in range(len(self.data.key_index_with_ue)):
-                print(self.data.rtt_edge[i][j], end=" ")
+        for i in range(len(self.data.key_index_all)):
+            for j in range(len(self.data.key_index_all)):
+                if self.data.rtt_edge[i][j] == NO_EDGE:
+                    print('ထ', end=" ")
+                else:
+                    print(self.data.rtt_edge[i][j], end=" ")
             print()
         print()
 
@@ -798,15 +887,18 @@ class LogData:
         print()
 
     def __log_rtt_min(self):
-        print("BASE RTT.")
-        for i in range(len(self.data.key_index_with_ue)):
-            for j in range(len(self.data.key_index_with_ue)):
-                print(self.data.rtt_min[i][j], end=" ")
+        print("MINIMUM RTT.")
+        for i in range(len(self.data.key_index_all)):
+            for j in range(len(self.data.key_index_all)):
+                if self.data.rtt_min[i][j] == NO_EDGE:
+                    print('ထ', end=" ")
+                else:
+                    print(self.data.rtt_min[i][j], end=" ")
             print()
         print()
 
     def __log_rtt_min_dict(self):
-        print("BASE RTT.")
+        print("MINIMUM RTT.")
         for k in self.data.rtt_min_dict.keys():
             print(k, self.data.rtt_min_dict[k])
         print()
@@ -854,7 +946,10 @@ class LogData:
                 print(filename.upper())
                 for i in range(len(self.data.key_index_all)):
                     for j in range(len(self.data.key_index_all)):
-                        print(self.data.throughput_expected_edge[f][i][j], end=" ")
+                        if self.data.throughput_expected_edge[f][i][j] == NO_EDGE:
+                            print('ထ', end=" ")
+                        else:
+                            print(self.data.throughput_expected_edge[f][i][j], end=" ")
                     print()
                 print()
         print()
@@ -870,7 +965,10 @@ class LogData:
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
                 for j in range(len(self.data.key_index_all)):
-                    print(self.data.throughput_current_edge[f][i][j], end=" ")
+                    if self.data.throughput_current_edge[f][i][j] == NO_EDGE:
+                        print('ထ', end=" ")
+                    else:
+                        print(self.data.throughput_current_edge[f][i][j], end=" ")
                 print()
             print()
         print()
@@ -941,6 +1039,37 @@ class LogData:
             print(k, self.data.weight_dict[k])
         print()
 
+    def __log_weight_resources(self):
+        print("WEIGHT RESOURCES.")
+        for i in range(len(self.data.key_index_bs)):
+            print(str(self.data.weight_resources[i]).format(), end=" ")
+
+    def __log_weight_resources_dict(self):
+        print("WEIGHT RESOURCES.")
+        for k in self.data.weight_resources_dict.keys():
+            print(k, self.data.weight_resources_dict[k])
+        print()
+
+    def __log_weight_network(self):
+        print("WEIGHT NETWORK.")
+        for f, filename in enumerate(self.data.key_index_file):
+            print(filename.upper())
+            for i in range(len(self.data.key_index_all)):
+                for j in range(len(self.data.key_index_all)):
+                    if self.data.weight_file_edge[f][i][j] == NO_EDGE:
+                        print('ထ', end=" ")
+                    else:
+                        print(str(self.data.weight_file_edge[f][i][j]).format(), end=" ")
+                print()
+            print()
+        print()
+
+    def __log_weight_network_dict(self):
+        print("WEIGHT NETWORK.")
+        for k in self.data.weight_network_dict.keys():
+            print(k, self.data.weight_network_dict[k])
+        print()
+
     def show_parameters(self):
         print("PARAMETERS.\n")
         self.__log_phi_node()
@@ -967,7 +1096,9 @@ class LogData:
         self.__log_diff_throughput_edge()
         self.__log_current_resources_node()
         self.__log_psi_edge()
-        self.__log_weight_file_edge()
+        # self.__log_weight_file_edge()
+        self.__log_weight_resources()
+        self.__log_weight_network()
 
     def show_vars_dict(self):
         print("VARS.\n")
@@ -983,20 +1114,27 @@ class LogData:
 # This class store all result and plot a graphics.
 class PlotData:
     __data = Data()
-    __set_path = None
+    set_path = None
     __delay = None
     __events_count = 0
+    __req_count = 0
 
     def __init__(self, data):
         self.__data = data
-        self.__set_path = pds.DataFrame(columns=['Path', 'Delay'])
+        self.set_path = pds.DataFrame(columns=['Path', 'Source', 'Sink', 'Delay'])
         self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
 
-    def insert_path(self, path, event):
+    def insert_path(self, path, source, sink, event, req):
         self.__events_count = event
-        self.__set_path = self.__set_path.append({'Path': path.copy(), 'Delay': self.__sum_rtt(path)},
-                                                 ignore_index=True)
-        self.__upload_delay()
+        self.__req_count = req
+        self.set_path = self.set_path.append(
+            {'Path': path.copy(), 'Source': source, 'Sink': sink, 'Delay': self.__sum_rtt(path)},
+            ignore_index=True)
+        self.__insert_delay(path)
+
+    def update_path(self, path, req):
+        self.set_path._set_value(req, 'Path', path.copy())
+        self.__update_delay()
 
     def __sum_rtt(self, path):
         rtt = 0
@@ -1008,14 +1146,19 @@ class PlotData:
 
     def show_paths(self):
         print("SET PATH.")
-        print(self.__set_path)
+        print(self.set_path)
         print(self.__delay)
 
-    def __upload_delay(self):
-        for i, row in self.__set_path.iterrows():
+    def __insert_delay(self, path, ):
+        self.__delay = self.__delay.append(
+            {'Id': self.set_path.shape[0] - 1, 'Event': self.__events_count, 'Delay': self.__sum_rtt(path)},
+            ignore_index=True)
+
+    def __update_delay(self):
+        for i, row in self.set_path.iterrows():
             self.__delay = self.__delay.append(
                 {'Id': i, 'Event': self.__events_count, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
-            self.__set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
+            self.set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
 
     def plot(self):
         plt.title('Average delay per time')
@@ -1040,4 +1183,4 @@ class PlotData:
     def save_data(self, path):
         with pds.ExcelWriter(path) as writer:
             self.__delay.to_excel(writer, sheet_name='Delay')
-            self.__set_path.to_excel(writer, sheet_name='Request')
+            self.set_path.to_excel(writer, sheet_name='Request')

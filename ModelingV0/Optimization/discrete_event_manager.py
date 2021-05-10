@@ -63,27 +63,27 @@ show_results = True
 show_path = True
 show_var = False
 show_par = False
-plot_distribution = True
-plot_data = True
+plot_distribution = False
+plot_data = False
 show_all_paths = False
-type = Type.ZIPF
+type = Type.SINGLE
 mobility = Mobility.IS_MOBILE
 
 path_dataset = r'..\dataset\instance_2.json'
 
-save_data = True
+save_data = False
 path_output = r'..\output\data\instance_2.xlsx'
-plot_graph = False
+plot_graph = True
 path_graph = r'..\output\graph\instance_2.png'
 
 # random and distribution.
 avg_qtd_bulk = 2
-num_events = 10
+num_events = 2
 num_alpha = 0.56
 
 # single.
-s = np.array(['F1'])
-t = np.array(['UE1'])
+s = np.array(['F5'])
+t = np.array(['UE11'])
 
 
 def main():
@@ -135,7 +135,7 @@ def single(source, sink):
     path = create_model(source, sink)
     handler.path = path
     handler.update_data()
-    allocated_request(pd, path,source,sink)
+    allocated_request(pd, path, source, sink)
     if show_all_paths:
         pd.show_paths()
     if save_data:
@@ -189,26 +189,28 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         qtd_req = bulks[event]
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-        for req in range(qtd_req):
-            source = sources[req]
-            sink = sinks[req]
+        # for req in range(qtd_req):
+        #   source = sources[req]
+        #  sink = sinks[req]
 
-            source = [source]
-            sink = [sink]
+        # source = [source]
+        # sink = [sink]
 
-            if is_unique(pd, source, sink):
-                path = create_model(source, sink)
-                handler.path = path
+        #for s,t in zip(sources,sinks):
+        #if is_unique(pd, s, t):
+        path = create_model(sources, sinks, event)
+        handler.path = path
 
-                if path is not None:
-                    start_time = time.time()
-                    handler.update_data()
-                    print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-                    allocated_request(pd, path, source, sink, event, req)
-            update_model(pd, handler, source, sink)
+        if path is not None:
+            start_time = time.time()
+            handler.update_data()
+            print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+            #allocated_request(pd, path, source, sink, event, req)
+        # update_model(pd, handler, source, sink)
         init = qtd_req
-    if show_all_paths:
-        pd.show_paths()
+
+    #if show_all_paths:
+     #   pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     if plot_data:
@@ -229,14 +231,13 @@ def update_model(pd, handler, last_source, last_sink):
         else:
             path = create_model(row['Source'], row['Sink'], True)
             handler.path = path
-            if path != row['Path']: #verificar se essa condição é adequada, como usar o diff?
+            if path != row['Path']:  # verificar se essa condição é adequada, como usar o diff?
                 print("SHIFT.")
                 handler.old_path = row['Path']
                 handler.update_data(True)
                 reallocated_request(pd, path, i)
             else:
                 print("NON-SHIFT.")
-
 
 
 def get_req(zipf, qtd_previous, qtd):
@@ -325,21 +326,21 @@ def make_data():
                 )
 
 
-def create_model(source, sink, reoptimize=False):
+def create_model(source, sink, event=1, reoptimize=False):
     if show_par:
         show_parameters()
     if show_var:
         show_vars()
-    return run_model(source, sink, reoptimize)
+    return run_model(source, sink, reoptimize, event)
 
 
-def run_model(source, sink, reoptimize):
+def run_model(source, sink, reoptimize, event):
     start_time = time.time()
-    od = OptimizeData(data=data, source=source, sink=sink)
+    od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
     od.create_vars()
     od.set_function_objective()
-    #od.set_function_objective2()
+    # od.set_function_objective2()
     od.create_constraints()
     od.execute(show_log)
     if show_results:
@@ -348,6 +349,7 @@ def run_model(source, sink, reoptimize):
     if reoptimize:
         print(CYAN, "REOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
     else:
+        print(RED, "EVENTO: ", event, RESET)
         print(CYAN, "\nOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
     if od.model.status == gp.GRB.OPTIMAL:
         path = od.solution_path(show_path)

@@ -31,6 +31,10 @@ DECREASE = 0
 
 MOBILITY_RATE = 10
 
+ID_REQ = 0
+SOURCE = 1
+SINK = 2
+
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
@@ -61,6 +65,10 @@ class Model(Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
+
+    requests = list()
+    __id_req = 0
+
     mobility = Mobility
     mobility_rate = 0
     # Input
@@ -243,6 +251,13 @@ class Data:
             self.__e_bs_adj_to_dictionary()
             self.rtt_min_to_dictionary()
             self.distance_ue_to_dictionary()
+
+    def insert_requests(self, sources, sinks):
+        self.__id_req += 1
+        for r in range(len(sources)):
+            tuple = (self.__id_req, sources[r], sinks[r])
+            self.requests.append(tuple)
+
 
     # PARAMETERS TO DICTIONARY
     def phi_node_to_dictionary(self):
@@ -437,8 +452,8 @@ class HandleData:
                             self.__data.rtt_edge[j][i] = NO_EDGE
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
                         if self.__is_coverage_bs_to_ue(tag_i, tag_j):
-                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue(tag_i, i, tag_j, j,
-                                                                                  self.__data.rtt_min[i][j])
+                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
+                                                                                           self.__data.rtt_min[i][j])
                         else:
                             self.__data.rtt_edge[i][j] = NO_EDGE
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
@@ -452,10 +467,18 @@ class HandleData:
 
         self.__data.rtt_edge_to_dictionary()
 
-    def __calc_rtt_bs_to_ue(self, bs, i, ue, j, rtt_min):
+    def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__data.omega_user_node_dict[ue, bs] == 1:
-            rtt = rtt_min * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+            rtt = rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+        else:
+            rtt = NO_EDGE
+        return rtt
+
+    def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
+        rtt = 0
+        if self.__data.omega_user_node_dict[ue, bs] == 1:
+            rtt = rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
         else:
             rtt = NO_EDGE
         return rtt
@@ -595,7 +618,7 @@ class HandleData:
         return rri / rti
 
     def __calc_weight(self, rr_i, rt_i, bwc_fij, bwe_fij):
-        if bwc_fij== 0 or bwe_fij ==0:
+        if bwc_fij == 0 or bwe_fij == 0:
             return NO_EDGE
         return (self.__data.alpha * (rr_i / rt_i)) + ((1 - self.__data.alpha) * (bwc_fij / bwe_fij))
 
@@ -631,10 +654,11 @@ class HandleData:
 
     # This method update data of the problem.
     def update_data(self, is_shift=False):
+        sense = -1
         if self.__data.mobility.IS_MOBILE:
-            self.__update_ue_position()
+            sense = self.__update_ue_position()
         self.__update_rtt_min()
-        self.__update_rtt()
+        self.__update_rtt(sense)
         if is_shift:
             self.__update_phi_node()
         else:
@@ -642,20 +666,22 @@ class HandleData:
         self.calc_vars(True)
 
     def __update_rtt_min(self):
-        for i in range(len(self.__data.key_index_with_ue)):
-            for j in range(len(self.__data.key_index_with_ue)):
+        for i in range(len(self.__data.key_index_all)):
+            for j in range(len(self.__data.key_index_all)):
                 if self.__data.rtt_edge[i][j] <= self.__data.rtt_min[i][j]:
                     self.__data.rtt_min[i][j] = self.__data.rtt_edge[i][j]
         self.__data.rtt_min_to_dictionary()
 
-    def __update_rtt(self):
-        for i in range(len(self.__data.key_index_with_ue)):
-            for j in range(len(self.__data.key_index_with_ue)):
+    def __update_rtt(self, sense):
+        for i, tag_i in enumerate(self.__data.key_index_all):
+            for j, tag_j in enumerate(self.__data.key_index_all):
                 if self.__data.rtt_edge[i][j] != NO_EDGE:
-                    if random.uniform(0, 1) == INCREASE:
-                        self.__data.rtt_edge[i][j] += randrange(1, 10)
-                    if random.uniform(0, 1) == DECREASE:
-                        self.__data.rtt_edge[i][j] = abs(self.__data.rtt_edge[i][j] - randrange(1, 10))
+                    if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
+                        if random.uniform(0, 1) == INCREASE:
+                            self.__data.rtt_edge[i][j] += self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
+                                                                                            self.__data.rtt_edge[i][j])
+                        if random.uniform(0, 1) == DECREASE:
+                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease()
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
@@ -675,10 +701,16 @@ class HandleData:
         self.__data.phi_node_to_dictionary()
 
     def __update_ue_position(self):
+        sense = -1
         for u in range(len(self.__data.key_index_ue)):
             for i in range(len(self.__data.key_index_bs)):
-                self.__data.distance_ue[u][i] += np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate,
-                                                                  1)
+                new_dis = np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate, 1)
+                if new_dis > self.__data.distance_ue[u][i]:
+                    sense = INCREASE
+                else:
+                    sense = DECREASE
+                self.__data.distance_ue[u][i] += new_dis
+        return sense
 
 
 # This class execute the optimization model.
@@ -691,15 +723,18 @@ class OptimizeData:
     t = ""
     __path = list()
 
-    def __init__(self, data, source, sink):
+    req_lst = list()
+
+    def __init__(self, data, sources, sinks):
         self.data = data
-        self.s = source
-        self.t = sink
+        self.s = sources
+        self.t = sinks
+        self.__data.insert_requests(sources,sinks)
 
     def run_model(self):
         pass
 
-    # n_fij \in {0,1}
+    # x_fij \in {0,1}
     def create_vars(self):
         self.x = self.model.addVars(self.s, self.data.key_index_all, self.data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
@@ -727,23 +762,42 @@ class OptimizeData:
     def create_constraints(self):
         # limite de recursos do nó.
         self.__set_constraint_node_resources_capacity()
+        # self.__set_constraint_node_resources_capacity2()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
         self.__set_constraint_throughput()
+        # self.__set_constraint_throughput2()
 
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.__set_constraint_flow_conservation()
+        # self.__set_constraint_flow_conservation2()
 
         # restrições de equilibrio de fluxo no nó de origem.
         self.__set_constraint_flow_conservation_source()
+        #self.__set_constraint_flow_conservation_source2()
 
         # restrições de equilibrio de fluxo no nó de destino.
         self.__set_constraint_flow_conservation_sink()
+        # self.__set_constraint_flow_conservation_sink2()
+
+    def __set_constraint_node_resources_capacity2(self):
+        for req in self.__data.requests:
+            for i in self.__data.key_index_all:
+                self.model.addConstrs(self.data.resources_node_dict[i] * self.x[req[SOURCE], req[SOURCE], i]
+                                      >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[req[SOURCE]]) *
+                                      self.x[
+                                          req[SOURCE], req[SOURCE], i])
+
+    def __set_constraint_throughput2(self):
+        for req in self.__data.requests:
+            for i in self.data.key_index_all:
+                for j in self.data.key_index_all:
+                    self.model.addConstrs(self.data.throughput_expected_edge_dict[req[SOURCE], i, j] * self.x[req[SOURCE], i, j] >= self.data.throughput_current_edge_dict[req[SOURCE], i, j] * self.x[req[SOURCE], i, j])
 
     def __set_constraint_node_resources_capacity(self):
         self.model.addConstrs(self.data.resources_node_dict[i] * self.x[s, s, i]
                               >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[s]) * self.x[
-                                  s, s, i] for f in self.data.key_index_file for s in self.s for i in
+                                  s, s, i] for s in self.s for i in
                               self.data.key_index_bs)
 
     def __set_constraint_throughput(self):
@@ -761,17 +815,38 @@ class OptimizeData:
                                          - gp.quicksum(self.x[f, j, i] for j in self.data.key_index_all)
                                          == 0, 'c4')
 
+    def __set_constraint_flow_conservation2(self):
+        for req in self.__data.requests:
+            for i in self.data.key_index_all:
+                if all(i != s for s in self.__data.requests[SOURCE]) and all(i != t for t in self.__data.requests[SINK]):
+                    # if i != self.s and i != self.t:
+                    self.model.addConstr(gp.quicksum(self.x[req[SOURCE], i, j] for j in self.data.key_index_all)
+                                         - gp.quicksum(self.x[req[SOURCE], j, i] for j in self.data.key_index_all)
+                                         == 0, 'c4')
+
     def __set_constraint_flow_conservation_source(self):
         for f in self.s:
             self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.data.key_index_bs)
                                  - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.data.key_index_bs)
                                  == self.data.throughput_min_file_dict[f], 'c5')
 
+    def __set_constraint_flow_conservation_source2(self):
+        for req in self.__data.requests:
+            self.model.addConstr(gp.quicksum(self.x[req[SOURCE], req[SOURCE], i] for i in self.data.key_index_bs)
+                                 - gp.quicksum(self.x[req[SOURCE], i, req[SOURCE]] for i in self.data.key_index_bs)
+                                 == self.data.throughput_min_file_dict[req[SOURCE]], 'c5')
+
     def __set_constraint_flow_conservation_sink(self):
         for f in self.s:
             self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.data.key_index_bs)
                                  - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.data.key_index_bs)
                                  == - self.data.throughput_min_file_dict[f], 'c6')
+
+    def __set_constraint_flow_conservation_sink2(self):
+        for req in self.__data.requests:
+            self.model.addConstr(gp.quicksum(self.x[req[SOURCE], req[SINK], i] for i in self.data.key_index_bs)
+                                 - gp.quicksum(self.x[req[SOURCE], i, req[SINK]] for i in self.data.key_index_bs)
+                                 == - self.data.throughput_min_file_dict[req[SOURCE]], 'c6')
 
     def execute(self, log):
         # self.model.reset()

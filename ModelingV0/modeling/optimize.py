@@ -34,6 +34,7 @@ MOBILITY_RATE = 10
 ID_REQ = 0
 SOURCE = 1
 SINK = 2
+KEY = 3
 
 RED = "\033[1;31m"
 BLUE = "\033[1;34m"
@@ -65,9 +66,10 @@ class Model(Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
-
     requests = list()
-    __id_req = 0
+    id_req = 0
+    __id_event = 0
+    __s = list()
 
     mobility = Mobility
     mobility_rate = 0
@@ -252,12 +254,22 @@ class Data:
             self.rtt_min_to_dictionary()
             self.distance_ue_to_dictionary()
 
+    def clear_requests(self):
+        self.requests.clear()
+        self.id_req = 0
+
     def insert_requests(self, sources, sinks):
-        self.__id_req += 1
+        self.__id_event += 1
+        new_source = list()
         for r in range(len(sources)):
-            tuple = (self.__id_req, sources[r], sinks[r])
+            self.id_req += 1
+            key = str(self.id_req).rjust(8, '0') + '_' + str(sources[r])
+            tuple = (self.id_req, sources[r], sinks[r], key)
+            new_source.append(key)
             self.requests.append(tuple)
 
+        self.__s += new_source
+        return self.__s
 
     # PARAMETERS TO DICTIONARY
     def phi_node_to_dictionary(self):
@@ -681,7 +693,8 @@ class HandleData:
                             self.__data.rtt_edge[i][j] += self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                             self.__data.rtt_edge[i][j])
                         if random.uniform(0, 1) == DECREASE:
-                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease()
+                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_j,
+                                                                                           self.__data.rtt_edge[i][j])
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
@@ -723,38 +736,44 @@ class OptimizeData:
     t = ""
     __path = list()
 
-    req_lst = list()
-
     def __init__(self, data, sources, sinks):
-        self.data = data
+        self.__data = data
         self.s = sources
         self.t = sinks
-        self.__data.insert_requests(sources,sinks)
+        self.s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self):
         pass
 
     # x_fij \in {0,1}
     def create_vars(self):
-        self.x = self.model.addVars(self.s, self.data.key_index_all, self.data.key_index_all,
+        self.x = self.model.addVars(self.s, self.__data.key_index_all, self.__data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
     def set_function_objective(self):
         self.model.setObjective(
-            gp.quicksum(self.x[f, i, j] * self.data.weight_dict[f, i, j] for f in self.s for i in
-                        self.data.key_index_all for j in self.data.key_index_all),
+            gp.quicksum(self.x[f, i, j] * self.__data.weight_dict[f, i, j] for f in self.s for i in
+                        self.__data.key_index_all for j in self.__data.key_index_all),
+            sense=gp.GRB.MINIMIZE)
+
+    def set_function_objective1(self):
+        self.model.setObjective(
+            gp.quicksum(self.x[f, i, j] * self.__data.weight_dict[f[9:], i, j] for f in self.s for i in
+                        self.__data.key_index_all for j in self.__data.key_index_all),
             sense=gp.GRB.MINIMIZE)
 
     def set_function_objective2(self):
-        for f in self.s:
-            for i in self.data.key_index_all:
-                for j in self.data.key_index_all:
-                    self.model.setObjective(
-                        (self.__data.alpha * self.__data.weight_resources_dict[i] * self.x[f, i, j])
-                        + ((1 - self.__data.alpha) * gp.quicksum(
-                            (self.__data.weight_network_dict[f, i, j] * self.x[f, i, j]) * self.data.psi_edge_dict[
-                                f, i, j])),
-                        sense=gp.GRB.MINIMIZE)
+        self.model.setObjective(
+            (self.__data.alpha * gp.quicksum(
+                self.__data.weight_resources_dict[i] * self.x[req[KEY], req[SOURCE], i] for i in
+                self.__data.key_index_bs for req in self.__data.requests))
+            +
+            ((1 - self.__data.alpha) * gp.quicksum(
+                (self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]) *
+                self.__data.psi_edge_dict[
+                    req[SOURCE], i, j] for i in self.__data.key_index_bs for j in self.__data.key_index_all for req in
+                self.__data.requests)),
+            sense=gp.GRB.MINIMIZE)
 
     def create_model_in_ortools(self):
         pass
@@ -762,91 +781,109 @@ class OptimizeData:
     def create_constraints(self):
         # limite de recursos do nó.
         self.__set_constraint_node_resources_capacity()
-        # self.__set_constraint_node_resources_capacity2()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
         self.__set_constraint_throughput()
-        # self.__set_constraint_throughput2()
 
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.__set_constraint_flow_conservation()
-        # self.__set_constraint_flow_conservation2()
 
         # restrições de equilibrio de fluxo no nó de origem.
         self.__set_constraint_flow_conservation_source()
-        #self.__set_constraint_flow_conservation_source2()
 
         # restrições de equilibrio de fluxo no nó de destino.
         self.__set_constraint_flow_conservation_sink()
-        # self.__set_constraint_flow_conservation_sink2()
+
+    def create_constraints2(self):
+        # limite de recursos do nó.
+        self.__set_constraint_node_resources_capacity2()
+
+        # restrição para vazão esperada seja sempre a menor que a atual.
+        self.__set_constraint_throughput2()
+
+        # restrições de equilibrio de fluxo em nós intermediarios.
+        self.__set_constraint_flow_conservation2()
+
+        # restrições de equilibrio de fluxo no nó de origem.
+        self.__set_constraint_flow_conservation_source2()
+
+        # restrições de equilibrio de fluxo no nó de destino.
+        self.__set_constraint_flow_conservation_sink2()
 
     def __set_constraint_node_resources_capacity2(self):
         for req in self.__data.requests:
-            for i in self.__data.key_index_all:
-                self.model.addConstrs(self.data.resources_node_dict[i] * self.x[req[SOURCE], req[SOURCE], i]
-                                      >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[req[SOURCE]]) *
-                                      self.x[
-                                          req[SOURCE], req[SOURCE], i])
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.__data.resources_node_dict[i] *
+                                     self.x[req[KEY], req[SOURCE], i]
+                                     >= (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
+                    req[SOURCE]]) *
+                                     self.x[
+                                         req[KEY], req[SOURCE], i])
+
+    def __set_constraint_node_resources_capacity(self):
+        self.model.addConstrs(self.__data.resources_node_dict[i] * self.x[s, s, i]
+                              >= (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[s]) *
+                              self.x[
+                                  s, s, i] for s in self.s for i in
+                              self.__data.key_index_bs)
 
     def __set_constraint_throughput2(self):
         for req in self.__data.requests:
-            for i in self.data.key_index_all:
-                for j in self.data.key_index_all:
-                    self.model.addConstrs(self.data.throughput_expected_edge_dict[req[SOURCE], i, j] * self.x[req[SOURCE], i, j] >= self.data.throughput_current_edge_dict[req[SOURCE], i, j] * self.x[req[SOURCE], i, j])
-
-    def __set_constraint_node_resources_capacity(self):
-        self.model.addConstrs(self.data.resources_node_dict[i] * self.x[s, s, i]
-                              >= (self.data.current_resources_node_dict[i] + self.data.resources_file_dict[s]) * self.x[
-                                  s, s, i] for s in self.s for i in
-                              self.data.key_index_bs)
+            for i in self.__data.key_index_all:
+                for j in self.__data.key_index_all:
+                    self.model.addConstr(
+                        (self.__data.throughput_expected_edge_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]) >= (
+                                self.__data.throughput_current_edge_dict[req[SOURCE], i, j] * self.x[
+                            req[KEY], i, j]))
 
     def __set_constraint_throughput(self):
-        self.model.addConstrs(self.data.throughput_expected_edge_dict[f, i, j] * self.x[f, i, j]
-                              >= self.data.throughput_current_edge_dict[f, i, j] * self.x[f, i, j] for f in
-                              self.s for i in self.data.key_index_all for j in
-                              self.data.key_index_all)
+        self.model.addConstrs(self.__data.throughput_expected_edge_dict[f, i, j] * self.x[f, i, j]
+                              >= self.__data.throughput_current_edge_dict[f, i, j] * self.x[f, i, j] for f in
+                              self.s for i in self.__data.key_index_all for j in
+                              self.__data.key_index_all)
 
     def __set_constraint_flow_conservation(self):
         for f in self.s:
-            for i in self.data.key_index_all:
+            for i in self.__data.key_index_all:
                 if all(i != s for s in self.s) and all(i != t for t in self.t):
-                    # if i != self.s and i != self.t:
-                    self.model.addConstr(gp.quicksum(self.x[f, i, j] for j in self.data.key_index_all)
-                                         - gp.quicksum(self.x[f, j, i] for j in self.data.key_index_all)
+                    self.model.addConstr(gp.quicksum(self.x[f, i, j] for j in self.__data.key_index_all)
+                                         - gp.quicksum(self.x[f, j, i] for j in self.__data.key_index_all)
                                          == 0, 'c4')
 
     def __set_constraint_flow_conservation2(self):
         for req in self.__data.requests:
-            for i in self.data.key_index_all:
-                if all(i != s for s in self.__data.requests[SOURCE]) and all(i != t for t in self.__data.requests[SINK]):
-                    # if i != self.s and i != self.t:
-                    self.model.addConstr(gp.quicksum(self.x[req[SOURCE], i, j] for j in self.data.key_index_all)
-                                         - gp.quicksum(self.x[req[SOURCE], j, i] for j in self.data.key_index_all)
+            for i in self.__data.key_index_all:
+                # if all(i != s for s in req[SOURCE]) and all(i != t for t in req[SINK]):
+                if (i != req[SOURCE]) and (i != req[SINK]):
+                    # if (i[:2] != 'UE') and (i[:1] != 'F'):
+                    # if (all(i != s[SOURCE] for s in self.__data.requests) and all(i != t[SINK] for t in self.__data.requests)):
+                    self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] for j in self.__data.key_index_all)
+                                         - gp.quicksum(self.x[req[KEY], j, i] for j in self.__data.key_index_all)
                                          == 0, 'c4')
 
     def __set_constraint_flow_conservation_source(self):
         for f in self.s:
-            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.data.key_index_bs)
-                                 - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.data.key_index_bs)
-                                 == self.data.throughput_min_file_dict[f], 'c5')
+            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.__data.key_index_bs)
+                                 - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.__data.key_index_bs)
+                                 == self.__data.throughput_min_file_dict[f], 'c5')
 
     def __set_constraint_flow_conservation_source2(self):
         for req in self.__data.requests:
-            self.model.addConstr(gp.quicksum(self.x[req[SOURCE], req[SOURCE], i] for i in self.data.key_index_bs)
-                                 - gp.quicksum(self.x[req[SOURCE], i, req[SOURCE]] for i in self.data.key_index_bs)
-                                 == self.data.throughput_min_file_dict[req[SOURCE]], 'c5')
+            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SOURCE], i] for i in self.__data.key_index_bs)
+                                 - gp.quicksum(self.x[req[KEY], i, req[SOURCE]] for i in self.__data.key_index_bs)
+                                 == self.__data.throughput_min_file_dict[req[SOURCE]], 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
         for f in self.s:
-            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.data.key_index_bs)
-                                 - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.data.key_index_bs)
-                                 == - self.data.throughput_min_file_dict[f], 'c6')
+            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.__data.key_index_bs)
+                                 - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.__data.key_index_bs)
+                                 == - self.__data.throughput_min_file_dict[f], 'c6')
 
     def __set_constraint_flow_conservation_sink2(self):
         for req in self.__data.requests:
-            self.model.addConstr(gp.quicksum(self.x[req[SOURCE], req[SINK], i] for i in self.data.key_index_bs)
-                                 - gp.quicksum(self.x[req[SOURCE], i, req[SINK]] for i in self.data.key_index_bs)
-                                 == - self.data.throughput_min_file_dict[req[SOURCE]], 'c6')
+            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SINK], i] for i in self.__data.key_index_bs)
+                                 - gp.quicksum(self.x[req[KEY], i, req[SINK]] for i in self.__data.key_index_bs)
+                                 == - self.__data.throughput_min_file_dict[req[SOURCE]], 'c6')
 
     def execute(self, log):
         # self.model.reset()

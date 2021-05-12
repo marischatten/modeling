@@ -60,7 +60,7 @@ data = None
 
 show_log = 0
 show_results = True
-show_path = True
+show_path = False
 show_var = False
 show_par = False
 plot_distribution = False
@@ -69,21 +69,21 @@ show_all_paths = False
 type = Type.SINGLE
 mobility = Mobility.IS_MOBILE
 
-path_dataset = r'..\dataset\instance_2.json'
+path_dataset = r'..\dataset\instance_3.json'
 
 save_data = False
-path_output = r'..\output\data\instance_2.xlsx'
-plot_graph = True
-path_graph = r'..\output\graph\instance_2.png'
+path_output = r'..\output\data\instance_3.xlsx'
+plot_graph = False
+path_graph = r'..\output\graph\instance_3.png'
 
 # random and distribution.
-avg_qtd_bulk = 2
-num_events = 2
+avg_qtd_bulk = 10
+num_events = 50
 num_alpha = 0.56
 
 # single.
-s = np.array(['F5'])
-t = np.array(['UE11'])
+s = np.array(['F3'])
+t = np.array(['UE7'])
 
 
 def main():
@@ -134,13 +134,14 @@ def single(source, sink):
 
     path = create_model(source, sink)
     handler.path = path
-    handler.update_data()
-    allocated_request(pd, path, source, sink)
+    #handler.update_data()
+    #allocated_request(pd, path, source, sink)
     if show_all_paths:
         pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
+    data.clear_requests()
 
 
 def bulk_distribution_poisson(avg_size_bulk, num_events):
@@ -191,7 +192,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
         # for req in range(qtd_req):
         #   source = sources[req]
-        #  sink = sinks[req]
+        #   sink = sinks[req]
 
         # source = [source]
         # sink = [sink]
@@ -205,9 +206,11 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             start_time = time.time()
             handler.update_data()
             print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-            #allocated_request(pd, path, source, sink, event, req)
-        # update_model(pd, handler, source, sink)
+            allocated_request(pd, path, sources, sinks, event, 1)
+        update_model(pd, handler, sources, sinks)
         init = qtd_req
+
+    # data.clear_requests()
 
     #if show_all_paths:
      #   pd.show_paths()
@@ -339,9 +342,11 @@ def run_model(source, sink, reoptimize, event):
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
     od.create_vars()
-    od.set_function_objective()
-    # od.set_function_objective2()
-    od.create_constraints()
+    # od.set_function_objective()
+    # od.set_function_objective1()
+    od.set_function_objective2()
+    # od.create_constraints()
+    od.create_constraints2()
     od.execute(show_log)
     if show_results:
         print(GREEN, "\nContent:", source, " to User:", sink)
@@ -399,7 +404,7 @@ def picture():
 
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
-            bbox=(600, 600), )
+            bbox=(1000, 1000), )
 
 
 def load_dataset(dataset: object):

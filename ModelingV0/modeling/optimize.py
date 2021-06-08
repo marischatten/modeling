@@ -600,7 +600,6 @@ class HandleData:
                             tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
                             self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
-
                     if tag_i[:3] == 'SBS' and tag_j[:2] == 'UE':
                         if self.__is_coverage_bs_to_ue2(tag_j, tag_i):
                             self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
@@ -763,6 +762,7 @@ class OptimizeData:
             sense=gp.GRB.MINIMIZE)
 
     def set_function_objective2(self):
+
         self.model.setObjective(
             (self.__data.alpha * gp.quicksum(
                 self.__data.weight_resources_dict[i] * self.x[req[KEY], req[SOURCE], i] for i in
@@ -774,6 +774,20 @@ class OptimizeData:
                     req[SOURCE], i, j] for i in self.__data.key_index_bs for j in self.__data.key_index_all for req in
                 self.__data.requests)),
             sense=gp.GRB.MINIMIZE)
+        '''
+        for req in self.__data.requests:
+            self.model.setObjective((self.__data.alpha * gp.quicksum(
+                self.__data.weight_resources_dict[i] * self.x[req[KEY], req[SOURCE], i] for i in
+                self.__data.key_index_bs)
+                                     +
+                                     ((1 - self.__data.alpha) *
+                                      gp.quicksum((self.__data.weight_network_dict[req[SOURCE], i, j] *
+                                                   self.x[req[KEY], i, j]) *
+                                                  self.__data.psi_edge_dict[req[SOURCE], i, j] for i in
+                                                  self.__data.key_index_all for j in
+                                                  self.__data.key_index_all))
+                                     ), sense=gp.GRB.MINIMIZE)
+'''
 
     def create_model_in_ortools(self):
         pass
@@ -852,11 +866,14 @@ class OptimizeData:
 
     def __set_constraint_flow_conservation2(self):
         for req in self.__data.requests:
-            for i in self.__data.key_index_all:
+            print(req)
+            for i in self.__data.key_index_bs:
                 # if all(i != s for s in req[SOURCE]) and all(i != t for t in req[SINK]):
-                if (i != req[SOURCE]) and (i != req[SINK]):
-                    # if (i[:2] != 'UE') and (i[:1] != 'F'):
-                    # if (all(i != s[SOURCE] for s in self.__data.requests) and all(i != t[SINK] for t in self.__data.requests)):
+                #if i[:1] == 'F' or i[:2] == 'UE':
+                if (i != req[SOURCE]) or (i != req[SINK]):
+                    print(i)
+                # if (i[:2] != 'UE') and (i[:1] != 'F'):
+                # if (all(i != s[SOURCE] for s in self.__data.requests) and all(i != t[SINK] for t in self.__data.requests)):
                     self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] for j in self.__data.key_index_all)
                                          - gp.quicksum(self.x[req[KEY], j, i] for j in self.__data.key_index_all)
                                          == 0, 'c4')

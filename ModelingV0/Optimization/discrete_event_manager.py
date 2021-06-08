@@ -68,22 +68,23 @@ plot_data = False
 show_all_paths = False
 type = Type.SINGLE
 mobility = Mobility.IS_MOBILE
+model = Model.ONLINE
 
 path_dataset = r'..\dataset\instance_3.json'
 
 save_data = False
 path_output = r'..\output\data\instance_3.xlsx'
-plot_graph = False
+plot_graph = True
 path_graph = r'..\output\graph\instance_3.png'
 
 # random and distribution.
-avg_qtd_bulk = 10
-num_events = 50
+avg_qtd_bulk = 2
+num_events = 2
 num_alpha = 0.56
 
 # single.
-s = np.array(['F3'])
-t = np.array(['UE7'])
+s = np.array(['F2'])
+t = np.array(['UE3'])
 
 
 def main():
@@ -207,7 +208,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             handler.update_data()
             print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
             allocated_request(pd, path, sources, sinks, event, 1)
-        update_model(pd, handler, sources, sinks)
+        # update_model(pd, handler, sources, sinks)
         init = qtd_req
 
     # data.clear_requests()

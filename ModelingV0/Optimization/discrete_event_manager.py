@@ -59,23 +59,23 @@ radius_sbs = 0
 data = None
 
 show_log = 0
-show_results = True
+show_results = False
 show_path = False
 show_var = False
 show_par = False
 plot_distribution = False
 plot_data = False
 show_all_paths = False
-type = Type.SINGLE
+type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
 model = Model.ONLINE
 
-path_dataset = r'..\dataset\instance_3.json'
+path_dataset = ''
 
 save_data = False
-path_output = r'..\output\data\instance_3.xlsx'
-plot_graph = True
-path_graph = r'..\output\graph\instance_3.png'
+path_output = ''
+plot_graph = False
+path_graph = ''
 
 # random and distribution.
 avg_qtd_bulk = 2
@@ -83,13 +83,13 @@ num_events = 2
 num_alpha = 0.56
 
 # single.
-s = np.array(['F2'])
+s = np.array(['F1'])
 t = np.array(['UE3'])
 
 
-def main():
+def application():
     #########################################################################################################################
-    path_config = r''
+    path_config = r'..\config\config.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)
@@ -119,61 +119,27 @@ def main():
 def discrete_events(type, source=None, sink=None, avg_qtd_bulk=0, num_events=0, num_alpha=0.0):
     if type == Type.SINGLE:
         single(source, sink)
-    if type == Type.POISSON:
-        bulk_distribution_poisson(avg_qtd_bulk, num_events)
     if type == Type.ZIPF:
         bulk_poisson_req_zipf(num_alpha, avg_qtd_bulk, num_events)
     if type == Type.ALLTOALL:
         all_to_all()
-    if type == Type.RANDOM:
-        random_request(avg_qtd_bulk, num_events)
+
 
 
 def single(source, sink):
     pd = PlotData(data)
     handler = HandleData(data)
-
+    insert_reqs(source, sink)
     path = create_model(source, sink)
     handler.path = path
-    #handler.update_data()
-    #allocated_request(pd, path, source, sink)
+    # handler.update_data()
+    # allocated_request(pd, path, source, sink)
     if show_all_paths:
         pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
-    data.clear_requests()
-
-
-def bulk_distribution_poisson(avg_size_bulk, num_events):
-    pd = PlotData(data)
-    handler = HandleData(data)
-
-    bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
-
-    if plot_distribution:
-        plot_poisson(bulks)
-
-    for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
-        qtd_req = bulks[event]
-        sources = r.Request.generate_sources_random(qtd_req, key_index_file)
-        sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-        for req in range(qtd_req):
-            source = sources[req]
-            sink = sinks[req]
-
-            source = [source]
-            sink = [sink]
-            path = create_model(source, sink)
-            handler.path = path
-            handler.update_data()
-            allocated_request(pd, path, event)
-
-    if show_all_paths:
-        pd.show_paths()
-    if save_data:
-        pd.save_data(path_output)
-    # pd.plot()
+    # data.clear_requests()
 
 
 def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
@@ -198,8 +164,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         # source = [source]
         # sink = [sink]
 
-        #for s,t in zip(sources,sinks):
-        #if is_unique(pd, s, t):
+        # for s,t in zip(sources,sinks):
+        # if is_unique(pd, s, t):
+        insert_reqs(sources, sinks)
         path = create_model(sources, sinks, event)
         handler.path = path
 
@@ -213,12 +180,26 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
     # data.clear_requests()
 
-    #if show_all_paths:
-     #   pd.show_paths()
+    # if show_all_paths:
+    #   pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     if plot_data:
         pd.plot()
+
+
+def insert_reqs(sources, sinks):
+    global data
+    req = [[0 for f in range(num_files)] for u in range(num_ue)]
+
+    for u in range(len(key_index_ue)):
+        for f in range(len(key_index_file)):
+            tag_ue = key_index_ue[u]
+            tag_file = key_index_file[f]
+            data.req_dict[tag_ue, tag_file] = req[u][f]
+
+    for s, t in zip(sinks, sources):
+        data.req_dict[s, t] = 1
 
 
 def is_unique(pd, source, sink):
@@ -259,32 +240,11 @@ def all_to_all():
         for t in key_index_ue:
             source = np.array([s])
             sink = np.array([t])
+            insert_reqs(source,sink)
             path = create_model(source, sink)
             handler.path = path
-            handler.update_data()
-            allocated_request(pd, path)
-
-    if show_all_paths:
-        pd.show_paths()
-    if save_data:
-        pd.save_data(path_output)
-    # pd.plot()
-
-
-def random_request(qtd_bulk, num_events):
-    pd = PlotData(data)
-    handler = HandleData(data)
-
-    for event in range(num_events):
-        sources = r.Request.generate_sources_random(qtd_bulk, num_events)
-        sinks = r.Request.generate_sinks_random(qtd_bulk, num_events)
-        for req in tqdm.tqdm(range(qtd_bulk)):
-            source = np.array(sources[req])
-            sink = np.array(sinks[req])
-            path = create_model(source, sink)
-            handler.path = path
-            handler.update_data()
-            allocated_request(pd, path, event)
+            # handler.update_data()
+            # allocated_request(pd, path)
 
     if show_all_paths:
         pd.show_paths()
@@ -342,13 +302,8 @@ def run_model(source, sink, reoptimize, event):
     start_time = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
-    od.create_vars()
-    # od.set_function_objective()
-    # od.set_function_objective1()
-    od.set_function_objective2()
-    # od.create_constraints()
-    od.create_constraints2()
-    od.execute(show_log)
+    od.run_model(show_log)
+
     if show_results:
         print(GREEN, "\nContent:", source, " to User:", sink)
         od.result()
@@ -399,8 +354,8 @@ def picture():
 
     for i, name_orig in enumerate(key_nodes):
         for j, name_dest in enumerate(key_nodes):
-            if data.weight_dict is not None:
-                if data.weight_file_edge[0][i][j] < NO_EDGE:
+            if data.weight_network_dict is not None:
+                if data.weight_network[0][i][j] < NO_EDGE:
                     g.add_edge(name_orig, name_dest)
 
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
@@ -455,17 +410,37 @@ def load_dataset(dataset: object):
     radius_sbs = int(dataset["radius_sbs"])
 
 
+def load_type_enum(t):
+    global type
+    if str(t).upper() == str('SINGLE'):
+         type = type.SINGLE
+    if str(t).upper() == 'ZIPF':
+        type =  type.ZIPF
+    if str(t).upper() == 'ALLTOALL':
+        type =  type.ALLTOALL
+
+
+def load_is_mobile_enum(mob):
+    global mobility
+    if mob.upper() == 'IS_MOBILE':
+        mobility = mobility.IS_MOBILE
+    if mob.upper() == 'NON_MOBILE':
+        mobility = mobility.NON_MOBILE
+
+
 def load_config(config: object):
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
     show_var = config["show_var"]
+
     show_par = config["show_par"]
     plot_distribution = config["plot_distribution"]
     plot_data = config["plot_data"]
     show_all_paths = config["show_all_paths"]
-    type = config["type"]
-    mobility = config["mobility"]
+    load_type_enum(config["type"])
+    load_is_mobile_enum(config["mobility"])
     path_dataset = config["path_dataset"]
     save_data = config["save_data"]
     path_output = config["path_output"]
@@ -478,9 +453,12 @@ def load_config(config: object):
     num_alpha = config["num_alpha"]
 
     # single.
-    source = config["source"]
-    sink = config["sink"]
+
+    s = config["source"]
+    t = config["sink"]
+
+    print(CYAN,"LOADED CONFIGURATION.",RESET)
 
 
 if __name__ == "__main__":
-    main()
+    application()

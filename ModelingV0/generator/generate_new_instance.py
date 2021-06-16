@@ -95,7 +95,7 @@ rtt_min_sbs_ue = 0
 
 
 def main():
-    path = r"..\dataset\instance_3.json"  # args[0]
+    path = r"..\dataset\instance_6.json"  # args[0]
     global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, key_index_all
 
     mobility_rate = 10

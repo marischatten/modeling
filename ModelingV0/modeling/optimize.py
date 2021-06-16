@@ -14,7 +14,7 @@ import uuid
 import pandas as pds
 from random import randrange
 
-NO_EDGE = 99999
+NO_EDGE = 9999999999
 
 TAG_COORD = 0
 X_COORD = 1
@@ -48,10 +48,8 @@ REVERSE = "\033[;7m"
 # This class changes the type of trials.
 class Type(Enum):
     SINGLE = 1
-    POISSON = 2
-    ZIPF = 3
-    ALLTOALL = 4
-    RANDOM = 5
+    ZIPF = 2
+    ALLTOALL = 3
 
 
 class Mobility(Enum):
@@ -70,6 +68,9 @@ class Data:
     id_req = 0
     __id_event = 0
     __s = list()
+
+    req = list()
+    req_dict = dict()
 
     mobility = Mobility
     mobility_rate = 0
@@ -144,13 +145,14 @@ class Data:
     current_resources_node = None
 
     # c_fij \in R
-    weight_file_edge = None
     weight_network = None
     weight_resources = None
 
-    weight_dict = dict()
     weight_network_dict = dict()
     weight_resources_dict = dict()
+
+    connectivity_edges = None
+    connectivity_edges_dict = dict()
 
     throughput_current_edge_dict = dict()
     throughput_expected_edge_dict = dict()
@@ -241,9 +243,10 @@ class Data:
 
             self.omega_user_node = [[0 for i in range(self.num_bs)] for u in range(self.num_ue)]
 
+            self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
+
             self.gama_file_node = gama_file_node
 
-            self.weight_to_dictionary()
             self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
@@ -386,15 +389,6 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
 
-    def weight_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_all)):
-                for j in range(len(self.key_index_all)):
-                    tag_file = self.key_index_file[f]
-                    tag_orig = self.key_index_all[i]
-                    tag_dest = self.key_index_all[j]
-                    self.weight_dict[tag_file, tag_orig, tag_dest] = self.weight_file_edge[f][i][j]
-
     def weight_network_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -408,6 +402,15 @@ class Data:
         for i in range(len(self.key_index_bs)):
             tag = self.key_index_bs[i]
             self.weight_resources_dict[tag] = self.weight_resources[i]
+
+    def connectivity_edges_to_dictionary(self):
+        for c in range(len(self.key_index_file)):
+            for i in range(len(self.key_index_all)):
+                for j in range(len(self.key_index_all)):
+                    tag_file = self.key_index_file[c]
+                    tag_orig = self.key_index_all[i]
+                    tag_dest = self.key_index_all[j]
+                    self.connectivity_edges_dict[tag_file, tag_orig, tag_dest] = self.connectivity_edges[c][i][j]
 
 
 # This class handles and calculates the variables and parameters.
@@ -429,10 +432,20 @@ class HandleData:
         self.__calc_diff_throughput()
         self.__calc_psi_edge()
         self.__calc_current_resources_node()
-        self.__calc_weight_file_edge()
-
         self.__calc_weight_network()
         self.__calc_weight_resources()
+        self.__calc_connectivity_edges()
+
+    def __calc_connectivity_edges(self):
+        self.__data.connectivity_edges = [[[ 0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                                       range(self.__data.num_nodes + self.__data.num_files)] for
+                                      f in range(self.__data.num_files)]
+        for c in range(len(self.__data.key_index_file)):
+            for i in range(len(self.__data.key_index_all)):
+                for j in range(len(self.__data.key_index_all)):
+                    if self.__data.weight_network[c][i][j] != NO_EDGE:
+                        self.__data.connectivity_edges[c][i][j] = 1
+        self.__data.connectivity_edges_to_dictionary()
 
     def __calc_omega_user_node(self):
 
@@ -552,40 +565,6 @@ class HandleData:
                         self.__data.psi_edge[f][i][j] = 1
         self.__data.psi_edge_to_dictionary()
 
-    def __calc_weight_file_edge(self):
-        global NO_EDGE
-        for f, filename in enumerate(self.__data.key_index_file):
-            for i, orig_name in enumerate(self.__data.key_index_all):
-                for j, dest_name in enumerate(self.__data.key_index_all):
-                    if i == j:  # Origem e destino não podem ser iguais.
-                        self.__data.weight_file_edge[f][i][j] = NO_EDGE
-                    elif self.__is_ue(orig_name) or self.__is_content(orig_name):  # UE ou F
-                        if self.__is_ue(orig_name):  # Não existe aresta saindo de UE.
-                            self.__data.weight_file_edge[f][i][j] = NO_EDGE
-                        elif self.__is_content_to_bs(
-                                dest_name):  # O custo de F para BS é sempre 0. Se o Gama entre BS e F são iguais a 1.
-                            if self.__is_caching(orig_name, dest_name):  # #BS não armazena F.
-                                self.__data.weight_file_edge[f][i][j] = 0.0
-                            else:  # BS armazena F.
-                                self.__data.weight_file_edge[f][i][j] = NO_EDGE
-                        else:  # F para UE.
-                            self.__data.weight_file_edge[f][i][j] = NO_EDGE  # Não existe aresta entre F e UE.
-                    else:  # BS
-                        if self.__is_bs_to_content(dest_name):  # Não existe aresta com origem em BS para F.
-                            self.__data.weight_file_edge[f][i][j] = NO_EDGE
-                        else:  # BS para UE
-                            if self.__is_coverage(orig_name,
-                                                  dest_name):  # Existe aresta de origem em BS para o destino UE ou origem em BS para o destino BS.
-                                rt_i = self.__data.resources_node[i]
-                                rr_i = self.__data.current_resources_node[i]
-                                bwc_fij = self.__data.throughput_current_edge[f][i][j]
-                                bwe_fij = self.__data.throughput_expected_edge[f][i][j]
-                                weight = self.__calc_weight(rr_i, rt_i, bwc_fij, bwe_fij)
-                                self.__data.weight_file_edge[f][i][j] = round(weight, 4)
-                            else:  # Não existe aresta de origem em BS parao destino UE.
-                                self.__data.weight_file_edge[f][i][j] = NO_EDGE
-        self.__data.weight_to_dictionary()
-
     def __calc_weight_network(self):
         self.__data.weight_network = [[[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
                                        range(self.__data.num_nodes + self.__data.num_files)] for
@@ -593,8 +572,8 @@ class HandleData:
         for f, tag_f in enumerate(self.__data.key_index_file):
             for i, tag_i in enumerate(self.__data.key_index_all):
                 for j, tag_j in enumerate(self.__data.key_index_all):
-                    thp_c = self.__data.throughput_current_edge_dict[tag_f, tag_j, tag_j]
-                    thp_e = self.__data.throughput_expected_edge_dict[tag_f, tag_j, tag_j]
+                    thp_c = self.__data.throughput_current_edge_dict[tag_f, tag_i, tag_j]
+                    thp_e = self.__data.throughput_expected_edge_dict[tag_f, tag_i, tag_j]
 
                     if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS') or (
                             tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
@@ -611,9 +590,13 @@ class HandleData:
         self.__data.weight_network_to_dictionary()
 
     def __weight_network(self, thp_c, thp_e):
-        if thp_c == 0 or thp_e == 0:
+        if thp_c == 0 and thp_e == 0:
             return NO_EDGE
-        return thp_c / thp_e
+        if thp_c == NO_EDGE and thp_e == NO_EDGE:
+            return 0
+        if thp_c == thp_e:
+            return 1
+        return (thp_c / thp_e)
 
     def __calc_weight_resources(self):
         self.__data.weight_resources = [0.0 for i in range(self.__data.num_bs)]
@@ -626,33 +609,10 @@ class HandleData:
         self.__data.weight_resources_to_dictionary()
 
     def __weight_resource(self, rri, rti):
-        return rri / rti
-
-    def __calc_weight(self, rr_i, rt_i, bwc_fij, bwe_fij):
-        if bwc_fij == 0 or bwe_fij == 0:
-            return NO_EDGE
-        return (self.__data.alpha * (rr_i / rt_i)) + ((1 - self.__data.alpha) * (bwc_fij / bwe_fij))
+        return (rri / rti)
 
     def __is_caching(self, file, bs):
         return self.__data.gama_file_node_dict[file, bs] == 1
-
-    def __is_coverage(self, orig, dest):
-        if self.__is_ue(dest):
-            return self.__is_coverage_bs_to_ue(orig, dest)
-        else:
-            return self.__is_coverage_bs_to_bs(orig, dest)
-
-    def __is_ue(self, name):
-        return name in self.__data.key_index_ue
-
-    def __is_content(self, name):
-        return name in self.__data.key_index_file
-
-    def __is_content_to_bs(self, dest):
-        return dest in self.__data.key_index_bs
-
-    def __is_bs_to_content(self, dest):
-        return dest in self.__data.key_index_file
 
     def __is_coverage_bs_to_bs(self, orig, dest):
         return self.__data.e_bs_adj_dict[orig, dest] == 1
@@ -741,63 +701,29 @@ class OptimizeData:
         self.t = sinks
         self.s = self.__data.insert_requests(sources, sinks)
 
-    def run_model(self):
-        pass
+    def run_model(self, show_log):
+        self.create_vars()
+        self.__set_function_objective()
+        self.__create_constraints()
+        self.execute(show_log)
 
-    # x_fij \in {0,1}
+    # x_cij \in {0,1}
     def create_vars(self):
         self.x = self.model.addVars(self.s, self.__data.key_index_all, self.__data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
-    def set_function_objective(self):
-        self.model.setObjective(
-            gp.quicksum(self.x[f, i, j] * self.__data.weight_dict[f, i, j] for f in self.s for i in
-                        self.__data.key_index_all for j in self.__data.key_index_all),
-            sense=gp.GRB.MINIMIZE)
+    def __set_function_objective(self):
+        self.model.setObjective((self.__data.alpha * (gp.quicksum(self.__data.weight_resources_dict[i] * self.x[c[KEY], c[SOURCE], i] * self.__data.req_dict[u[SINK], c[SOURCE]] for i in self.__data.key_index_bs for c in self.__data.requests for u in self.__data.requests)))
+                                +
+                                ((1 - self.__data.alpha) * (gp.quicksum(self.__data.weight_network_dict[c[SOURCE], i, j] * self.x[c[KEY],i,j] * self.__data.req_dict[u[SINK], c[SOURCE]] * self.__data.psi_edge_dict[c[SOURCE], i, j] * self.__data.connectivity_edges_dict[c[SOURCE],i,j] for j in self.__data.key_index_all for i in self.__data.key_index_all for c in self.__data.requests for u in self.__data.requests)))
+                                , sense=gp.GRB.MINIMIZE)
 
-    def set_function_objective1(self):
-        self.model.setObjective(
-            gp.quicksum(self.x[f, i, j] * self.__data.weight_dict[f[9:], i, j] for f in self.s for i in
-                        self.__data.key_index_all for j in self.__data.key_index_all),
-            sense=gp.GRB.MINIMIZE)
-
-    def set_function_objective2(self):
-
-        self.model.setObjective(
-            (self.__data.alpha * gp.quicksum(
-                self.__data.weight_resources_dict[i] * self.x[req[KEY], req[SOURCE], i] for i in
-                self.__data.key_index_bs for req in self.__data.requests))
-            +
-            ((1 - self.__data.alpha) * gp.quicksum(
-                (self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]) *
-                self.__data.psi_edge_dict[
-                    req[SOURCE], i, j] for i in self.__data.key_index_bs for j in self.__data.key_index_all for req in
-                self.__data.requests)),
-            sense=gp.GRB.MINIMIZE)
-        '''
-        for req in self.__data.requests:
-            self.model.setObjective((self.__data.alpha * gp.quicksum(
-                self.__data.weight_resources_dict[i] * self.x[req[KEY], req[SOURCE], i] for i in
-                self.__data.key_index_bs)
-                                     +
-                                     ((1 - self.__data.alpha) *
-                                      gp.quicksum((self.__data.weight_network_dict[req[SOURCE], i, j] *
-                                                   self.x[req[KEY], i, j]) *
-                                                  self.__data.psi_edge_dict[req[SOURCE], i, j] for i in
-                                                  self.__data.key_index_all for j in
-                                                  self.__data.key_index_all))
-                                     ), sense=gp.GRB.MINIMIZE)
-'''
-
-    def create_model_in_ortools(self):
-        pass
-
-    def create_constraints(self):
+    def __create_constraints(self):
         # limite de recursos do nó.
         self.__set_constraint_node_resources_capacity()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
-        self.__set_constraint_throughput()
+        #self.__set_constraint_throughput()
 
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.__set_constraint_flow_conservation()
@@ -808,40 +734,12 @@ class OptimizeData:
         # restrições de equilibrio de fluxo no nó de destino.
         self.__set_constraint_flow_conservation_sink()
 
-    def create_constraints2(self):
-        # limite de recursos do nó.
-        self.__set_constraint_node_resources_capacity2()
-
-        # restrição para vazão esperada seja sempre a menor que a atual.
-        self.__set_constraint_throughput2()
-
-        # restrições de equilibrio de fluxo em nós intermediarios.
-        self.__set_constraint_flow_conservation2()
-
-        # restrições de equilibrio de fluxo no nó de origem.
-        self.__set_constraint_flow_conservation_source2()
-
-        # restrições de equilibrio de fluxo no nó de destino.
-        self.__set_constraint_flow_conservation_sink2()
-
-    def __set_constraint_node_resources_capacity2(self):
+    def __set_constraint_node_resources_capacity(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.__data.resources_node_dict[i] *
-                                     self.x[req[KEY], req[SOURCE], i]
-                                     >= (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
-                    req[SOURCE]]) *
-                                     self.x[
-                                         req[KEY], req[SOURCE], i])
+                self.model.addConstr(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * (self.__data.resources_node_dict[i] - (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[req[SOURCE]])) >=0)
 
-    def __set_constraint_node_resources_capacity(self):
-        self.model.addConstrs(self.__data.resources_node_dict[i] * self.x[s, s, i]
-                              >= (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[s]) *
-                              self.x[
-                                  s, s, i] for s in self.s for i in
-                              self.__data.key_index_bs)
-
-    def __set_constraint_throughput2(self):
+    def __set_constraint_throughput(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_all:
                 for j in self.__data.key_index_all:
@@ -849,57 +747,40 @@ class OptimizeData:
                         (self.__data.throughput_expected_edge_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]) >= (
                                 self.__data.throughput_current_edge_dict[req[SOURCE], i, j] * self.x[
                             req[KEY], i, j]))
-
-    def __set_constraint_throughput(self):
-        self.model.addConstrs(self.__data.throughput_expected_edge_dict[f, i, j] * self.x[f, i, j]
-                              >= self.__data.throughput_current_edge_dict[f, i, j] * self.x[f, i, j] for f in
-                              self.s for i in self.__data.key_index_all for j in
-                              self.__data.key_index_all)
+                    #self.model.addConstr(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] * (
+                     #           self.__data.throughput_current_edge_dict[req[SOURCE], i, j] - self.__data.throughput_min_file_dict[req[SOURCE]])
+                      #                    * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
+                       #                  >= 0)
 
     def __set_constraint_flow_conservation(self):
-        for f in self.s:
-            for i in self.__data.key_index_all:
-                if all(i != s for s in self.s) and all(i != t for t in self.t):
-                    self.model.addConstr(gp.quicksum(self.x[f, i, j] for j in self.__data.key_index_all)
-                                         - gp.quicksum(self.x[f, j, i] for j in self.__data.key_index_all)
-                                         == 0, 'c4')
-
-    def __set_constraint_flow_conservation2(self):
         for req in self.__data.requests:
-            print(req)
             for i in self.__data.key_index_bs:
-                # if all(i != s for s in req[SOURCE]) and all(i != t for t in req[SINK]):
-                #if i[:1] == 'F' or i[:2] == 'UE':
-                if (i != req[SOURCE]) or (i != req[SINK]):
-                    print(i)
-                # if (i[:2] != 'UE') and (i[:1] != 'F'):
-                # if (all(i != s[SOURCE] for s in self.__data.requests) and all(i != t[SINK] for t in self.__data.requests)):
-                    self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] for j in self.__data.key_index_all)
-                                         - gp.quicksum(self.x[req[KEY], j, i] for j in self.__data.key_index_all)
+                self.model.addConstr(gp.quicksum(
+                        self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]  * self.__data.connectivity_edges_dict[req[SOURCE],i,j] for j in
+                        self.__data.key_index_all)
+                                         - gp.quicksum(
+                        self.x[req[KEY], j, i] * self.__data.req_dict[req[SINK], req[SOURCE]]  * self.__data.connectivity_edges_dict[req[SOURCE],j,i] for j in
+                        self.__data.key_index_all)
                                          == 0, 'c4')
 
     def __set_constraint_flow_conservation_source(self):
-        for f in self.s:
-            self.model.addConstr(gp.quicksum(self.x[f, s, i] for s in self.s for i in self.__data.key_index_bs)
-                                 - gp.quicksum(self.x[f, i, s] for s in self.s for i in self.__data.key_index_bs)
-                                 == self.__data.throughput_min_file_dict[f], 'c5')
-
-    def __set_constraint_flow_conservation_source2(self):
         for req in self.__data.requests:
-            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SOURCE], i] for i in self.__data.key_index_bs)
-                                 - gp.quicksum(self.x[req[KEY], i, req[SOURCE]] for i in self.__data.key_index_bs)
+            self.model.addConstr(gp.quicksum(
+                self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],req[SOURCE],i]  for i in
+                self.__data.key_index_bs)
+                                 - gp.quicksum(
+                self.x[req[KEY], i, req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],i,req[SOURCE]] for i in
+                self.__data.key_index_bs)
                                  == self.__data.throughput_min_file_dict[req[SOURCE]], 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
-        for f in self.s:
-            self.model.addConstr(gp.quicksum(self.x[f, t, i] for t in self.t for i in self.__data.key_index_bs)
-                                 - gp.quicksum(self.x[f, i, t] for t in self.t for i in self.__data.key_index_bs)
-                                 == - self.__data.throughput_min_file_dict[f], 'c6')
-
-    def __set_constraint_flow_conservation_sink2(self):
         for req in self.__data.requests:
-            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SINK], i] for i in self.__data.key_index_bs)
-                                 - gp.quicksum(self.x[req[KEY], i, req[SINK]] for i in self.__data.key_index_bs)
+            self.model.addConstr(gp.quicksum(
+                self.x[req[KEY], req[SINK], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],req[SINK],i] for i in
+                self.__data.key_index_bs)
+                                 - gp.quicksum(
+                self.x[req[KEY], i, req[SINK]] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],i,req[SINK]] for i in
+                self.__data.key_index_bs)
                                  == - self.__data.throughput_min_file_dict[req[SOURCE]], 'c6')
 
     def execute(self, log):
@@ -914,7 +795,7 @@ class OptimizeData:
             print(CYAN + "OBJECTIVE FUNCTION: " + RED + str(obj.getValue()) + RESET)
             print(BOLD + "DECISION VARIABLE:" + BOLD)
             for var in self.model.getVars():
-                if var.X != 0:
+                if var.X > 0:
                     print(var.VarName, round(var.X, 2))
         else:
             print(RED + "THE SOLVE IS INFEASIBLE.")
@@ -950,6 +831,9 @@ class OptimizeData:
             if node in hops[i][CURRENT_NODE]:
                 self.__path.append(hops[i][CURRENT_NODE])
                 return self.__next_hop(hops, hops[i][NEXT_HOP])
+
+    def create_model_in_ortools(self):
+        pass
 
 
 # This class show data in parameters and vars.
@@ -1055,6 +939,7 @@ class LogData:
         print()
 
     # VARS
+
     def __log_omega_user_node(self):
         print("USER COVERAGE PER BASE STATION(OMEGA).")
         for u in range(len(self.data.key_index_ue)):
@@ -1151,27 +1036,11 @@ class LogData:
             print(k, self.data.current_resources_node_dict[k])
         print()
 
-    def __log_weight_file_edge(self):
-        print("WEIGHT.")
-        for f, filename in enumerate(self.data.key_index_file):
-            print(filename.upper())
-            for i in range(len(self.data.key_index_all)):
-                for j in range(len(self.data.key_index_all)):
-                    print(str(self.data.weight_file_edge[f][i][j]).format(), end=" ")
-                print()
-            print()
-        print()
-
-    def __log_weight_dict(self):
-        print("WEIGHT.")
-        for k in self.data.weight_dict.keys():
-            print(k, self.data.weight_dict[k])
-        print()
-
     def __log_weight_resources(self):
         print("WEIGHT RESOURCES.")
         for i in range(len(self.data.key_index_bs)):
             print(str(self.data.weight_resources[i]).format(), end=" ")
+        print()
 
     def __log_weight_resources_dict(self):
         print("WEIGHT RESOURCES.")
@@ -1185,10 +1054,10 @@ class LogData:
             print(filename.upper())
             for i in range(len(self.data.key_index_all)):
                 for j in range(len(self.data.key_index_all)):
-                    if self.data.weight_file_edge[f][i][j] == NO_EDGE:
+                    if self.data.weight_network[f][i][j] == NO_EDGE:
                         print('ထ', end=" ")
                     else:
-                        print(str(self.data.weight_file_edge[f][i][j]).format(), end=" ")
+                        print(str(self.data.weight_network[f][i][j]).format(), end=" ")
                 print()
             print()
         print()
@@ -1197,6 +1066,23 @@ class LogData:
         print("WEIGHT NETWORK.")
         for k in self.data.weight_network_dict.keys():
             print(k, self.data.weight_network_dict[k])
+        print()
+
+    def __log_connectivity_edges(self):
+        print("CONNECTIVITY EDGES.")
+        for f, filename in enumerate(self.data.key_index_file):
+            print(filename.upper())
+            for i in range(len(self.data.key_index_all)):
+                for j in range(len(self.data.key_index_all)):
+                    print(str(self.data.connectivity_edges[f][i][j]).format(), end=" ")
+                print()
+            print()
+        print()
+
+    def __log_connectivity_edges_dict(self):
+        print("CONNECTIVITY EDGES.")
+        for k in self.data.connectivity_edges_dict.keys():
+            print(k, self.data.connectivity_edges_dict[k])
         print()
 
     def show_parameters(self):
@@ -1225,9 +1111,9 @@ class LogData:
         self.__log_diff_throughput_edge()
         self.__log_current_resources_node()
         self.__log_psi_edge()
-        # self.__log_weight_file_edge()
         self.__log_weight_resources()
         self.__log_weight_network()
+        self.__log_connectivity_edges()
 
     def show_vars_dict(self):
         print("VARS.\n")
@@ -1237,7 +1123,9 @@ class LogData:
         self.__log_diff_throughput_edge_dict()
         self.__log_current_resources_node_dict()
         self.__log_psi_edge_dict()
-        self.__log_weight_dict()
+        self.__log_weight_resources_dict()
+        self.__log_weight_network_dict()
+        self.__log_connectivity_edges_dict()
 
 
 # This class store all result and plot a graphics.

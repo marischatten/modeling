@@ -1,0 +1,24 @@
+{
+"show_log": 0,
+"show_results": true,
+"show_path": false,
+"show_var": false,
+"show_par": false,
+"plot_distribution": false,
+"plot_data": false,
+"show_all_paths": false,
+"type": "single",
+"mobility": "NON_MOBILE",
+"path_dataset": "..\\dataset\\instance_5.json",
+"save_data": false,
+"path_output": "..\\output\\data\\instance_1.xlsx",
+"plot_graph": false,
+"path_graph": "..\\output\\graph\\instance_2.png",
+
+"avg_qtd_bulk": 2,
+"num_events": 2,
+"num_alpha": 0.56,
+
+"source": ["F2"],
+"sink": ["UE2"]
+}

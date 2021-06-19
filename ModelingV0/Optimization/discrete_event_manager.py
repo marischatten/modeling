@@ -131,8 +131,8 @@ def single(source, sink):
     handler = HandleData(data)
     insert_reqs(source, sink)
     path = create_model(source, sink)
-    handler.path = path
-    # handler.update_data()
+    handler.paths = path
+    #handler.update_data()
     # allocated_request(pd, path, source, sink)
     if show_all_paths:
         pd.show_paths()
@@ -157,31 +157,23 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         qtd_req = bulks[event]
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-        # for req in range(qtd_req):
-        #   source = sources[req]
-        #   sink = sinks[req]
 
-        # source = [source]
-        # sink = [sink]
-
-        # for s,t in zip(sources,sinks):
-        # if is_unique(pd, s, t):
         insert_reqs(sources, sinks)
         path = create_model(sources, sinks, event)
-        handler.path = path
+        handler.paths = path
 
         if path is not None:
             start_time = time.time()
             handler.update_data()
             print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-            allocated_request(pd, path, sources, sinks, event, 1)
+            #allocated_request(pd, path, sources, sinks, event, 1)
         # update_model(pd, handler, sources, sinks)
         init = qtd_req
 
     # data.clear_requests()
 
-    # if show_all_paths:
-    #   pd.show_paths()
+    if show_all_paths:
+       pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     if plot_data:
@@ -200,6 +192,35 @@ def insert_reqs(sources, sinks):
 
     for s, t in zip(sinks, sources):
         data.req_dict[s, t] = 1
+
+
+def remove_replicate_reqs(sources, sinks):
+    sources_cp = sources
+    sinks_cp = sinks
+    reqs_dict =dict()
+    sinks_dict = dict()
+
+    for s in range(len(sources)):
+        tag_source = sources[s]
+        tag_sink = sinks[s]
+        reqs_dict[tag_source,tag_sink] = 0
+
+
+    print(reqs_dict)
+
+
+    print(sources,sinks)
+    if len(sources) == len(sinks):
+        for i in range(len(sources)):
+            for j in range(len(sources)):
+                if i != j:
+                    print(sources[i], sources[j],sinks[i],sinks[j])
+                    print(i,j)
+                    if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
+                        print('remove')
+                        del sources_cp[i]
+                        del sinks_cp[i]
+    return (sources_cp, sinks_cp)
 
 
 def is_unique(pd, source, sink):
@@ -242,7 +263,7 @@ def all_to_all():
             sink = np.array([t])
             insert_reqs(source,sink)
             path = create_model(source, sink)
-            handler.path = path
+            handler.paths = path
             # handler.update_data()
             # allocated_request(pd, path)
 

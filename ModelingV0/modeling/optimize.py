@@ -415,7 +415,7 @@ class Data:
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
-    path = None
+    paths = None
     old_path = None
 
     __data = Data()
@@ -437,9 +437,9 @@ class HandleData:
         self.__calc_connectivity_edges()
 
     def __calc_connectivity_edges(self):
-        self.__data.connectivity_edges = [[[ 0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
-                                       range(self.__data.num_nodes + self.__data.num_files)] for
-                                      f in range(self.__data.num_files)]
+        self.__data.connectivity_edges = [[[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                                           range(self.__data.num_nodes + self.__data.num_files)] for
+                                          f in range(self.__data.num_files)]
         for c in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
@@ -659,17 +659,19 @@ class HandleData:
     def __update_phi_node(self):
         for i, file in enumerate(self.__data.key_index_file):
             for j, bs in enumerate(self.__data.key_index_bs):
-                if file == self.old_path[CONTENT] and bs == self.old_path[STORE]:
-                    self.__data.phi_node[i][j] -= 1
-                if file == self.path[CONTENT] and bs == self.path[STORE]:
-                    self.__data.phi_node[i][j] += 1
+                for p in self.paths:
+                    if file == self.old_path[CONTENT] and bs == self.old_path[STORE]:
+                        self.__data.phi_node[i][j] -= 1
+                    if file == p[CONTENT] and bs == p[STORE]:
+                        self.__data.phi_node[i][j] += 1
         self.__data.phi_node_to_dictionary()
 
     def __insert_phi_node(self):
         for i, file in enumerate(self.__data.key_index_file):
             for j, bs in enumerate(self.__data.key_index_bs):
-                if file == self.path[CONTENT] and bs == self.path[STORE]:
-                    self.__data.phi_node[i][j] += 1
+                for p in self.paths:
+                    if file == p[CONTENT] and bs == p[STORE]:
+                        self.__data.phi_node[i][j] += 1
         self.__data.phi_node_to_dictionary()
 
     def __update_ue_position(self):
@@ -694,6 +696,7 @@ class OptimizeData:
     s = ""
     t = ""
     __path = list()
+    __paths = list()
 
     def __init__(self, data, sources, sinks):
         self.__data = data
@@ -702,6 +705,7 @@ class OptimizeData:
         self.s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self, show_log):
+        self.model.reset()
         self.create_vars()
         self.__set_function_objective()
         self.__create_constraints()
@@ -713,9 +717,18 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum(self.__data.weight_resources_dict[i] * self.x[c[KEY], c[SOURCE], i] * self.__data.req_dict[u[SINK], c[SOURCE]] for i in self.__data.key_index_bs for c in self.__data.requests for u in self.__data.requests)))
+        self.model.setObjective((self.__data.alpha * (gp.quicksum(
+            self.__data.weight_resources_dict[i] * self.x[c[KEY], c[SOURCE], i] * self.__data.req_dict[
+                u[SINK], c[SOURCE]] for i in self.__data.key_index_bs for c in self.__data.requests for u in
+            self.__data.requests)))
                                 +
-                                ((1 - self.__data.alpha) * (gp.quicksum(self.__data.weight_network_dict[c[SOURCE], i, j] * self.x[c[KEY],i,j] * self.__data.req_dict[u[SINK], c[SOURCE]] * self.__data.psi_edge_dict[c[SOURCE], i, j] * self.__data.connectivity_edges_dict[c[SOURCE],i,j] for j in self.__data.key_index_all for i in self.__data.key_index_all for c in self.__data.requests for u in self.__data.requests)))
+                                ((1 - self.__data.alpha) * (gp.quicksum(
+                                    self.__data.weight_network_dict[c[SOURCE], i, j] * self.x[c[KEY], i, j] *
+                                    self.__data.req_dict[u[SINK], c[SOURCE]]
+                                    * self.__data.psi_edge_dict[c[SOURCE], i, j]
+                                    * self.__data.connectivity_edges_dict[c[SOURCE], i, j] for j in
+                                    self.__data.key_index_all for i in self.__data.key_index_all for c in
+                                    self.__data.requests for u in self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
     def __create_constraints(self):
@@ -723,7 +736,7 @@ class OptimizeData:
         self.__set_constraint_node_resources_capacity()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
-        #self.__set_constraint_throughput()
+        # self.__set_constraint_throughput()
 
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.__set_constraint_flow_conservation()
@@ -737,49 +750,61 @@ class OptimizeData:
     def __set_constraint_node_resources_capacity(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * (self.__data.resources_node_dict[i] - (self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[req[SOURCE]])) >=0)
+                self.model.addConstr(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * (
+                            self.__data.resources_node_dict[i] - (
+                                self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
+                            req[SOURCE]])) >= 0)
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_all:
                 for j in self.__data.key_index_all:
-                    self.model.addConstr(
-                        (self.__data.throughput_expected_edge_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]) >= (
-                                self.__data.throughput_current_edge_dict[req[SOURCE], i, j] * self.x[
-                            req[KEY], i, j]))
-                    #self.model.addConstr(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                     #           self.__data.throughput_current_edge_dict[req[SOURCE], i, j] - self.__data.throughput_min_file_dict[req[SOURCE]])
-                      #                    * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
-                       #                  >= 0)
+                    self.model.addConstr(((self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]) * (
+                            self.__data.throughput_current_edge_dict[req[SOURCE], i, j] -
+                            self.__data.throughput_min_file_dict[req[SOURCE]]))
+                                         * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
+                                         >= 0)
 
     def __set_constraint_flow_conservation(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(gp.quicksum(
-                        self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]  * self.__data.connectivity_edges_dict[req[SOURCE],i,j] for j in
-                        self.__data.key_index_all)
-                                         - gp.quicksum(
-                        self.x[req[KEY], j, i] * self.__data.req_dict[req[SINK], req[SOURCE]]  * self.__data.connectivity_edges_dict[req[SOURCE],j,i] for j in
-                        self.__data.key_index_all)
-                                         == 0, 'c4')
+                    self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                    * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
+                    for j in
+                    self.__data.key_index_all)
+                                     - gp.quicksum(
+                    self.x[req[KEY], j, i] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                    * self.__data.connectivity_edges_dict[req[SOURCE], j, i]
+                    for j in
+                    self.__data.key_index_all)
+                                     == 0, 'c4')
 
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
             self.model.addConstr(gp.quicksum(
-                self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],req[SOURCE],i]  for i in
+                self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
+                for i in
                 self.__data.key_index_bs)
                                  - gp.quicksum(
-                self.x[req[KEY], i, req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],i,req[SOURCE]] for i in
+                self.x[req[KEY], i, req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
+                for i in
                 self.__data.key_index_bs)
                                  == self.__data.throughput_min_file_dict[req[SOURCE]], 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
             self.model.addConstr(gp.quicksum(
-                self.x[req[KEY], req[SINK], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],req[SINK],i] for i in
+                self.x[req[KEY], req[SINK], i] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
+                for i in
                 self.__data.key_index_bs)
                                  - gp.quicksum(
-                self.x[req[KEY], i, req[SINK]] * self.__data.req_dict[req[SINK], req[SOURCE]] * self.__data.connectivity_edges_dict[req[SOURCE],i,req[SINK]] for i in
+                self.x[req[KEY], i, req[SINK]] * self.__data.req_dict[req[SINK], req[SOURCE]]
+                * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
+                for i in
                 self.__data.key_index_bs)
                                  == - self.__data.throughput_min_file_dict[req[SOURCE]], 'c6')
 
@@ -802,16 +827,31 @@ class OptimizeData:
 
     def solution_path(self, show_path):
         self.__path.clear()
+        self.__paths.clear()
+
         hops = list()
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
                 if var.X != 0:
                     hops.append(self.__get_solution(str(var.VarName)))
 
-        self.__make_path(hops, self.s[0], self.t[0])
+        for req in self.__data.requests:
+            self.__make_path(hops, req[SOURCE], req[SINK])
+
+        self.__split_paths()
+
         if show_path:
-            print(REVERSE, "PATH: ", self.__path, RESET)
-        return self.__path
+            for req in range(len(self.__paths)):
+                print(REVERSE, "PATH: ", self.__paths[req], RESET)
+
+        return self.__paths
+
+    def __split_paths(self):
+        init = 0
+        for u, tag_u in enumerate(self.__path):
+            if tag_u[:2] == "UE":
+                self.__paths.append(self.__path[init:u + 1])
+                init = u + 1
 
     def __get_solution(self, hop):
         next_hop = list()

@@ -673,11 +673,11 @@ class HandleData:
         self.__data.phi_node_to_dictionary()
 
     def __insert_phi_node(self):
-        for i, file in enumerate(self.__data.key_index_file):
+        for f, file in enumerate(self.__data.key_index_file):
             for j, bs in enumerate(self.__data.key_index_bs):
                 for p in self.paths:
                     if file == p[CONTENT] and bs == p[STORE]:
-                        self.__data.phi_node[i][j] += 1
+                        self.__data.phi_node[f][j] += 1
         self.__data.phi_node_to_dictionary()
 
     def __update_ue_position(self):

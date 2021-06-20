@@ -166,7 +166,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
         if paths is not None:
             start_time = time.time()
-            handler.update_data(False)
+            handler.update_data(event == 0)
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
             #allocated_request(pd, path, sources, sinks, event, 1)
         # update_model(pd, handler, sources, sinks)

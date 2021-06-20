@@ -1,6 +1,6 @@
 {
 "show_log": 0,
-"show_results": true,
+"show_results": false,
 "show_path": true,
 "show_var": false,
 "show_par": false,
@@ -15,8 +15,8 @@
 "plot_graph": false,
 "path_graph": "..\\output\\graph\\instance_1.png",
 
-"avg_qtd_bulk": 3,
-"num_events": 1,
+"avg_qtd_bulk": 4,
+"num_events": 5,
 "num_alpha": 0.56,
 
 "source": ["F1"],

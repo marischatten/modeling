@@ -62,6 +62,11 @@ class Model(Enum):
     OFFLINE = 0
 
 
+class Reallocation(Enum):
+    REALLOCATION = 1
+    NON_REALLOCATION = 0
+
+
 # This class manages and handles the data of an instance of the problem.
 class Data:
     requests = list()
@@ -624,16 +629,16 @@ class HandleData:
         return self.__data.omega_user_node_dict[u, bs] == 1
 
     # This method update data of the problem.
-    def update_data(self, is_shift=False):
+    def update_data(self, is_first=False):
         sense = -1
-        if self.__data.mobility.IS_MOBILE:
+        if self.__data.mobility == Mobility.IS_MOBILE:
             sense = self.__update_ue_position()
         self.__update_rtt_min()
         self.__update_rtt(sense)
-        if is_shift:
-            self.__update_phi_node()
-        else:
+        if is_first:
             self.__insert_phi_node()
+        else:
+            self.__update_phi_node()
         self.calc_vars(True)
 
     def __update_rtt_min(self):
@@ -648,22 +653,23 @@ class HandleData:
             for j, tag_j in enumerate(self.__data.key_index_all):
                 if self.__data.rtt_edge[i][j] != NO_EDGE:
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                        if random.uniform(0, 1) == INCREASE:
+                        if sense == INCREASE:
                             self.__data.rtt_edge[i][j] += self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                             self.__data.rtt_edge[i][j])
-                        if random.uniform(0, 1) == DECREASE:
+                        if sense == DECREASE:
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_j,
                                                                                            self.__data.rtt_edge[i][j])
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
-        for i, file in enumerate(self.__data.key_index_file):
-            for j, bs in enumerate(self.__data.key_index_bs):
-                for p in self.paths:
-                    if file == self.old_path[CONTENT] and bs == self.old_path[STORE]:
-                        self.__data.phi_node[i][j] -= 1
-                    if file == p[CONTENT] and bs == p[STORE]:
-                        self.__data.phi_node[i][j] += 1
+        for op,np in zip(self.old_path,self.paths):
+            print(op," | ",np)
+            if op != np:
+                self.__data.phi_node[op[CONTENT]][op[STORE]] -= 1
+                self.__data.phi_node[np[CONTENT]][np[STORE]] += 1
+                print("SHIFT.")
+            else:
+                print("NON-SHIFT.")
         self.__data.phi_node_to_dictionary()
 
     def __insert_phi_node(self):
@@ -736,7 +742,7 @@ class OptimizeData:
         self.__set_constraint_node_resources_capacity()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
-        # self.__set_constraint_throughput()
+        self.__set_constraint_throughput()
 
         # restrições de equilibrio de fluxo em nós intermediarios.
         self.__set_constraint_flow_conservation()

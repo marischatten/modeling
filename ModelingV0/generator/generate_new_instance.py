@@ -81,6 +81,8 @@ gama = list()
 radius_mbs = 0
 radius_sbs = 0
 
+
+
 resources_node_max = 0
 resources_node_min = 0
 
@@ -88,6 +90,8 @@ size_file_max = 0
 size_file_min = 0
 resources_file_max = 0
 resources_file_min = 0
+throughput_min_file_min = 0
+throughput_min_file_max = 0
 
 rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
@@ -96,7 +100,7 @@ rtt_min_sbs_ue = 0
 
 def main():
     path = r"..\dataset\instance_8.json"  # args[0]
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, key_index_all
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max,key_index_all
 
     mobility_rate = 10
     alpha = 0.5
@@ -111,6 +115,9 @@ def main():
     size_file_min = 100
     resources_file_max = 400
     resources_file_min = 100
+
+    throughput_min_file_max = 32
+    throughput_min_file_min = 16
 
     resources_node_max = 2048
     resources_node_min = 1024
@@ -144,7 +151,7 @@ def generate_throughput_min():
     global throughput_min_file
     throughput_min_file = [0 for f in range(num_files)]
     for f in range(num_files):
-        throughput_min_file[f] = 25
+        throughput_min_file[f] = np.random.randint(throughput_min_file_min, throughput_min_file_max)
 
     print("THROUGHPUT MÍNIMA DO CONTEÚDO.")
     for f in range(num_files):

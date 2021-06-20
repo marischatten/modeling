@@ -97,18 +97,18 @@ def application():
     start_time = time.time()
     dataset = u.get_data(path_dataset)
     load_dataset(dataset)
-    print(CYAN, "READ FILE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+    print(CYAN, "READ FILE TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
 
     start_time = time.time()
     global data
     data = make_data()
     calc_vars()
-    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
 
     start_time = time.time()
     discrete_events(type, source=s, sink=t, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
-    print(CYAN, "FULL TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
 
     if plot_graph:
         picture()
@@ -123,7 +123,6 @@ def discrete_events(type, source=None, sink=None, avg_qtd_bulk=0, num_events=0, 
         bulk_poisson_req_zipf(num_alpha, avg_qtd_bulk, num_events)
     if type == Type.ALLTOALL:
         all_to_all()
-
 
 
 def single(source, sink):
@@ -146,6 +145,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     pd = PlotData(data)
     handler = HandleData(data)
     init = 0
+    paths = None
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_sources_zip(num_alpha, sum_requests(bulks), key_index_file)
 
@@ -158,14 +158,16 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
+        #sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
-        path = create_model(sources, sinks, event)
-        handler.paths = path
+        handler.old_path = handler.paths
+        paths = create_model(sources, sinks, event)
+        handler.paths = paths
 
-        if path is not None:
+        if paths is not None:
             start_time = time.time()
-            handler.update_data()
-            print(CYAN, "UPDATE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+            handler.update_data(False)
+            print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
             #allocated_request(pd, path, sources, sinks, event, 1)
         # update_model(pd, handler, sources, sinks)
         init = qtd_req
@@ -194,56 +196,37 @@ def insert_reqs(sources, sinks):
         data.req_dict[s, t] = 1
 
 
-def remove_replicate_reqs(sources, sinks):
-    sources_cp = sources
-    sinks_cp = sinks
-    reqs_dict =dict()
-    sinks_dict = dict()
+def remove_replicate_reqs(pd,sources, sinks):
+    must_remove = list()
 
-    for s in range(len(sources)):
-        tag_source = sources[s]
-        tag_sink = sinks[s]
-        reqs_dict[tag_source,tag_sink] = 0
-
-
-    print(reqs_dict)
-
-
-    print(sources,sinks)
     if len(sources) == len(sinks):
         for i in range(len(sources)):
             for j in range(len(sources)):
                 if i != j:
-                    print(sources[i], sources[j],sinks[i],sinks[j])
-                    print(i,j)
                     if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
-                        print('remove')
-                        del sources_cp[i]
-                        del sinks_cp[i]
+                        must_remove.append((i))
+                        if not is_unique(pd,sources[i],sinks[i]):
+                            must_remove.append(i)
+
+    return remove_reqs(sources,sinks,must_remove)
+
+
+def remove_reqs(sources,sinks,must_remove):
+    sources_cp = sources
+    sinks_cp = sinks
+    if must_remove is not None:
+        print("Replicated Requests Removed.")
+
     return (sources_cp, sinks_cp)
 
 
 def is_unique(pd, source, sink):
-    for i, row in pd.set_path.iterrows():
-        if source == row['Source'] and sink == row['Sink']:
-            return False
+    if len(source) == len(sink):
+        for i, row in pd.set_path.iterrows():
+            for j in range(len(source)):
+                if source == row['Source'] and sink == row['Sink']:
+                    return False
     return True
-
-
-def update_model(pd, handler, last_source, last_sink):
-    for i, row in pd.set_path.iterrows():
-        if last_source == row['Source'] and last_sink == row['Sink']:
-            pass
-        else:
-            path = create_model(row['Source'], row['Sink'], True)
-            handler.path = path
-            if path != row['Path']:  # verificar se essa condição é adequada, como usar o diff?
-                print("SHIFT.")
-                handler.old_path = row['Path']
-                handler.update_data(True)
-                reallocated_request(pd, path, i)
-            else:
-                print("NON-SHIFT.")
 
 
 def get_req(zipf, qtd_previous, qtd):
@@ -311,7 +294,7 @@ def make_data():
                 )
 
 
-def create_model(source, sink, event=1, reoptimize=False):
+def create_model(source, sink, event=0, reoptimize=False):
     if show_par:
         show_parameters()
     if show_var:
@@ -326,13 +309,12 @@ def run_model(source, sink, reoptimize, event):
     od.run_model(show_log)
 
     if show_results:
-        print(GREEN, "\nContent:", source, " to User:", sink)
+        print(GREEN, "Content:", source, " to User:", sink)
         od.result()
-    if reoptimize:
-        print(CYAN, "REOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
-    else:
-        print(RED, "EVENTO: ", event, RESET)
-        print(CYAN, "\nOPTIMIZE TIME --- %s seconds ---" % (time.time() - start_time), RESET)
+
+    print(RED, "EVENT: ", event+1, RESET)
+    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
+
     if od.model.status == gp.GRB.OPTIMAL:
         path = od.solution_path(show_path)
     else:
@@ -474,11 +456,10 @@ def load_config(config: object):
     num_alpha = config["num_alpha"]
 
     # single.
-
     s = config["source"]
     t = config["sink"]
 
-    print(CYAN,"LOADED CONFIGURATION.",RESET)
+    print(CYAN,"LOADED CONFIGURATION.", RESET)
 
 
 if __name__ == "__main__":

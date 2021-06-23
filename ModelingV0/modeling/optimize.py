@@ -216,40 +216,7 @@ class Data:
         self.distance_bs = dis_bs
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
-            self.throughput_current_edge = [
-                [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
-                 range(self.num_nodes + self.num_files)]
-                for f
-                in
-                range(self.num_files)]
-            self.current_resources_node = [0 for i in range(self.num_bs)]
-
-            self.throughput_expected_edge = [
-                [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
-                 range(self.num_nodes + self.num_files)]
-                for f
-                in
-                range(self.num_files)]
-
-            self.throughput_diff_edge = [
-                [[0.0 for i in range(self.num_nodes + self.num_files)] for j in range(self.num_nodes + self.num_files)]
-                for f in
-                range(self.num_files)]
-
-            self.weight_file_edge = [
-                [[0.0 for i in range(self.num_nodes + self.num_files)] for j in range(self.num_nodes + self.num_files)]
-                for f in
-                range(self.num_files)]
-
-            self.psi_edge = [
-                [[0 for i in range(self.num_nodes + self.num_files)] for j in range(self.num_nodes + self.num_files)]
-                for f in
-                range(self.num_files)]
-
-            self.omega_user_node = [[0 for i in range(self.num_bs)] for u in range(self.num_ue)]
-
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
-
             self.gama_file_node = gama_file_node
 
             self.__resources_file_to_dictionary()
@@ -422,7 +389,8 @@ class Data:
 class HandleData:
     paths = None
     old_path = None
-
+    show_reallocation = None
+    reallocation = None
     __data = Data()
 
     def __init__(self, data):
@@ -453,6 +421,7 @@ class HandleData:
         self.__data.connectivity_edges_to_dictionary()
 
     def __calc_omega_user_node(self):
+        self.__data.omega_user_node = [[0 for i in range(self.__data.num_bs)] for u in range(self.__data.num_ue)]
 
         for u in range(len(self.__data.key_index_ue)):
             for i, tag_i in enumerate(self.__data.key_index_bs):
@@ -473,7 +442,8 @@ class HandleData:
             for j, tag_j in enumerate(self.__data.key_index_all):
                 if i != j:
                     if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
-                            tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
+                            tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
+                            tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS') :
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
                             self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
                             self.__data.rtt_edge[j][i] = self.__data.rtt_min[j][i]
@@ -484,13 +454,9 @@ class HandleData:
                         if self.__is_coverage_bs_to_ue(tag_i, tag_j):
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                            self.__data.rtt_min[i][j])
-                        else:
-                            self.__data.rtt_edge[i][j] = NO_EDGE
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                         if self.__is_caching(tag_i, tag_j):
                             self.__data.rtt_edge[i][j] = 0
-                        else:
-                            self.__data.rtt_edge[i][j] = NO_EDGE
                 else:
                     self.__data.rtt_edge[i][j] = NO_EDGE
                     self.__data.rtt_edge[j][i] = NO_EDGE
@@ -500,7 +466,7 @@ class HandleData:
     def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__data.omega_user_node_dict[ue, bs] == 1:
-            rtt = rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+            rtt = rtt_previous * 1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)
         else:
             rtt = NO_EDGE
         return rtt
@@ -508,43 +474,61 @@ class HandleData:
     def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__data.omega_user_node_dict[ue, bs] == 1:
-            rtt = rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+            rtt = rtt_previous / 1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)
         else:
             rtt = NO_EDGE
         return rtt
 
     def __calc_current_throughput_edge(self):
-        rtt_ij = 0
+        self.__data.throughput_current_edge = [
+            [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+             range(self.__data.num_nodes + self.__data.num_files)]
+            for f
+            in
+            range(self.__data.num_files)]
+
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
                     if self.__data.rtt_edge is not None:
-                        rtt_ij = self.__data.rtt_edge[i][j]
-                    if rtt_ij == NO_EDGE:
-                        self.__data.throughput_current_edge[f][i][j] = 0
-                    if rtt_ij == 0:
-                        self.__data.throughput_current_edge[f][i][j] = NO_EDGE
-                    else:
-                        self.__data.throughput_current_edge[f][i][j] = round(size_f // rtt_ij, 2)
+                        if self.__data.rtt_edge[i][j] == NO_EDGE:
+                            self.__data.throughput_current_edge[f][i][j] = 0
+                        if self.__data.rtt_edge[i][j] == 0:
+                            self.__data.throughput_current_edge[f][i][j] = NO_EDGE
+                        else:
+                            self.__data.throughput_current_edge[f][i][j] = round(size_f // self.__data.rtt_edge[i][j], 2)
 
         self.__data.throughput_current_to_dictionary()
 
     def __calc_expected_throughput_edge(self):
+        self.__data.throughput_expected_edge = [
+            [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+             range(self.__data.num_nodes + self.__data.num_files)]
+            for f
+            in
+            range(self.__data.num_files)]
+
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
-                    if self.__data.rtt_min[i][j] == NO_EDGE:
-                        self.__data.throughput_expected_edge[f][i][j] = 0
-                    if self.__data.rtt_min[i][j] == 0:
-                        self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
-                    else:
-                        self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
+                    if self.__data.rtt_min is not None:
+                        if self.__data.rtt_min[i][j] == NO_EDGE:
+                            self.__data.throughput_expected_edge[f][i][j] = 0
+                        if self.__data.rtt_min[i][j] == 0:
+                            self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
+                        else:
+                            self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
 
         self.__data.throughput_expected_to_dictionary()
 
     def __calc_diff_throughput(self):
+        self.__data.throughput_diff_edge = [
+            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in range(self.__data.num_nodes + self.__data.num_files)]
+            for f in
+            range(self.__data.num_files)]
+
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_with_ue)):
                 for j in range(len(self.__data.key_index_with_ue)):
@@ -553,6 +537,8 @@ class HandleData:
         self.__data.throughput_diff_to_dictionary()
 
     def __calc_current_resources_node(self):
+        self.__data.current_resources_node = [0 for i in range(self.__data.num_bs)]
+
         for i in range(len(self.__data.key_index_bs)):
             file = 0
             for f in range(len(self.__data.key_index_file)):
@@ -563,6 +549,11 @@ class HandleData:
         self.__data.current_resources_node_to_dictionary()
 
     def __calc_psi_edge(self):
+        self.__data.psi_edge = [
+            [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in range(self.__data.num_nodes + self.__data.num_files)]
+            for f in
+            range(self.__data.num_files)]
+
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
@@ -590,7 +581,7 @@ class HandleData:
 
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                         if self.__is_caching(tag_i, tag_j):
-                            self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
+                            self.__data.weight_network[f][i][j] = 0
 
         self.__data.weight_network_to_dictionary()
 
@@ -599,8 +590,8 @@ class HandleData:
             return NO_EDGE
         if thp_c == NO_EDGE and thp_e == NO_EDGE:
             return 0
-        if thp_c == thp_e:
-            return 1
+        if (thp_c == thp_e) and (thp_c != 0) and (thp_e != 0):
+            return 0
         return (thp_c / thp_e)
 
     def __calc_weight_resources(self):
@@ -635,7 +626,7 @@ class HandleData:
             sense = self.__update_ue_position()
         self.__update_rtt_min()
         self.__update_rtt(sense)
-        if is_first:
+        if is_first or (self.show_reallocation == Reallocation.NON_REALLOCATION):
             self.__insert_phi_node()
         else:
             self.__update_phi_node()
@@ -654,7 +645,7 @@ class HandleData:
                 if self.__data.rtt_edge[i][j] != NO_EDGE:
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
                         if sense == INCREASE:
-                            self.__data.rtt_edge[i][j] += self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
+                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                             self.__data.rtt_edge[i][j])
                         if sense == DECREASE:
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_j,
@@ -662,22 +653,26 @@ class HandleData:
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
-        for op,np in zip(self.old_path,self.paths):
-            print(op," | ",np)
+        # TO DO TypeError: 'NoneType' object is not iterable
+        for op, np in zip(self.old_path,self.paths):
             if op != np:
                 self.__data.phi_node[op[CONTENT]][op[STORE]] -= 1
                 self.__data.phi_node[np[CONTENT]][np[STORE]] += 1
-                print("SHIFT.")
+                if self.show_reallocation:
+                    print("SHIFT.")
             else:
-                print("NON-SHIFT.")
+                if self.show_reallocation:
+                    print("NON-SHIFT.")
         self.__data.phi_node_to_dictionary()
 
     def __insert_phi_node(self):
         for f, file in enumerate(self.__data.key_index_file):
             for j, bs in enumerate(self.__data.key_index_bs):
-                for p in self.paths:
-                    if file == p[CONTENT] and bs == p[STORE]:
-                        self.__data.phi_node[f][j] += 1
+                for p in range(len(self.paths)):
+                    # TO DO TypeError: 'NoneType' object is not iterable
+                    #if  self.paths[p] not in self.old_path:
+                        if file == self.paths[p][CONTENT] and bs == self.paths[p][STORE]:
+                            self.__data.phi_node[f][j] += 1
         self.__data.phi_node_to_dictionary()
 
     def __update_ue_position(self):
@@ -739,7 +734,7 @@ class OptimizeData:
 
     def __create_constraints(self):
         # limite de recursos do nó.
-        self.__set_constraint_node_resources_capacity()
+        #self.__set_constraint_node_resources_capacity()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
         self.__set_constraint_throughput()
@@ -908,7 +903,7 @@ class LogData:
         print()
 
     def __log_resources_file_dict(self):
-        print("SIZE FILE.")
+        print("RESOURCES FILE.")
         for k in self.data.resources_file_dict.keys():
             print(k, self.data.resources_file_dict[k])
         print()
@@ -1133,7 +1128,7 @@ class LogData:
 
     def show_parameters(self):
         print("PARAMETERS.\n")
-        self.__log_phi_node()
+        # self.__log_phi_node()
 
         self.__log_resources_file_dict()
         self.__log_size_file_dict()

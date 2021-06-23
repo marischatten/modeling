@@ -8,15 +8,8 @@ import seaborn as sns
 from scipy import special
 import scipy.stats as stats
 
-class Request:
 
-    @staticmethod
-    def generate_sources_random(size_bulk, key_files):
-        sources = list()
-        for i in range(size_bulk):
-            file_rand = randrange(0, len(key_files) - 1)
-            sources.append(key_files[file_rand])
-        return sources
+class Request:
 
     @staticmethod
     def generate_sinks_random(size_bulk, key_users):

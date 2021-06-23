@@ -68,7 +68,9 @@ plot_data = False
 show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
+reallocation = Reallocation.REALLOCATION
 model = Model.ONLINE
+show_reallocation = False
 
 path_dataset = ''
 
@@ -144,6 +146,8 @@ def single(source, sink):
 def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     pd = PlotData(data)
     handler = HandleData(data)
+    handler.show_reallocation = show_reallocation
+    handler.reallocation = reallocation
     init = 0
     paths = None
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
@@ -159,6 +163,16 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
         #sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
+        if event == 0:
+            sources = ['F1','F1','F1','F2','F2','F2','F3','F3','F3']
+            sinks = ['UE1','UE2','UE3','UE1','UE2','UE3','UE1','UE2','UE3' ]
+        if event == 1:
+            sources = ['F3']
+            sinks = ['UE2']
+        #if event == 2:
+         #   sources = ['F3','F3','F3']
+          #  sinks = ['UE1', 'UE2', 'UE3']
+
         insert_reqs(sources, sinks)
         handler.old_path = handler.paths
         paths = create_model(sources, sinks, event)
@@ -169,7 +183,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             handler.update_data(event == 0)
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
             #allocated_request(pd, path, sources, sinks, event, 1)
-        # update_model(pd, handler, sources, sinks)
+
         init = qtd_req
 
     # data.clear_requests()
@@ -430,9 +444,16 @@ def load_is_mobile_enum(mob):
     if mob.upper() == 'NON_MOBILE':
         mobility = mobility.NON_MOBILE
 
+def load_is_reallocation_enum(realloc):
+    global reallocation
+    if realloc.upper() == 'REALLOCATION':
+        reallocation = reallocation.REALLOCATION
+    if realloc.upper() == 'NON_REALLOCATION':
+        reallocation = reallocation.NON_REALLOCATION
+
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -444,12 +465,13 @@ def load_config(config: object):
     show_all_paths = config["show_all_paths"]
     load_type_enum(config["type"])
     load_is_mobile_enum(config["mobility"])
+    load_is_reallocation_enum(config["reallocation"])
     path_dataset = config["path_dataset"]
     save_data = config["save_data"]
     path_output = config["path_output"]
     plot_graph = config["plot_graph"]
     path_graph = config["path_graph"]
-
+    show_reallocation = config["show_reallocation"]
     # random and distribution.
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]

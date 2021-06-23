@@ -99,18 +99,18 @@ def application():
     start_time = time.time()
     dataset = u.get_data(path_dataset)
     load_dataset(dataset)
-    print(CYAN, "READ FILE TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
+    print(CYAN, "READ FILE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     start_time = time.time()
     global data
     data = make_data()
     calc_vars()
-    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
+    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     start_time = time.time()
     discrete_events(type, source=s, sink=t, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
-    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
+    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     if plot_graph:
         picture()
@@ -133,7 +133,7 @@ def single(source, sink):
     insert_reqs(source, sink)
     path = create_model(source, sink)
     handler.paths = path
-    #handler.update_data()
+    # handler.update_data()
     # allocated_request(pd, path, source, sink)
     if show_all_paths:
         pd.show_paths()
@@ -162,17 +162,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
-        #sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
-        if event == 0:
-            sources = ['F1','F1','F1','F2','F2','F2','F3','F3','F3']
-            sinks = ['UE1','UE2','UE3','UE1','UE2','UE3','UE1','UE2','UE3' ]
-        if event == 1:
-            sources = ['F3']
-            sinks = ['UE2']
-        #if event == 2:
-         #   sources = ['F3','F3','F3']
-          #  sinks = ['UE1', 'UE2', 'UE3']
-
+        # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
         handler.old_path = handler.paths
         paths = create_model(sources, sinks, event)
@@ -181,15 +171,15 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         if paths is not None:
             start_time = time.time()
             handler.update_data(event == 0)
-            print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
-            #allocated_request(pd, path, sources, sinks, event, 1)
+            print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+            # allocated_request(pd, path, sources, sinks, event, 1)
 
         init = qtd_req
 
     # data.clear_requests()
 
     if show_all_paths:
-       pd.show_paths()
+        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     if plot_data:
@@ -210,7 +200,7 @@ def insert_reqs(sources, sinks):
         data.req_dict[s, t] = 1
 
 
-def remove_replicate_reqs(pd,sources, sinks):
+def remove_replicate_reqs(pd, sources, sinks):
     must_remove = list()
 
     if len(sources) == len(sinks):
@@ -219,13 +209,13 @@ def remove_replicate_reqs(pd,sources, sinks):
                 if i != j:
                     if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
                         must_remove.append((i))
-                        if not is_unique(pd,sources[i],sinks[i]):
+                        if not is_unique(pd, sources[i], sinks[i]):
                             must_remove.append(i)
 
-    return remove_reqs(sources,sinks,must_remove)
+    return remove_reqs(sources, sinks, must_remove)
 
 
-def remove_reqs(sources,sinks,must_remove):
+def remove_reqs(sources, sinks, must_remove):
     sources_cp = sources
     sinks_cp = sinks
     if must_remove is not None:
@@ -258,7 +248,7 @@ def all_to_all():
         for t in key_index_ue:
             source = np.array([s])
             sink = np.array([t])
-            insert_reqs(source,sink)
+            insert_reqs(source, sink)
             path = create_model(source, sink)
             handler.paths = path
             # handler.update_data()
@@ -326,8 +316,8 @@ def run_model(source, sink, reoptimize, event):
         print(GREEN, "Content:", source, " to User:", sink)
         od.result()
 
-    print(RED, "EVENT: ", event+1, RESET)
-    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time),4), RESET)
+    print(RED, "EVENT: ", event + 1, RESET)
+    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     if od.model.status == gp.GRB.OPTIMAL:
         path = od.solution_path(show_path)
@@ -430,11 +420,11 @@ def load_dataset(dataset: object):
 def load_type_enum(t):
     global type
     if str(t).upper() == str('SINGLE'):
-         type = type.SINGLE
+        type = type.SINGLE
     if str(t).upper() == 'ZIPF':
-        type =  type.ZIPF
+        type = type.ZIPF
     if str(t).upper() == 'ALLTOALL':
-        type =  type.ALLTOALL
+        type = type.ALLTOALL
 
 
 def load_is_mobile_enum(mob):
@@ -443,6 +433,7 @@ def load_is_mobile_enum(mob):
         mobility = mobility.IS_MOBILE
     if mob.upper() == 'NON_MOBILE':
         mobility = mobility.NON_MOBILE
+
 
 def load_is_reallocation_enum(realloc):
     global reallocation
@@ -481,7 +472,7 @@ def load_config(config: object):
     s = config["source"]
     t = config["sink"]
 
-    print(CYAN,"LOADED CONFIGURATION.", RESET)
+    print(CYAN, "LOADED CONFIGURATION.", RESET)
 
 
 if __name__ == "__main__":

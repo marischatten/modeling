@@ -443,7 +443,7 @@ class HandleData:
                 if i != j:
                     if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
                             tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
-                            tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS') :
+                            tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
                             self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
                             self.__data.rtt_edge[j][i] = self.__data.rtt_min[j][i]
@@ -481,51 +481,52 @@ class HandleData:
 
     def __calc_current_throughput_edge(self):
         self.__data.throughput_current_edge = [
-            [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
              range(self.__data.num_nodes + self.__data.num_files)]
             for f
             in
             range(self.__data.num_files)]
 
-        for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_all)):
+        for f, tag_f in enumerate(self.__data.key_index_file):
+            for i, tag_i in enumerate(self.__data.key_index_all):
                 for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
                     if self.__data.rtt_edge is not None:
-                        if self.__data.rtt_edge[i][j] == NO_EDGE:
-                            self.__data.throughput_current_edge[f][i][j] = 0
                         if self.__data.rtt_edge[i][j] == 0:
-                            self.__data.throughput_current_edge[f][i][j] = NO_EDGE
+                            if tag_f == tag_i:
+                                self.__data.throughput_current_edge[f][i][j] = NO_EDGE
                         else:
-                            self.__data.throughput_current_edge[f][i][j] = round(size_f // self.__data.rtt_edge[i][j], 2)
+                            self.__data.throughput_current_edge[f][i][j] = round(size_f // self.__data.rtt_edge[i][j],
+                                                                                 2)
 
         self.__data.throughput_current_to_dictionary()
 
     def __calc_expected_throughput_edge(self):
         self.__data.throughput_expected_edge = [
-            [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
              range(self.__data.num_nodes + self.__data.num_files)]
             for f
             in
             range(self.__data.num_files)]
 
-        for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_all)):
+        for f, tag_f in enumerate(self.__data.key_index_file):
+            for i, tag_i in enumerate(self.__data.key_index_all):
                 for j in range(len(self.__data.key_index_all)):
                     size_f = self.__data.size_file[f]
                     if self.__data.rtt_min is not None:
-                        if self.__data.rtt_min[i][j] == NO_EDGE:
-                            self.__data.throughput_expected_edge[f][i][j] = 0
                         if self.__data.rtt_min[i][j] == 0:
-                            self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
+                            if tag_f == tag_i:
+                                self.__data.throughput_expected_edge[f][i][j] = NO_EDGE
                         else:
-                            self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j], 2)
+                            self.__data.throughput_expected_edge[f][i][j] = round(size_f // self.__data.rtt_min[i][j],
+                                                                                  2)
 
         self.__data.throughput_expected_to_dictionary()
 
     def __calc_diff_throughput(self):
         self.__data.throughput_diff_edge = [
-            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in range(self.__data.num_nodes + self.__data.num_files)]
+            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+             range(self.__data.num_nodes + self.__data.num_files)]
             for f in
             range(self.__data.num_files)]
 
@@ -550,7 +551,8 @@ class HandleData:
 
     def __calc_psi_edge(self):
         self.__data.psi_edge = [
-            [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in range(self.__data.num_nodes + self.__data.num_files)]
+            [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+             range(self.__data.num_nodes + self.__data.num_files)]
             for f in
             range(self.__data.num_files)]
 
@@ -580,7 +582,7 @@ class HandleData:
                             self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_e)
 
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
-                        if self.__is_caching(tag_i, tag_j):
+                        if self.__is_caching(tag_i, tag_j) and (tag_f == tag_i):
                             self.__data.weight_network[f][i][j] = 0
 
         self.__data.weight_network_to_dictionary()
@@ -646,7 +648,7 @@ class HandleData:
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
                         if sense == INCREASE:
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
-                                                                                            self.__data.rtt_edge[i][j])
+                                                                                           self.__data.rtt_edge[i][j])
                         if sense == DECREASE:
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_j,
                                                                                            self.__data.rtt_edge[i][j])
@@ -654,7 +656,7 @@ class HandleData:
 
     def __update_phi_node(self):
         # TO DO TypeError: 'NoneType' object is not iterable
-        for op, np in zip(self.old_path,self.paths):
+        for op, np in zip(self.old_path, self.paths):
             if op != np:
                 self.__data.phi_node[op[CONTENT]][op[STORE]] -= 1
                 self.__data.phi_node[np[CONTENT]][np[STORE]] += 1
@@ -670,9 +672,9 @@ class HandleData:
             for j, bs in enumerate(self.__data.key_index_bs):
                 for p in range(len(self.paths)):
                     # TO DO TypeError: 'NoneType' object is not iterable
-                    #if  self.paths[p] not in self.old_path:
-                        if file == self.paths[p][CONTENT] and bs == self.paths[p][STORE]:
-                            self.__data.phi_node[f][j] += 1
+                    # if  self.paths[p] not in self.old_path:
+                    if file == self.paths[p][CONTENT] and bs == self.paths[p][STORE]:
+                        self.__data.phi_node[f][j] += 1
         self.__data.phi_node_to_dictionary()
 
     def __update_ue_position(self):
@@ -734,7 +736,7 @@ class OptimizeData:
 
     def __create_constraints(self):
         # limite de recursos do nó.
-        #self.__set_constraint_node_resources_capacity()
+        self.__set_constraint_node_resources_capacity()
 
         # restrição para vazão esperada seja sempre a menor que a atual.
         self.__set_constraint_throughput()
@@ -752,9 +754,9 @@ class OptimizeData:
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                            self.__data.resources_node_dict[i] - (
-                                self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
-                            req[SOURCE]])) >= 0)
+                        self.__data.resources_node_dict[i] - (
+                        self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
+                    req[SOURCE]])) >= 0)
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:

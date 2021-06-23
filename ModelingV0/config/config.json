@@ -7,20 +7,20 @@
 "plot_distribution": false,
 "plot_data": false,
 "show_all_paths": false,
-"type": "zipf",
+"type": "single",
 "mobility": "MOBILE",
 "reallocation": "reallocation",
 "show_reallocation": true,
-"path_dataset": "..\\dataset\\instance_3.json",
+"path_dataset": "..\\dataset\\instance_1.json",
 "save_data": false,
 "path_output": "..\\output\\data\\instance_1.xlsx",
 "plot_graph": false,
 "path_graph": "..\\output\\graph\\instance_6.png",
 
-"avg_qtd_bulk": 3,
-"num_events": 1,
+"avg_qtd_bulk": 5,
+"num_events": 2,
 "num_alpha": 0.56,
 
-"source": ["F3"],
-"sink": ["UE1"]
+"source": ["F2"],
+"sink": ["UE2"]
 }

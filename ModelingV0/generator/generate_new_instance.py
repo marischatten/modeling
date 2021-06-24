@@ -31,23 +31,6 @@ INTERFERENCE = 20
 DISTANCE_MBS_MBS = 550
 MAX_USE_NODE = 0.5
 
-DISTANCE_SBS_MBS = [88.02,
-                    87.53,
-                    78.13,
-                    97.13,
-                    202.16,
-                    202.97,
-                    217.12,
-                    215.23,
-                    199.8,
-                    215.89,
-                    217.73,
-                    224.54,
-                    223.6,
-                    222.29,
-                    216.1
-                    ]
-
 mobility_rate = 0
 alpha = 0
 beta = 0
@@ -57,7 +40,7 @@ num_mbs = 0
 num_sbs_per_mbs = 0
 num_ue = 0
 num_files = 0
-num_nodes = 0  # sem vértices de conteúdo. BS + UE
+num_nodes = 0  # BS + UE
 key_index_file = list()
 key_index_bs = list()
 key_index_ue = list()

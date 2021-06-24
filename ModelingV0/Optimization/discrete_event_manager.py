@@ -164,7 +164,6 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
-        handler.old_path = handler.paths
         paths = create_model(sources, sinks, event)
         handler.paths = paths
 
@@ -290,7 +289,7 @@ def plot_zipf(distribution, alpha):
 
 
 def make_data():
-    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+    return Data(mobility,reallocation, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 resources_file, size_file, phi,
                 throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
@@ -298,15 +297,15 @@ def make_data():
                 )
 
 
-def create_model(source, sink, event=0, reoptimize=False):
+def create_model(source, sink, event=0):
     if show_par:
         show_parameters()
     if show_var:
         show_vars()
-    return run_model(source, sink, reoptimize, event)
+    return run_model(source, sink, event)
 
 
-def run_model(source, sink, reoptimize, event):
+def run_model(source, sink, event):
     start_time = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")

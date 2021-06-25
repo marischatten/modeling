@@ -1,7 +1,7 @@
 {
     "mobility_rate": 10,
     "alpha" : 0.5,
-    "beta": 10,
+    "beta": 0.1,
 
     "phi" : [
         [0,0],

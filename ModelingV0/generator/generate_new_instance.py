@@ -86,12 +86,12 @@ def main():
 
     mobility_rate = 10
     alpha = 0.5
-    beta = 0.1
+    beta = 100
     num_mbs = 2
     num_sbs_per_mbs = 15
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
-    num_files = 20
-    num_ue = 20
+    num_files = 100
+    num_ue = 200
     num_nodes = num_bs + num_ue + num_files
     size_file_max = 400
     size_file_min = 100

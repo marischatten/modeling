@@ -99,7 +99,7 @@ def application():
     start_time = time.time()
     dataset = u.get_data(path_dataset)
     load_dataset(dataset)
-    print(CYAN, "READ FILE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+    print(CYAN, "READ INSTANCE FILE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     start_time = time.time()
     global data
@@ -311,7 +311,9 @@ def run_model(source, sink, event):
     od.model = gp.Model("Orchestrator")
     od.run_model(show_log)
 
+
     if show_results:
+        print(RED, "##########################################", RESET)
         print(GREEN, "Content:", source, " to User:", sink)
         od.result()
 

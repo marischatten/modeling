@@ -173,7 +173,8 @@ class Data:
     rtt_min_dict = dict()
     distance_ue_dict = dict()
 
-    def __init__(self, mobility: object = Mobility.NON_MOBILE, reallocation: object = Reallocation.REALLOCATION, mr=0, alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
+    def __init__(self, mobility: object = Mobility.NON_MOBILE, reallocation: object = Reallocation.REALLOCATION, mr=0,
+                 alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  rf=None, sf=None, phi_node=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
@@ -559,7 +560,7 @@ class HandleData:
 
     def __weight_network(self, thp_c, thp_min):
         if thp_c == 0:
-           return NO_EDGE
+            return NO_EDGE
         if thp_c == NO_EDGE:
             return 1
         return (thp_c / thp_min)
@@ -619,13 +620,12 @@ class HandleData:
         self.__data.rtt_edge_to_dictionary()
 
     def __update_phi_node(self):
-        for op, np in zip(self.old_path, self.paths):
+        for op, np in zip(self.old_path, self.paths[:len(self.old_path)]):
             if op != np:
                 op_index_content = self.__data.key_index_file.index(op[CONTENT])
                 op_index_store = self.__data.key_index_bs.index(op[STORE])
                 np_index_content = self.__data.key_index_file.index(np[CONTENT])
                 np_index_store = self.__data.key_index_bs.index(np[STORE])
-
                 self.__data.phi_node[op_index_content][op_index_store] -= 1
                 self.__data.phi_node[np_index_content][np_index_store] += 1
 
@@ -634,6 +634,12 @@ class HandleData:
             else:
                 if self.show_reallocation:
                     print("NON-SHIFT.")
+            np_index = self.paths.index(np)
+        for np in self.paths[len(self.old_path):]:
+            np_index_content = self.__data.key_index_file.index(np[CONTENT])
+            np_index_store = self.__data.key_index_bs.index(np[STORE])
+            self.__data.phi_node[np_index_content][np_index_store] += 1
+
         self.__data.phi_node_to_dictionary()
 
     def __insert_phi_node(self):
@@ -703,7 +709,7 @@ class OptimizeData:
 
     def __create_constraints(self):
         # This constraint limit the use  of node resources.
-        self.__set_constraint_node_resources_capacity()
+        # self.__set_constraint_node_resources_capacity()
 
         # This constraint ensures that the throughput current being the most than the throughput minimum of content.
         self.__set_constraint_throughput()
@@ -740,13 +746,13 @@ class OptimizeData:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(gp.quicksum(
                     self.x[req[KEY], i, j]
-                    #* self.__data.req_dict[req[SINK], req[SOURCE]]
+                    # * self.__data.req_dict[req[SINK], req[SOURCE]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
                     for j in
                     self.__data.key_index_all)
                                      - gp.quicksum(
                     self.x[req[KEY], j, i]
-                    #* self.__data.req_dict[req[SINK], req[SOURCE]]
+                    # * self.__data.req_dict[req[SINK], req[SOURCE]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], j, i]
                     for j in
                     self.__data.key_index_all)
@@ -755,33 +761,37 @@ class OptimizeData:
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(gp.quicksum(( self.__data.throughput_current_edge_dict[req[SOURCE],req[SOURCE],i]  for i in self.__data.key_index_bs )) == (
-                        gp.quicksum(
-                        self.x[req[KEY], req[SOURCE], i]
-                        * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
-                        for i in self.__data.key_index_bs
-                        )
-                                         - gp.quicksum(
-                        self.x[req[KEY], i, req[SOURCE]]
-                        * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
-                        for i in self.__data.key_index_bs
-                    )  )
-                                         , 'c5')
+                self.model.addConstr(gp.quicksum(
+                    (self.__data.throughput_current_edge_dict[req[SOURCE], req[SOURCE], i] for i in
+                     self.__data.key_index_bs)) == (
+                                             gp.quicksum(
+                                                 self.x[req[KEY], req[SOURCE], i]
+                                                 * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
+                                                 for i in self.__data.key_index_bs
+                                             )
+                                             - gp.quicksum(
+                                         self.x[req[KEY], i, req[SOURCE]]
+                                         * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
+                                         for i in self.__data.key_index_bs
+                                     ))
+                                     , 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
-            self.model.addConstr( gp.quicksum((- self.__data.throughput_current_edge_dict[req[SOURCE],req[SINK],i] for i in self.__data.key_index_bs ) ) == (
-                    gp.quicksum(
-                    self.x[req[KEY], req[SINK], i]
-                    * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
-                    for i in self.__data.key_index_bs
-                    )
-                                     - gp.quicksum(
-                    self.x[req[KEY], i, req[SINK]]
-                    * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
-                    for i in self.__data.key_index_bs
-                ) )
-                                     , 'c6')
+            self.model.addConstr(gp.quicksum(
+                (- self.__data.throughput_current_edge_dict[req[SOURCE], req[SINK], i] for i in
+                 self.__data.key_index_bs)) == (
+                                         gp.quicksum(
+                                             self.x[req[KEY], req[SINK], i]
+                                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
+                                             for i in self.__data.key_index_bs
+                                         )
+                                         - gp.quicksum(
+                                     self.x[req[KEY], i, req[SINK]]
+                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
+                                     for i in self.__data.key_index_bs
+                                 ))
+                                 , 'c6')
 
     def execute(self, log):
         self.model.setParam("LogToConsole", log)
@@ -789,15 +799,15 @@ class OptimizeData:
 
     def result(self):
         if self.model.status == gp.GRB.OPTIMAL:
-            print(GREEN + "\nOPTIMAL SOLVE." + RESET)
+            print(GREEN, "OPTIMAL SOLVE.", RESET)
             obj = self.model.getObjective()
-            print(CYAN + "OBJECTIVE FUNCTION: " + RED + str(obj.getValue()) + RESET)
-            print(BOLD + "DECISION VARIABLE:" + BOLD)
+            print(CYAN, "OBJECTIVE FUNCTION: ", RED, str(obj.getValue()), RESET)
+            print(BOLD, "DECISION VARIABLE:", BOLD)
             for var in self.model.getVars():
                 if var.X > 0:
                     print(var.VarName, round(var.X, 2))
         else:
-            print(RED + "THE SOLVE IS INFEASIBLE.")
+            print(RED, "THE SOLVE IS INFEASIBLE.")
 
     def solution_path(self, show_path):
         self.__path.clear()
@@ -884,7 +894,7 @@ class LogData:
     def __log_size_file_dict(self):
         print("SIZE FILE.")
         for k in self.data.size_file_dict.keys():
-            print(k, self.data.size_file_dict[k],"MB")
+            print(k, self.data.size_file_dict[k], "MB")
         print()
 
     def __log_resources_node_dict(self):
@@ -910,7 +920,7 @@ class LogData:
     def __log_throughput_min_dict(self):
         print("MINIMAL THROUGHPUT.")
         for k in self.data.throughput_min_file_dict.keys():
-            print(k, self.data.throughput_min_file_dict[k],"MB")
+            print(k, self.data.throughput_min_file_dict[k], "MB")
         print()
 
     def __log_rtt_min(self):

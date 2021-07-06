@@ -1,6 +1,6 @@
 {
 "show_log": 0,
-"show_results": false,
+"show_results": true,
 "show_path": false,
 "show_var": false,
 "show_par": false,
@@ -11,14 +11,14 @@
 "mobility": "is_mobile",
 "reallocation": "reallocation",
 "show_reallocation": false,
-"path_dataset": "..\\dataset\\instance_6.json",
+"path_dataset": "..\\dataset\\instance_1.json",
 "save_data": false,
 "path_output": "..\\output\\data\\instance_1.xlsx",
 "plot_graph": true,
 "path_graph": "..\\output\\graph\\instance_6.png",
 
-"avg_qtd_bulk": 50,
-"num_events": 1,
+"avg_qtd_bulk": 3,
+"num_events": 3,
 "num_alpha": 0.56,
 
 "source": ["F2"],

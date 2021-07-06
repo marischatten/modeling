@@ -746,13 +746,13 @@ class OptimizeData:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(gp.quicksum(
                     self.x[req[KEY], i, j]
-                    # * self.__data.req_dict[req[SINK], req[SOURCE]]
+                    * self.__data.req_dict[req[SINK], req[SOURCE]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
                     for j in
                     self.__data.key_index_all)
                                      - gp.quicksum(
                     self.x[req[KEY], j, i]
-                    # * self.__data.req_dict[req[SINK], req[SOURCE]]
+                    * self.__data.req_dict[req[SINK], req[SOURCE]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], j, i]
                     for j in
                     self.__data.key_index_all)
@@ -761,9 +761,8 @@ class OptimizeData:
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(gp.quicksum(
-                    (self.__data.throughput_current_edge_dict[req[SOURCE], req[SOURCE], i] for i in
-                     self.__data.key_index_bs)) == (
+                self.model.addConstr(
+                    (self.__data.throughput_min_file_dict[req[SOURCE]]) == (
                                              gp.quicksum(
                                                  self.x[req[KEY], req[SOURCE], i]
                                                  * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
@@ -778,9 +777,8 @@ class OptimizeData:
 
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
-            self.model.addConstr(gp.quicksum(
-                (- self.__data.throughput_current_edge_dict[req[SOURCE], req[SINK], i] for i in
-                 self.__data.key_index_bs)) == (
+            self.model.addConstr(
+                (- self.__data.throughput_min_file_dict[req[SOURCE]]) == (
                                          gp.quicksum(
                                              self.x[req[KEY], req[SINK], i]
                                              * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]

@@ -1,30 +1,6 @@
-# python -m pip install -i https://pypi.gurobi.com gurobipy
-# pip install python-igraph
-# pip install pycairo
-# pip install ortools
-# pip install numpy
-# pip install matplotlib
-# pip install tqdm
-# pip install scipy
-# pip install seaborn
-import numpy as np
-
-import time
-import tqdm
-import seaborn as sns
-from scipy import special
-import statistics as s
-
-import ortools.linear_solver.pywraplp as otlp
-from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
-from ortools.graph import pywrapgraph
-
-import igraph as ig
 from modeling.optimize import *
-import matplotlib.pyplot as plt
-
 from utils import utils as u
-from simulation import request as r
+
 
 NO_EDGE = 99999
 INTERFERENCE = 20
@@ -64,7 +40,6 @@ gama = list()
 radius_mbs = 0
 radius_sbs = 0
 
-
 resources_node_max = 0
 resources_node_min = 0
 
@@ -79,36 +54,17 @@ rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
 rtt_min_sbs_ue = 0
 
+path = ''
+
 
 def main():
-    path = r"..\dataset\instance_6.json"  # args[0]
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max,key_index_all
 
-    mobility_rate = 10
-    alpha = 0.5
-    beta = 100
-    num_mbs = 2
-    num_sbs_per_mbs = 15
-    num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
-    num_files = 100
-    num_ue = 200
-    num_nodes = num_bs + num_ue + num_files
-    size_file_max = 400
-    size_file_min = 100
-    resources_file_max = 400
-    resources_file_min = 100
+    path_config = r'..\config\config_generator.json'
+    if path_config != '':
+        config = u.get_data(path_config)
+        load_config(config)
 
-    throughput_min_file_max = 32
-    throughput_min_file_min = 16
-
-    resources_node_max = 2048
-    resources_node_min = 1024
-    radius_mbs = 300
-    radius_sbs = 150
-    rtt_min_mbs_mbs = 1.0
-    rtt_min_sbs_mbs = 3.0
-    rtt_min_sbs_ue = 5.0
-
+    global key_index_all
     generate_nodes(num_files, num_mbs, num_sbs_per_mbs, num_ue)
     key_index_all = key_index_bs + key_index_ue + key_index_file
     generate_resources_file()
@@ -289,26 +245,26 @@ def generate_rtt_min():
         for j, tag_j in enumerate(key_index_all):
             if i != j:
                 if tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS':
-                    if coverage_bs_to_bs(tag_i,tag_j):
+                    if coverage_bs_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_mbs_mbs
                         rtt_min[j][i] = rtt_min_mbs_mbs
                     else:
                         rtt_min[i][j] = NO_EDGE
                         rtt_min[j][i] = NO_EDGE
                 if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
-                    if coverage_bs_to_bs(tag_i,tag_j):
+                    if coverage_bs_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_sbs_mbs
                         rtt_min[j][i] = rtt_min_sbs_mbs
                     else:
                         rtt_min[i][j] = NO_EDGE
                         rtt_min[j][i] = NO_EDGE
                 if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                    if coverage_bs_ue(tag_i,tag_j):
+                    if coverage_bs_ue(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_sbs_ue
                     else:
                         rtt_min[i][j] = NO_EDGE
                 if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
-                    if caching_to_bs(tag_i,tag_j):
+                    if caching_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = 0
                     else:
                         rtt_min[i][j] = NO_EDGE
@@ -334,10 +290,10 @@ def coverage_bs_to_bs(source, sink):
             tag_orig = key_index_bs[i]
             tag_dest = key_index_bs[j]
             e_bs_adj_dict[tag_orig, tag_dest] = e_bs_adj[i][j]
-    return e_bs_adj_dict[source,sink] == 1
+    return e_bs_adj_dict[source, sink] == 1
 
 
-def coverage_bs_ue(source,sink):
+def coverage_bs_ue(source, sink):
     distance_ue_dict = dict()
     for u in range(len(key_index_ue)):
         for i in range(len(key_index_bs)):
@@ -345,10 +301,10 @@ def coverage_bs_ue(source,sink):
             tag_bs = key_index_bs[i]
             distance_ue_dict[tag_ue, tag_bs] = distance_ue[u][i]
 
-    return distance_ue_dict[sink,source] <= radius_sbs
+    return distance_ue_dict[sink, source] <= radius_sbs
 
 
-def caching_to_bs(source,sink):
+def caching_to_bs(source, sink):
     gama_dict = dict()
     for f in range(len(key_index_file)):
         for i in range(len(key_index_bs)):
@@ -424,6 +380,39 @@ def generate_json(path):
             "radius_sbs": radius_sbs
             }
     u.write_data(path, data)
+
+
+def load_config(config: object):
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max, key_index_all, path
+
+    mobility_rate = config["mobility_rate"]
+    alpha = config["alpha"]
+    beta = config["beta"]
+    num_mbs = config["num_mbs"]
+    num_sbs_per_mbs = config["num_sbs_per_mbs"]
+    num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
+    num_files = config["num_files"]
+    num_ue = config["num_ue"]
+    num_nodes = num_bs + num_ue + num_files
+    size_file_max = config["size_file_max"]
+    size_file_min = config["size_file_min"]
+    resources_file_max = config["resources_file_max"]
+    resources_file_min = config["resources_file_min"]
+
+    throughput_min_file_max = config["throughput_min_file_max"]
+    throughput_min_file_min = config["throughput_min_file_min"]
+
+    resources_node_max = config["resources_node_max"]
+    resources_node_min = config["resources_node_min"]
+    radius_mbs = config["radius_mbs"]
+    radius_sbs = config["radius_sbs"]
+    rtt_min_mbs_mbs = config["rtt_min_mbs_mbs"]
+    rtt_min_sbs_mbs = config["rtt_min_sbs_mbs"]
+    rtt_min_sbs_ue = config["rtt_min_sbs_ue"]
+
+    path = config["path"]
+
+    print(CYAN, "LOADED CONFIGURATION.", RESET)
 
 
 if __name__ == "__main__":

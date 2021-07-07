@@ -1,18 +1,10 @@
 import gurobipy as gp
-import statistics as s
-import statistics
-import random
-
 import matplotlib.pyplot as plt
-
-from utils import utils as utils
-import itertools
 import numpy as np
 import ortools as otlp  # somente LP
 from enum import Enum
-import uuid
 import pandas as pds
-from random import randrange
+
 
 NO_EDGE = 9999999999
 
@@ -760,8 +752,7 @@ class OptimizeData:
 
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
-            for i in self.__data.key_index_bs:
-                self.model.addConstr(
+            self.model.addConstr(
                     (self.__data.throughput_min_file_dict[req[SOURCE]]) == (
                                              gp.quicksum(
                                                  self.x[req[KEY], req[SOURCE], i]

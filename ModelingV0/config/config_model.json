@@ -17,8 +17,8 @@
 "plot_graph": true,
 "path_graph": "..\\output\\graph\\instance_6.png",
 
-"avg_qtd_bulk": 3,
-"num_events": 3,
+"avg_qtd_bulk":5,
+"num_events": 5,
 "num_alpha": 0.56,
 
 "source": ["F2"],

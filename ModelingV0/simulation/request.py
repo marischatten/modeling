@@ -1,11 +1,6 @@
 from random import randrange
 import numpy as np
 from scipy.stats import poisson
-from scipy.stats import zipf
-import matplotlib.pyplot as plt
-from numpy import random
-import seaborn as sns
-from scipy import special
 import scipy.stats as stats
 
 

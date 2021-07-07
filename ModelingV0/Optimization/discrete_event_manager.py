@@ -9,7 +9,7 @@
 # pip install seaborn
 # pip install openpyxl
 
-
+import os
 import time
 import tqdm
 import seaborn as sns
@@ -90,12 +90,12 @@ t = np.array(['UE3'])
 
 
 def application():
-    #########################################################################################################################
-    path_config = r'..\config\config.json'
+
+    path_config = r'..\config\config_model.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)
-    #########################################################################################################################
+
     start_time = time.time()
     dataset = u.get_data(path_dataset)
     load_dataset(dataset)
@@ -114,6 +114,8 @@ def application():
 
     if plot_graph:
         picture()
+
+    os.system("pause")
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -144,6 +146,8 @@ def single(source, sink):
 
 
 def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
+    sources = list()
+    sinks = list()
     pd = PlotData(data)
     handler = HandleData(data)
     handler.show_reallocation = show_reallocation
@@ -159,8 +163,11 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
-        sources = get_req(zipf, init, qtd_req)
-        sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
+
+        while(len(sources) == 0) or (len(sinks) == 0):
+            sources = get_req(zipf, init, qtd_req)
+            sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
+            print("CAIU")
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
@@ -200,27 +207,24 @@ def insert_reqs(sources, sinks):
 
 
 def remove_replicate_reqs(pd, sources, sinks):
-    must_remove = list()
 
+    new_sources = list()
+    new_sinks = list()
     if len(sources) == len(sinks):
         for i in range(len(sources)):
             for j in range(len(sources)):
                 if i != j:
                     if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
-                        must_remove.append((i))
-                        if not is_unique(pd, sources[i], sinks[i]):
-                            must_remove.append(i)
+                        print("Replicated Requests Removed.")
+                        continue
+                    if not is_unique(pd, sources[i], sinks[i]):
+                        print("Replicated Requests in Previous Events Removed.")
+                        continue
 
-    return remove_reqs(sources, sinks, must_remove)
+                    new_sources.append(sources[i])
+                    new_sinks.append(sinks[i])
 
-
-def remove_reqs(sources, sinks, must_remove):
-    sources_cp = sources
-    sinks_cp = sinks
-    if must_remove is not None:
-        print("Replicated Requests Removed.")
-
-    return (sources_cp, sinks_cp)
+    return (new_sources, new_sinks)
 
 
 def is_unique(pd, source, sink):

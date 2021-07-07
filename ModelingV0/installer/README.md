@@ -1,7 +1,23 @@
-###install:
-pip install pyinstaller 
+###Create Gurobi license in:
+https://www.gurobi.com/downloads/free-academic-license/
 
-###run:
-pyinstaller  --onefile 'filename' 
+###Active Gurobi license in command/terminal prompt:
+````shell
+command: grbgetkey "pastelicense"
+````
+###Install dependencies:
+````shell
+command: ./intaller.sh
+````
+###Execute the Model:
+````shell
+command: python3 discrete_event_manager.py
+````
+###Execute the Instance Generator:
+````shell
+command: python3 generate_new_instance.py
+````
 
-C:\Users\Mari\Desktop\Modelagem\Projects\milpV0\modeling\ModelingV0\optimization\discrete_event_manager.py
+Model configuration is in config/config_model.json
+
+Instance generator is in config/generator.json

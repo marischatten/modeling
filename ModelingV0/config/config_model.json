@@ -14,7 +14,7 @@
 "path_dataset": "..\\dataset\\instance_1.json",
 "save_data": false,
 "path_output": "..\\output\\data\\instance_1.xlsx",
-"plot_graph": true,
+"plot_graph": false,
 "path_graph": "..\\output\\graph\\instance_6.png",
 
 "avg_qtd_bulk":5,

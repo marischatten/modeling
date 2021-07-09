@@ -14,9 +14,9 @@ import time
 import tqdm
 import seaborn as sns
 
-import ortools.linear_solver.pywraplp as otlp
-from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
-from ortools.graph import pywrapgraph
+# import ortools.linear_solver.pywraplp as otlp
+# from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
+# from ortools.graph import pywrapgraph
 
 import igraph as ig
 from modeling.optimize import *

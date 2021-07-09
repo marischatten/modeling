@@ -1,12 +1,14 @@
 ###Install dependencies:
 ````shell
+command: cd modeling/ModelingV0/installer/
 command: chmod +x installer.sh
-````
-````shell
 command: ./installer.sh
 ````
 ### Download Gurobi Optimizer in :
-https://www.gurobi.com/downloads/gurobi-optimizer-eula/
+https://www.gurobi.com/downloads/gurobi-software/
+
+###Install  Gurobi:
+https://www.gurobi.com/documentation/9.1/remoteservices/linux_installation.html
 
 ###Create Gurobi license in:
 https://www.gurobi.com/downloads/free-academic-license/
@@ -18,11 +20,13 @@ command: grbgetkey "pastelicense"
 
 ###Execute the Model:
 ````shell
-command: python3 discrete_event_manager.py
+command: cd modeling/ModelingV0/optimization/
+command: python3.9 discrete_event_manager.py
 ````
 ###Execute the Instance Generator:
 ````shell
-command: python3 generate_new_instance.py
+command: cd modeling/ModelingV0/generator/
+command: python3.9 generate_new_instance.py
 ````
 
 Model configuration is in config/config_model.json
@@ -50,10 +54,12 @@ command: python3.9 -m venv <Dir>
 ````shell
 command: python3.9 -m pip install --upgrade Pillow
 ````
-
-
 >NoModule
 ````shell
 command: sudo apt-get install tqdm
 command: sudo apt-get install seaborn
+````
+>RuntimeError: This package is deprecated. See the deprecation notice above.
+````shell
+command: sudo apt-get install python-igraph
 ````

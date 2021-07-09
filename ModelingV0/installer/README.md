@@ -1,3 +1,10 @@
+###Install dependencies:
+````shell
+command: chmod +x installer.sh
+````
+````shell
+command: ./installer.sh
+````
 ###Create Gurobi license in:
 https://www.gurobi.com/downloads/free-academic-license/
 
@@ -5,10 +12,7 @@ https://www.gurobi.com/downloads/free-academic-license/
 ````shell
 command: grbgetkey "pastelicense"
 ````
-###Install dependencies:
-````shell
-command: ./intaller.sh
-````
+
 ###Execute the Model:
 ````shell
 command: python3 discrete_event_manager.py
@@ -21,3 +25,13 @@ command: python3 generate_new_instance.py
 Model configuration is in config/config_model.json
 
 Instance generator is in config/generator.json
+
+### Debug and Build
+````shell
+command: sudo snap install pycharm-professional --classic
+````
+
+### Update requirements file
+````shell
+command: pip3 list --format=freeze > requirements.txt
+````

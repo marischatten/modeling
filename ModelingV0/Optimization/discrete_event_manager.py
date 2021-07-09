@@ -90,8 +90,11 @@ t = np.array(['UE3'])
 
 
 def application():
+    if os.name  == 'nt':
+        path_config = r'..\config\config_model.json'
+    else:
+        path_config = r'../config/config_model.json'
 
-    path_config = r'..\config\config_model.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)
@@ -115,7 +118,8 @@ def application():
     if plot_graph:
         picture()
 
-    os.system("pause")
+    if os.name == 'nt':
+        os.system("pause")
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -472,10 +476,14 @@ def load_config(config: object):
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]
     num_alpha = config["num_alpha"]
-
     # single.
     s = config["source"]
     t = config["sink"]
+
+    if os.name != 'nt':
+        path_dataset = path_dataset.replace('\\','/')
+        path_output = path_output.replace('\\','/')
+        path_graph = path_graph.replace('\\','/')
 
     print(CYAN, "LOADED CONFIGURATION.", RESET)
 

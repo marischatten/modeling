@@ -18,7 +18,7 @@ import seaborn as sns
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-import igraph as ig
+#import igraph as ig
 import matplotlib.pyplot as plt
 
 from utils import utils as u
@@ -361,7 +361,7 @@ def show_vars():
 
 def picture():
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-
+'''
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -377,6 +377,7 @@ def picture():
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
+'''
 
 
 def load_dataset(dataset: object):

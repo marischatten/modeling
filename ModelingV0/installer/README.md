@@ -49,6 +49,12 @@ command: sudo apt install python3.9-venv
 command: python3.9 -m venv <Dir>
 ````
 
+###Set python version default
+````shell
+command: which python3
+command: sudo ln -sf /usr/bin/python3.9 /usr/bin/python3
+````
+
 ###Errors
 >ImportError: cannot import name '_imaging' from 'PIL'
 ````shell

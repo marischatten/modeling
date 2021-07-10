@@ -19,11 +19,11 @@ import seaborn as sns
 # from ortools.graph import pywrapgraph
 
 import igraph as ig
-from modeling.optimize import *
 import matplotlib.pyplot as plt
 
 from utils import utils as u
 from simulation import request as r
+from modeling.optimize import *
 
 mobility_rate = 10
 

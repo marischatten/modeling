@@ -657,7 +657,7 @@ class HandleData:
         return sense
 
 
-# This class execute the optimization model.
+# This class execute the application model.
 class OptimizeData:
     __data = Data()
     __path = list()

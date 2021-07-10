@@ -1,5 +1,7 @@
+import numpy as np
+import statistics as s
 from utils import utils as u
-
+from optimization import optimize as opt
 
 NO_EDGE = 99999
 INTERFERENCE = 20
@@ -58,7 +60,7 @@ path = ''
 
 def main():
 
-    path_config = r'..\config\config_generator.json'
+    path_config = r'../config/config_generator.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)
@@ -411,7 +413,7 @@ def load_config(config: object):
 
     path = config["path"]
 
-    print(CYAN, "LOADED CONFIGURATION.", RESET)
+    print(opt.CYAN, "LOADED CONFIGURATION.", opt.RESET)
 
 
 if __name__ == "__main__":

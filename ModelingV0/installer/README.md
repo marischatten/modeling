@@ -1,6 +1,6 @@
 ###Install dependencies:
 ````shell
-command: cd modeling/ModelingV0/installer/
+command: cd optimization/ModelingV0/installer/
 command: chmod +x installer.sh
 command: ./installer.sh
 ````
@@ -20,12 +20,12 @@ command: grbgetkey "pastelicense"
 
 ###Execute the Model:
 ````shell
-command: cd modeling/ModelingV0/optimization/
+command: cd optimization/ModelingV0/application/
 command: python3.9 discrete_event_manager.py
 ````
 ###Execute the Instance Generator:
 ````shell
-command: cd modeling/ModelingV0/generator/
+command: cd optimization/ModelingV0/generator/
 command: python3.9 generate_new_instance.py
 ````
 

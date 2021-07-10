@@ -1,6 +1,6 @@
 ###Install dependencies:
 ````shell
-command: cd modeling/ModelingV0/installer/
+command: cd optimization/ModelingV0/installer/
 command: chmod +x installer.sh
 command: ./installer.sh
 ````
@@ -19,19 +19,17 @@ command: grbgetkey "pastelicense"
 ````
 
 ###Execute the Model:
+Model configuration is in config/config_model.json
 ````shell
-command: cd modeling/ModelingV0/optimization/
+command: cd optimization/ModelingV0/application/
 command: python3.9 discrete_event_manager.py
 ````
 ###Execute the Instance Generator:
+Instance generator is in config/generator.json
 ````shell
-command: cd modeling/ModelingV0/generator/
+command: cd optimization/ModelingV0/application/
 command: python3.9 generate_new_instance.py
 ````
-
-Model configuration is in config/config_model.json
-
-Instance generator is in config/generator.json
 
 ### Debug and Build
 ````shell
@@ -47,6 +45,12 @@ command: pip3 list --format=freeze > requirements.txt
 ````shell
 command: sudo apt install python3.9-venv
 command: python3.9 -m venv <Dir>
+````
+
+###Set python version default
+````shell
+command: which python3
+command: sudo ln -sf /usr/bin/python3.9 /usr/bin/python3
 ````
 
 ###Errors

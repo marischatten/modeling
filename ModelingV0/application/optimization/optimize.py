@@ -1,7 +1,7 @@
 import gurobipy as gp
 import matplotlib.pyplot as plt
 import numpy as np
-import ortools as otlp  # somente LP
+# import ortools as otlp  # somente LP
 from enum import Enum
 import pandas as pds
 

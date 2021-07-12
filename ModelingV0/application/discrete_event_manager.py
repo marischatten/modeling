@@ -18,7 +18,7 @@ import seaborn as sns
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-#import igraph as ig
+import igraph as ig
 
 import utils.utils as u
 import simulation.request as r
@@ -39,9 +39,7 @@ key_index_ue = list()
 
 e_bs_adj = list()
 
-resources_file = list()
 size_file = list()
-phi = list()
 throughput_min_file = list()
 
 resources_node = list()
@@ -67,7 +65,6 @@ plot_data = False
 show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
-reallocation = Reallocation.REALLOCATION
 model = Model.ONLINE
 show_reallocation = False
 
@@ -117,8 +114,6 @@ def application():
     if plot_graph:
         picture()
 
-    if os.name == 'nt':
-        os.system("pause")
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -153,10 +148,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     sinks = list()
     pd = PlotData(data)
     handler = HandleData(data)
-    handler.show_reallocation = show_reallocation
-    handler.reallocation = reallocation
     init = 0
     paths = None
+    hosts = None
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_sources_zip(num_alpha, sum_requests(bulks), key_index_file)
 
@@ -174,14 +168,18 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
-        paths = create_model(sources, sinks, event)
+        paths,hosts = create_model(sources, sinks, event)
         handler.paths = paths
+        handler.hosts = hosts
 
         if paths is not None:
             start_time = time.time()
-            # handler.update_data(event == 0)
+            handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
             # allocated_request(pd, path, sources, sinks, event, 1)
+
+        if show_reallocation:
+            handler.show_reallocation()
 
         init = qtd_req
 
@@ -296,9 +294,9 @@ def plot_zipf(distribution, alpha):
 
 
 def make_data():
-    return Data(mobility,reallocation, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
-                resources_file, size_file, phi,
+                size_file,
                 throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
@@ -328,10 +326,10 @@ def run_model(source, sink, event):
     print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     if od.model.status == gp.GRB.OPTIMAL:
-        path = od.solution_path(show_path)
+        paths,hosts = od.solutions(show_path)
     else:
         path = None
-    return path
+    return (paths,hosts)
 
 
 def reallocated_request(pd, path, req):
@@ -360,7 +358,7 @@ def show_vars():
 
 def picture():
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-'''
+
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -376,11 +374,10 @@ def picture():
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
-'''
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     mobility_rate = dataset["mobility_rate"]
 
@@ -397,12 +394,7 @@ def load_dataset(dataset: object):
 
     e_bs_adj = dataset["e_bs_adj"]
 
-    resources_file = dataset["resources_file"]
     size_file = dataset["size_file"]
-
-    if num_bs is not None and num_files is not None:
-        phi = [[0 for i in range(num_bs)] for f in range(num_files)]
-        phi = dataset["phi"]
 
     throughput_min_file = dataset["throughput_min_file"]
 
@@ -444,16 +436,8 @@ def load_is_mobile_enum(mob):
         mobility = mobility.NON_MOBILE
 
 
-def load_is_reallocation_enum(realloc):
-    global reallocation
-    if realloc.upper() == 'REALLOCATION':
-        reallocation = reallocation.REALLOCATION
-    if realloc.upper() == 'NON_REALLOCATION':
-        reallocation = reallocation.NON_REALLOCATION
-
-
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -465,7 +449,6 @@ def load_config(config: object):
     show_all_paths = config["show_all_paths"]
     load_type_enum(config["type"])
     load_is_mobile_enum(config["mobility"])
-    load_is_reallocation_enum(config["reallocation"])
     path_dataset = config["path_dataset"]
     save_data = config["save_data"]
     path_output = config["path_output"]

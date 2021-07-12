@@ -10,8 +10,6 @@
 
     "size_file_max" :  400,
     "size_file_min" :  100,
-    "resources_file_max" :  400,
-    "resources_file_min" :  100,
 
     "throughput_min_file_max" :  32,
     "throughput_min_file_min" :  16,

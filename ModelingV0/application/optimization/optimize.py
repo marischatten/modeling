@@ -7,7 +7,8 @@ import pandas as pds
 
 
 NO_EDGE = 9999999999
-
+DELTA = 0.0001
+EPSILON = 0.9999
 TAG_COORD = 0
 X_COORD = 1
 Y_COORD = 2
@@ -54,11 +55,6 @@ class Model(Enum):
     OFFLINE = 0
 
 
-class Reallocation(Enum):
-    REALLOCATION = 1
-    NON_REALLOCATION = 0
-
-
 # This class manages and handles the data of an instance of the problem.
 class Data:
     requests = list()
@@ -69,7 +65,6 @@ class Data:
     req = list()
     req_dict = dict()
 
-    reallocation = Reallocation
     mobility = Mobility
     mobility_rate = 0
     # Input
@@ -96,11 +91,8 @@ class Data:
 
     e_bs_adj = list()
 
-    # fr \in R
-    resources_file = list()
+    # cs \in R
     size_file = list()
-    # phi_node \in R
-    phi_node = list()
 
     # bwf \in R
     throughput_min_file = list()
@@ -141,21 +133,18 @@ class Data:
 
     # c_fij \in R
     weight_network = None
-    weight_resources = None
 
     weight_network_dict = dict()
-    weight_resources_dict = dict()
 
     connectivity_edges = None
     connectivity_edges_dict = dict()
 
     throughput_current_edge_dict = dict()
     throughput_diff_edge_dict = dict()
-    resources_file_dict = dict()
+
     size_file_dict = dict()
     resources_node_dict = dict()
     current_resources_node_dict = dict()
-    phi_node_dict = dict()
     throughput_min_file_dict = dict()
     gama_file_node_dict = dict()
     omega_user_node_dict = dict()
@@ -165,15 +154,14 @@ class Data:
     rtt_min_dict = dict()
     distance_ue_dict = dict()
 
-    def __init__(self, mobility: object = Mobility.NON_MOBILE, reallocation: object = Reallocation.REALLOCATION, mr=0,
+    def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 rf=None, sf=None, phi_node=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
+                 sf=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
         self.mobility = mobility
-        self.reallocation = reallocation
         self.mobility_rate = mr
         self.alpha = alpha
         self.beta = beta
@@ -194,9 +182,7 @@ class Data:
 
         self.e_bs_adj = e_bs_adj
 
-        self.resources_file = rf
         self.size_file = sf
-        self.phi_node = phi_node
         self.throughput_min_file = bwf
         self.resources_node = rt_i
 
@@ -210,10 +196,8 @@ class Data:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
             self.gama_file_node = gama_file_node
 
-            self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
-            self.phi_node_to_dictionary()
             self.__throughput_min_file_to_dictionary()
             self.__gama_file_node_to_dictionary()
             self.__e_bs_adj_to_dictionary()
@@ -238,17 +222,6 @@ class Data:
         return self.__s
 
     # PARAMETERS TO DICTIONARY
-    def phi_node_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_bs)):
-                tag_file = self.key_index_file[f]
-                tag_user = self.key_index_bs[i]
-                self.phi_node_dict[tag_file, tag_user] = self.phi_node[f][i]
-
-    def __resources_file_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            tag = self.key_index_file[f]
-            self.resources_file_dict[tag] = self.resources_file[f]
 
     def __size_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -328,11 +301,6 @@ class Data:
                     tag_dest = self.key_index_with_ue[j]
                     self.throughput_diff_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_diff_edge[f][i][j]
 
-    def current_resources_node_to_dictionary(self):
-        for i in range(len(self.key_index_bs)):
-            tag = self.key_index_bs[i]
-            self.current_resources_node_dict[tag] = self.current_resources_node[i]
-
     def psi_edge_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -351,11 +319,6 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.weight_network_dict[tag_file, tag_orig, tag_dest] = self.weight_network[f][i][j]
 
-    def weight_resources_to_dictionary(self):
-        for i in range(len(self.key_index_bs)):
-            tag = self.key_index_bs[i]
-            self.weight_resources_dict[tag] = self.weight_resources[i]
-
     def connectivity_edges_to_dictionary(self):
         for c in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -368,10 +331,10 @@ class Data:
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
+    hosts = None
     paths = None
-    old_path = None
-    show_reallocation = None
-    reallocation = None
+    __old_hosts = None
+    __old_paths = None
     __data = Data()
 
     def __init__(self, data):
@@ -384,9 +347,8 @@ class HandleData:
         self.__calc_current_throughput_edge()
         self.__calc_diff_throughput()
         self.__calc_psi_edge()
-        self.__calc_current_resources_node()
+
         self.__calc_weight_network()
-        self.__calc_weight_resources()
         self.__calc_connectivity_edges()
 
     def __calc_connectivity_edges(self):
@@ -500,18 +462,6 @@ class HandleData:
                             self.__data.throughput_current_edge[f][i][j] - self.__data.throughput_min_file[f], 2)
         self.__data.throughput_diff_to_dictionary()
 
-    def __calc_current_resources_node(self):
-        self.__data.current_resources_node = [0 for i in range(self.__data.num_bs)]
-
-        for i in range(len(self.__data.key_index_bs)):
-            file = 0
-            for f in range(len(self.__data.key_index_file)):
-                if self.__data.gama_file_node[f][i] == 1 and self.__data.phi_node[f][i] != 0:
-                    file += self.__data.gama_file_node[f][i] * self.__data.resources_file[f] * self.__data.phi_node[f][
-                        i]
-            self.__data.current_resources_node[i] = file
-        self.__data.current_resources_node_to_dictionary()
-
     def __calc_psi_edge(self):
         self.__data.psi_edge = [
             [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
@@ -557,19 +507,6 @@ class HandleData:
             return 1
         return (thp_c / thp_min)
 
-    def __calc_weight_resources(self):
-        self.__data.weight_resources = [0.0 for i in range(self.__data.num_bs)]
-
-        for i, tag_i in enumerate(self.__data.key_index_bs):
-            rri = self.__data.current_resources_node_dict[tag_i]
-            rti = self.__data.resources_node_dict[tag_i]
-            self.__data.weight_resources[i] = self.__weight_resource(rri, rti)
-
-        self.__data.weight_resources_to_dictionary()
-
-    def __weight_resource(self, rri, rti):
-        return (rri / rti)
-
     def __is_caching(self, file, bs):
         return self.__data.gama_file_node_dict[file, bs] == 1
 
@@ -583,19 +520,14 @@ class HandleData:
         return self.__data.omega_user_node_dict[u, bs] == 1
 
     # This follow method update data of the problem.
-    def update_data(self, is_first=False):
+    def update_data(self):
+        self.__old_hosts = self.hosts
+        self.__old_paths = self.paths
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
             sense = self.__update_ue_position()
 
         self.__update_rtt(sense)
-        if is_first or (self.__data.reallocation == Reallocation.NON_REALLOCATION):
-            self.__insert_phi_node()
-            if is_first:
-                self.old_path = self.paths.copy()
-        else:
-            self.__update_phi_node()
-            self.old_path = self.paths.copy()
         self.calc_vars(True)
 
     def __update_rtt(self, sense):
@@ -611,39 +543,6 @@ class HandleData:
                                                                                            self.__data.rtt_edge[i][j])
         self.__data.rtt_edge_to_dictionary()
 
-    def __update_phi_node(self):
-        for op, np in zip(self.old_path, self.paths[:len(self.old_path)]):
-            if op != np:
-                op_index_content = self.__data.key_index_file.index(op[CONTENT])
-                op_index_store = self.__data.key_index_bs.index(op[STORE])
-                np_index_content = self.__data.key_index_file.index(np[CONTENT])
-                np_index_store = self.__data.key_index_bs.index(np[STORE])
-                self.__data.phi_node[op_index_content][op_index_store] -= 1
-                self.__data.phi_node[np_index_content][np_index_store] += 1
-
-                if self.show_reallocation:
-                    print("SHIFT PATH [{0}]".format(self.paths.index(np)))
-            else:
-                if self.show_reallocation:
-                    print("NON-SHIFT.")
-            np_index = self.paths.index(np)
-        for np in self.paths[len(self.old_path):]:
-            np_index_content = self.__data.key_index_file.index(np[CONTENT])
-            np_index_store = self.__data.key_index_bs.index(np[STORE])
-            self.__data.phi_node[np_index_content][np_index_store] += 1
-
-        self.__data.phi_node_to_dictionary()
-
-    def __insert_phi_node(self):
-        for f, file in enumerate(self.__data.key_index_file):
-            for j, bs in enumerate(self.__data.key_index_bs):
-                for p in range(len(self.paths)):
-                    # TO DO TypeError: 'NoneType' object is not iterable
-                    # if  self.paths[p] not in self.old_path:
-                    if file == self.paths[p][CONTENT] and bs == self.paths[p][STORE]:
-                        self.__data.phi_node[f][j] += 1
-        self.__data.phi_node_to_dictionary()
-
     def __update_ue_position(self):
         sense = -1
         for u in range(len(self.__data.key_index_ue)):
@@ -656,15 +555,30 @@ class HandleData:
                 self.__data.distance_ue[u][i] += new_dis
         return sense
 
+    def show_reallocation(self):
+        for op, np in zip(self.__old_paths, self.paths[:len(self.__old_paths)]):
+            if op != np:
+                print("SHIFT PATH [{0}]".format(self.paths.index(np)))
+            else:
+                print("NON-SHIFT PATH.")
+
+        for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
+            if oh != nh:
+                print("SHIFT HOST [{0}]".format(self.hosts.index(nh)))
+            else:
+                print("NON-SHIFT HOST.")
+
 
 # This class execute the application model.
 class OptimizeData:
     __data = Data()
     __path = list()
     __paths = list()
+    __hosts = list()
 
     model = None
-    x = None
+    x = gp.Var
+    y = gp.Var
 
     def __init__(self, data, sources, sinks):
         self.__data = data
@@ -679,16 +593,22 @@ class OptimizeData:
         self.__create_constraints()
         self.execute(show_log)
 
-    # x_cij \in {0,1}
+    # x_cij \in N+
     def create_vars(self):
+        self.__create_var_flow()
+        self.__create_var_host()
+
+    def __create_var_flow(self):
         self.x = self.model.addVars(self.s, self.__data.key_index_all, self.__data.key_index_all,
-                                    vtype=gp.GRB.SEMICONT, name="flow")
+                                    vtype=gp.GRB.SEMIINT, name="flow")
+
+    def __create_var_host(self):
+        self.y = self.model.addVars(self.s, self.__data.key_index_bs,
+                                    vtype=gp.GRB.INTEGER, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum(
-            self.__data.weight_resources_dict[i] * self.x[c[KEY], c[SOURCE], i] * self.__data.req_dict[
-                u[SINK], c[SOURCE]] for i in self.__data.key_index_bs for c in self.__data.requests for u in
-            self.__data.requests)))
+        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.size_file_dict[c[SOURCE]] * self.__data.req_dict[u[SINK], c[SOURCE]] *(self.y[c[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[c[SOURCE], i]) + DELTA)
+                                for i in self.__data.key_index_bs for c in self.__data.requests for u in self.__data.requests)))
                                 +
                                 ((1 - self.__data.alpha) * (gp.quicksum(
                                     self.__data.weight_network_dict[c[SOURCE], i, j] * self.x[c[KEY], i, j]
@@ -700,8 +620,11 @@ class OptimizeData:
                                 , sense=gp.GRB.MINIMIZE)
 
     def __create_constraints(self):
+        # This constraint set y value.
+        self.__set_constraint_y_value()
+
         # This constraint limit the use  of node resources.
-        # self.__set_constraint_node_resources_capacity()
+        self.__set_constraint_node_resources_capacity()
 
         # This constraint ensures that the throughput current being the most than the throughput minimum of content.
         self.__set_constraint_throughput()
@@ -715,13 +638,16 @@ class OptimizeData:
         # This constraint ensures the equilibrium of flow in the destiny(sink) nodes in the network.
         self.__set_constraint_flow_conservation_sink()
 
+    def __set_constraint_y_value(self):
+        for req in self.__data.requests:
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON)
+                self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]))
+
     def __set_constraint_node_resources_capacity(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                        self.__data.resources_node_dict[i] - (
-                        self.__data.current_resources_node_dict[i] + self.__data.resources_file_dict[
-                    req[SOURCE]])) >= 0)
+                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.size_file_dict[req[SOURCE]] * self.y[req[KEY],i] for i in self.__data.key_index_bs))
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -798,26 +724,33 @@ class OptimizeData:
         else:
             print(RED, "THE SOLVE IS INFEASIBLE.")
 
-    def solution_path(self, show_path):
+    def solutions(self, show_path):
+        self.__solution_path()
+        self.__solution_host()
+        if show_path:
+            for req in range(len(self.__paths)):
+                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req,self.__paths[req],self.__hosts[req]), RESET)
+        return (self.__paths, self.__hosts)
+
+    def __solution_host(self):
+        self.__hosts.clear()
+        if self.model.status == gp.GRB.OPTIMAL:
+            for var in self.model.getVars():
+                if var.X != 0 and var.VarName[:4] == "host":
+                    self.__hosts.append(str(var.VarName).split(',')[1][:-1])
+
+
+    def __solution_path(self):
         self.__path.clear()
         self.__paths.clear()
-
         hops = list()
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
-                if var.X != 0:
+                if var.X != 0 and var.VarName[:4] == "flow":
                     hops.append(self.__get_solution(str(var.VarName)))
-
         for req in self.__data.requests:
             self.__make_path(hops, req[SOURCE], req[SINK])
-
         self.__split_paths()
-
-        if show_path:
-            for req in range(len(self.__paths)):
-                print(REVERSE, " {0} - PATH: ".format(req), self.__paths[req], RESET)
-
-        return self.__paths
 
     def __split_paths(self):
         init = 0
@@ -874,12 +807,6 @@ class LogData:
             print(k, self.data.rtt_edge_dict[k])
         print()
 
-    def __log_resources_file_dict(self):
-        print("RESOURCES FILE.")
-        for k in self.data.resources_file_dict.keys():
-            print(k, self.data.resources_file_dict[k])
-        print()
-
     def __log_size_file_dict(self):
         print("SIZE FILE.")
         for k in self.data.size_file_dict.keys():
@@ -890,20 +817,6 @@ class LogData:
         print("TOTAL RESOURCES NODE.")
         for k in self.data.resources_node_dict.keys():
             print(k, self.data.resources_node_dict[k])
-        print()
-
-    def __log_phi_node(self):
-        print("RESOURCES LOADED PER BASE STATION.")
-        for f in range(len(self.data.key_index_file)):
-            for i in range(len(self.data.key_index_bs)):
-                print(self.data.phi_node[f][i], end=" ")
-            print()
-        print()
-
-    def __log_phi_node_dict(self):
-        print("RESOURCES LOADED PER BASE STATION.")
-        for k in self.data.phi_node_dict.keys():
-            print(k, self.data.phi_node_dict[k])
         print()
 
     def __log_throughput_min_dict(self):
@@ -1029,18 +942,6 @@ class LogData:
             print(k, self.data.current_resources_node_dict[k])
         print()
 
-    def __log_weight_resources(self):
-        print("WEIGHT RESOURCES.")
-        for i in range(len(self.data.key_index_bs)):
-            print(str(self.data.weight_resources[i]).format(), end=" ")
-        print()
-
-    def __log_weight_resources_dict(self):
-        print("WEIGHT RESOURCES.")
-        for k in self.data.weight_resources_dict.keys():
-            print(k, self.data.weight_resources_dict[k])
-        print()
-
     def __log_weight_network(self):
         print("WEIGHT NETWORK.")
         for f, filename in enumerate(self.data.key_index_file):
@@ -1082,12 +983,10 @@ class LogData:
         print("PARAMETERS.\n")
         # self.__log_phi_node()
 
-        self.__log_resources_file_dict()
         self.__log_size_file_dict()
         self.__log_throughput_min_dict()
 
         self.__log_resources_node_dict()
-        self.__log_phi_node_dict()
 
         self.__log_rtt_min()
         self.__log_rtt_edge()
@@ -1103,7 +1002,6 @@ class LogData:
         self.__log_diff_throughput_edge()
         self.__log_current_resources_node()
         self.__log_psi_edge()
-        self.__log_weight_resources()
         self.__log_weight_network()
         self.__log_connectivity_edges()
 
@@ -1114,7 +1012,6 @@ class LogData:
         self.__log_diff_throughput_edge_dict()
         self.__log_current_resources_node_dict()
         self.__log_psi_edge_dict()
-        self.__log_weight_resources_dict()
         self.__log_weight_network_dict()
         self.__log_connectivity_edges_dict()
 

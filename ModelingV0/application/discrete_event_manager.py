@@ -18,7 +18,7 @@ import seaborn as sns
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-import igraph as ig
+#import igraph as ig
 
 import utils.utils as u
 import simulation.request as r
@@ -315,7 +315,8 @@ def run_model(source, sink, event):
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
     od.run_model(show_log)
-
+    paths = None
+    hosts = None
 
     if show_results:
         print(RED, "##########################################", RESET)
@@ -327,9 +328,8 @@ def run_model(source, sink, event):
 
     if od.model.status == gp.GRB.OPTIMAL:
         paths,hosts = od.solutions(show_path)
-    else:
-        path = None
-    return (paths,hosts)
+
+    return (paths, hosts)
 
 
 def reallocated_request(pd, path, req):
@@ -358,22 +358,23 @@ def show_vars():
 
 def picture():
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-
-    g = ig.Graph(directed=1)
-    g.is_weighted()
-    key_nodes = key_index_bs + key_index_ue + key_index_file
-    for i, name in enumerate(key_nodes):
-        g.add_vertices(name)
-
-    for i, name_orig in enumerate(key_nodes):
-        for j, name_dest in enumerate(key_nodes):
-            if data.weight_network_dict is not None:
-                if data.weight_network[0][i][j] < NO_EDGE:
-                    g.add_edge(name_orig, name_dest)
-
-    g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
-    ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
-            bbox=(1000, 1000), )
+    '''
+        g = ig.Graph(directed=1)
+        g.is_weighted()
+        key_nodes = key_index_bs + key_index_ue + key_index_file
+        for i, name in enumerate(key_nodes):
+            g.add_vertices(name)
+    
+        for i, name_orig in enumerate(key_nodes):
+            for j, name_dest in enumerate(key_nodes):
+                if data.weight_network_dict is not None:
+                    if data.weight_network[0][i][j] < NO_EDGE:
+                        g.add_edge(name_orig, name_dest)
+    
+        g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
+        ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+                bbox=(1000, 1000), )
+    '''
 
 
 def load_dataset(dataset: object):

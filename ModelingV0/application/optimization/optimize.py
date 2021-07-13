@@ -930,18 +930,6 @@ class LogData:
         for k in self.data.psi_edge_dict.keys():
             print(k, self.data.psi_edge_dict[k])
 
-    def __log_current_resources_node(self):
-        print("CURRENT RESOURCES.")
-        for i in range(len(self.data.key_index_bs)):
-            print(self.data.current_resources_node[i])
-        print()
-
-    def __log_current_resources_node_dict(self):
-        print("CURRENT RESOURCES NODE.")
-        for k in self.data.current_resources_node_dict.keys():
-            print(k, self.data.current_resources_node_dict[k])
-        print()
-
     def __log_weight_network(self):
         print("WEIGHT NETWORK.")
         for f, filename in enumerate(self.data.key_index_file):
@@ -1000,7 +988,6 @@ class LogData:
         self.__log_omega_user_node()
         self.__log_current_throughput_edge()
         self.__log_diff_throughput_edge()
-        self.__log_current_resources_node()
         self.__log_psi_edge()
         self.__log_weight_network()
         self.__log_connectivity_edges()
@@ -1010,7 +997,6 @@ class LogData:
         self.__log_omega_user_node_dict()
         self.__log_current_throughput_edge_dict()
         self.__log_diff_throughput_edge_dict()
-        self.__log_current_resources_node_dict()
         self.__log_psi_edge_dict()
         self.__log_weight_network_dict()
         self.__log_connectivity_edges_dict()

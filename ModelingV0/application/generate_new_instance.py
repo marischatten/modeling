@@ -25,6 +25,7 @@ key_index_bs_ue = list()
 key_index_all = list()
 e_bs_adj = list()
 
+resources_file = list()
 size_file = list()
 throughput_min_file = list()
 
@@ -42,10 +43,10 @@ radius_sbs = 0
 resources_node_max = 0
 resources_node_min = 0
 
-size_file_max = 0
-size_file_min = 0
 resources_file_max = 0
 resources_file_min = 0
+size_file_max = 0
+size_file_min = 0
 throughput_min_file_min = 0
 throughput_min_file_max = 0
 
@@ -66,6 +67,7 @@ def main():
     global key_index_all
     generate_nodes(num_files, num_mbs, num_sbs_per_mbs, num_ue)
     key_index_all = key_index_bs + key_index_ue + key_index_file
+    generate_resources_file()
     generate_size_file()
     generate_throughput_min()
 
@@ -101,6 +103,14 @@ def generate_gama():
         # retorna inteiros com uma distribuição uniforme discreta
         i = np.random.randint(0, num_bs - 1)
         gama[f][i] = 1
+        # Pode ou não replicar a cache.
+        if np.random.randint(0, 2) == 1:
+            while True:
+                j = np.random.randint(0, num_bs - 1)
+                if j != i:
+                    break
+            gama[f][j] = 1
+
 
     print("HOSPEDAGEM DE CONTEÚDO.GAMA.")
     for f in range(len(key_index_file)):
@@ -179,6 +189,18 @@ def generate_resources_node():
     print("CAPACIDADE DA BS.")
     for i in range(num_bs):
         print(resources_node[i], end=" ")
+    print()
+
+
+def generate_resources_file():
+    global resources_file
+    resources_file = [0 for f in range(num_files)]
+    for f in range(num_files):
+        resources_file[f] = np.random.randint(resources_file_min, resources_file_max)
+
+    print("RECURSOS DO CONTEÚDO.")
+    for f in range(num_files):
+        print(resources_file[f], end=" ")
     print()
 
 
@@ -322,6 +344,7 @@ def generate_json(path):
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,
+            "resources_file": resources_file,
             "size_file": size_file,
             "throughput_min_file": throughput_min_file,
             "resources_node": resources_node,
@@ -337,7 +360,7 @@ def generate_json(path):
 
 
 def load_config(config: object):
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max, key_index_all, path
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max, key_index_all, path
 
     mobility_rate = config["mobility_rate"]
     alpha = config["alpha"]
@@ -348,9 +371,11 @@ def load_config(config: object):
     num_files = config["num_files"]
     num_ue = config["num_ue"]
     num_nodes = num_bs + num_ue + num_files
+
+    resources_file_max = config["resources_file_max"]
+    resources_file_min = config["resources_file_min"]
     size_file_max = config["size_file_max"]
     size_file_min = config["size_file_min"]
-
     throughput_min_file_max = config["throughput_min_file_max"]
     throughput_min_file_min = config["throughput_min_file_min"]
 

@@ -62,6 +62,7 @@ class Data:
     __id_event = 0
     __s = list()
 
+    graph_adj_matrix = None
     req = list()
     req_dict = dict()
 
@@ -89,15 +90,18 @@ class Data:
     key_index_with_ue = list()
     key_index_all = list()
 
+    # ij \in E
     e_bs_adj = list()
 
-    # cs \in R
+    # cr_k \in N
+    resources_file = list()
+    # cs_k \in N
     size_file = list()
 
-    # bwf \in R
+    # thp \in N
     throughput_min_file = list()
 
-    # rt_i \in R
+    # bsr_i \in R
     resources_node = list()
 
     rtt_min = 0
@@ -141,7 +145,7 @@ class Data:
 
     throughput_current_edge_dict = dict()
     throughput_diff_edge_dict = dict()
-
+    resources_file_dict = dict()
     size_file_dict = dict()
     resources_node_dict = dict()
     current_resources_node_dict = dict()
@@ -157,7 +161,7 @@ class Data:
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
-                 e_bs_adj=None,
+                 e_bs_adj=None,rf=None,
                  sf=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
@@ -182,6 +186,7 @@ class Data:
 
         self.e_bs_adj = e_bs_adj
 
+        self.resources_file = rf
         self.size_file = sf
         self.throughput_min_file = bwf
         self.resources_node = rt_i
@@ -196,6 +201,7 @@ class Data:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
             self.gama_file_node = gama_file_node
 
+            self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
             self.__throughput_min_file_to_dictionary()
@@ -222,6 +228,10 @@ class Data:
         return self.__s
 
     # PARAMETERS TO DICTIONARY
+    def __resources_file_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            tag = self.key_index_file[f]
+            self.resources_file_dict[tag] = self.resources_file[f]
 
     def __size_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -327,6 +337,16 @@ class Data:
                     tag_orig = self.key_index_all[i]
                     tag_dest = self.key_index_all[j]
                     self.connectivity_edges_dict[tag_file, tag_orig, tag_dest] = self.connectivity_edges[c][i][j]
+
+    def set_graph_adj_matrix(self):
+        self.graph_adj_matrix= [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
+                                       range(self.num_nodes + self.num_files)]
+
+        for c in range(len(self.key_index_file)):
+            for i in range(len(self.key_index_all)):
+                for j in range(len(self.key_index_all)):
+                    if (self.weight_network[c][i][j] != NO_EDGE) and (self.graph_adj_matrix[i][j] == NO_EDGE):
+                        self.graph_adj_matrix[i][j] = self.weight_network[c][i][j]
 
 
 # This class handles and calculates the variables and parameters.
@@ -560,13 +580,13 @@ class HandleData:
             if op != np:
                 print("SHIFT PATH [{0}]".format(self.paths.index(np)))
             else:
-                print("NON-SHIFT PATH.")
+                print("NON-SHIFT PATH [{0}]".format(self.paths.index(np)))
 
         for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
             if oh != nh:
-                print("SHIFT HOST [{0}]".format(self.hosts.index(nh)))
+                print("SHIFT HOST.")
             else:
-                print("NON-SHIFT HOST.")
+                print("NON-SHIFT.")
 
 
 # This class execute the application model.
@@ -593,21 +613,22 @@ class OptimizeData:
         self.__create_constraints()
         self.execute(show_log)
 
-    # x_cij \in N+
     def create_vars(self):
         self.__create_var_flow()
         self.__create_var_host()
 
+    # x_ijk \in R+
     def __create_var_flow(self):
         self.x = self.model.addVars(self.s, self.__data.key_index_all, self.__data.key_index_all,
-                                    vtype=gp.GRB.SEMIINT, name="flow")
+                                    vtype=gp.GRB.SEMICONT, name="flow")
 
+    # y_ik \in R+
     def __create_var_host(self):
         self.y = self.model.addVars(self.s, self.__data.key_index_bs,
-                                    vtype=gp.GRB.INTEGER, name="host")
+                                    vtype=gp.GRB.SEMICONT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.size_file_dict[c[SOURCE]] * self.__data.req_dict[u[SINK], c[SOURCE]] *(self.y[c[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[c[SOURCE], i]) + DELTA)
+        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[c[SOURCE]] * self.__data.req_dict[u[SINK], c[SOURCE]] *(self.y[c[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[c[SOURCE], i]) + DELTA)
                                 for i in self.__data.key_index_bs for c in self.__data.requests for u in self.__data.requests)))
                                 +
                                 ((1 - self.__data.alpha) * (gp.quicksum(
@@ -647,7 +668,7 @@ class OptimizeData:
     def __set_constraint_node_resources_capacity(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.size_file_dict[req[SOURCE]] * self.y[req[KEY],i] for i in self.__data.key_index_bs))
+                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY],i] for i in self.__data.key_index_bs))
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -727,6 +748,8 @@ class OptimizeData:
     def solutions(self, show_path):
         self.__solution_path()
         self.__solution_host()
+        if self.__paths is None:
+            return (None, None)
         if show_path:
             for req in range(len(self.__paths)):
                 print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req,self.__paths[req],self.__hosts[req]), RESET)
@@ -738,7 +761,6 @@ class OptimizeData:
             for var in self.model.getVars():
                 if var.X != 0 and var.VarName[:4] == "host":
                     self.__hosts.append(str(var.VarName).split(',')[1][:-1])
-
 
     def __solution_path(self):
         self.__path.clear()
@@ -805,6 +827,12 @@ class LogData:
         print("EDGE RTT.")
         for k in self.data.rtt_edge_dict.keys():
             print(k, self.data.rtt_edge_dict[k])
+        print()
+
+    def __log_resources_file_dict(self):
+        print("RESOURCES FILE.")
+        for k in self.data.resources_file_dict.keys():
+            print(k, self.data.resources_file_dict[k])
         print()
 
     def __log_size_file_dict(self):
@@ -969,8 +997,7 @@ class LogData:
 
     def show_parameters(self):
         print("PARAMETERS.\n")
-        # self.__log_phi_node()
-
+        self.__log_resources_file_dict()
         self.__log_size_file_dict()
         self.__log_throughput_min_dict()
 
@@ -1010,10 +1037,26 @@ class PlotData:
     __events_count = 0
     __req_count = 0
 
+    __paths = None
+    all_requests = 0
+    admission_requests = 0
+    __rate_admission_requests = 0
+
     def __init__(self, data):
         self.__data = data
         self.set_path = pds.DataFrame(columns=['Path', 'Source', 'Sink', 'Delay'])
         self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
+        self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
+
+    def insert_req(self,paths,hosts,event):
+        self.__events_count = event
+        for r in range(len(paths)):
+            self.__paths = self.__paths.append({'Event': event, 'Request': r ,'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],'Host': hosts[r]}, ignore_index=True)
+
+    def calc_rate_admission_requests(self, admission_requests, all_requests):
+        self.admission_requests = admission_requests
+        self.all_requests = all_requests
+        self.__rate_admission_requests = admission_requests / all_requests
 
     def insert_path(self, path, source, sink, event, req):
         self.__events_count = event
@@ -1072,6 +1115,9 @@ class PlotData:
         return np.mean(all_delay_event)
 
     def save_data(self, path):
+        dt_rate_admission = pds.DataFrame({'Rate Admission':[self.__rate_admission_requests],'Admission Requests':[self.admission_requests],'All Requests':[self.all_requests]})
         with pds.ExcelWriter(path) as writer:
-            self.__delay.to_excel(writer, sheet_name='Delay')
-            self.set_path.to_excel(writer, sheet_name='Request')
+            # self.__delay.to_excel(writer, sheet_name='Delay')
+            # self.set_path.to_excel(writer, sheet_name='Request')
+            self.__paths.to_excel(writer,sheet_name='Requests')
+            dt_rate_admission.to_excel(writer,sheet_name='Rate Admission')

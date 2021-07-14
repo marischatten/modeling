@@ -1,0 +1,8 @@
+t_int <- c(24.8757,67.3272,128.6533,208.8952,312.1988,427.9176,569.2394,730.1063,908.2009,1096.0188)
+e_int <- c(1,2,3,4,5,6,7,8,9,10)
+dt_int <- data.frame(e_int,t_int)
+plot(dt_int,type="b",col="red")
+t_cont <- c()
+e_cont <- c(1,2,3,4,5,6,7,8,9,10)
+dt_cont <- data.frame(e_cont,t_cont)
+plot(dt_cont,type="b",col="red")

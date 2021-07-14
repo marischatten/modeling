@@ -18,8 +18,7 @@ import seaborn as sns
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-#import igraph as ig
-
+import igraph as ig
 import utils.utils as u
 import simulation.request as r
 from optimization.optimize import *
@@ -39,6 +38,7 @@ key_index_ue = list()
 
 e_bs_adj = list()
 
+resources_file = list()
 size_file = list()
 throughput_min_file = list()
 
@@ -112,6 +112,7 @@ def application():
     print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
 
     if plot_graph:
+        data.set_graph_adj_matrix()
         picture()
 
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
@@ -161,10 +162,12 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
 
-        while(len(sources) == 0) or (len(sinks) == 0):
+        while True:
             sources = get_req(zipf, init, qtd_req)
             sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-            print("CAIU")
+            if (len(sources) != 0) or (len(sinks) != 0):
+                break
+            print("REPLICATED REQUEST.")
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
@@ -176,18 +179,17 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             start_time = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
-            # allocated_request(pd, path, sources, sinks, event, 1)
 
         if show_reallocation:
             handler.show_reallocation()
-
+        if paths is not None:
+            pd.insert_req(paths,hosts,event+1)
         init = qtd_req
-
-    # data.clear_requests()
 
     if show_all_paths:
         pd.show_paths()
     if save_data:
+        pd.calc_rate_admission_requests(len(handler.paths), sum(bulks))
         pd.save_data(path_output)
     if plot_data:
         pd.plot()
@@ -295,7 +297,7 @@ def plot_zipf(distribution, alpha):
 
 def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
-                key_index_ue, e_bs_adj,
+                key_index_ue, e_bs_adj,resources_file,
                 size_file,
                 throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
@@ -332,14 +334,6 @@ def run_model(source, sink, event):
     return (paths, hosts)
 
 
-def reallocated_request(pd, path, req):
-    pd.update_path(path, req)
-
-
-def allocated_request(pd, path, source, sink, req=1, event=1):
-    pd.insert_path(path, source, sink, event, req)
-
-
 def calc_vars():
     hd = HandleData(data)
     hd.calc_vars()
@@ -358,27 +352,26 @@ def show_vars():
 
 def picture():
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-    '''
-        g = ig.Graph(directed=1)
-        g.is_weighted()
-        key_nodes = key_index_bs + key_index_ue + key_index_file
-        for i, name in enumerate(key_nodes):
-            g.add_vertices(name)
+
+    g = ig.Graph(directed=1)
+    g.is_weighted()
+    key_nodes = key_index_bs + key_index_ue + key_index_file
+    for i, name in enumerate(key_nodes):
+        g.add_vertices(name)
     
-        for i, name_orig in enumerate(key_nodes):
-            for j, name_dest in enumerate(key_nodes):
-                if data.weight_network_dict is not None:
-                    if data.weight_network[0][i][j] < NO_EDGE:
-                        g.add_edge(name_orig, name_dest)
+    for i, name_orig in enumerate(key_nodes):
+        for j, name_dest in enumerate(key_nodes):
+            if data.graph_adj_matrix[i][j] != NO_EDGE:
+                g.add_edge(name_orig, name_dest)
     
-        g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
-        ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
-                bbox=(1000, 1000), )
-    '''
+    g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
+    ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+            bbox=(1000, 1000), )
+
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     mobility_rate = dataset["mobility_rate"]
 
@@ -395,6 +388,7 @@ def load_dataset(dataset: object):
 
     e_bs_adj = dataset["e_bs_adj"]
 
+    resources_file = dataset["resources_file"]
     size_file = dataset["size_file"]
 
     throughput_min_file = dataset["throughput_min_file"]

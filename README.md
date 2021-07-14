@@ -1,30 +1,33 @@
-###Install dependencies:
+### Install dependencies:
 ````shell
 command: cd optimization/ModelingV0/installer/
 command: chmod +x installer.sh
 command: ./installer.sh
 ````
 ### Download Gurobi Optimizer in :
+
 https://www.gurobi.com/downloads/gurobi-software/
 
-###Install  Gurobi:
+### Install  Gurobi:
+
 https://www.gurobi.com/documentation/9.1/remoteservices/linux_installation.html
 
-###Create Gurobi license in:
+### Create Gurobi license in:
+
 https://www.gurobi.com/downloads/free-academic-license/
 
-###Active Gurobi license in command/terminal prompt:
+### Active Gurobi license in command/terminal prompt:
 ````shell
 command: grbgetkey "pastelicense"
 ````
 
-###Execute the Model:
+### Execute the Model:
 Model configuration is in config/config_model.json
 ````shell
 command: cd optimization/ModelingV0/application/
 command: python3.9 discrete_event_manager.py
 ````
-###Execute the Instance Generator:
+### Execute the Instance Generator:
 Instance generator is in config/generator.json
 ````shell
 command: cd optimization/ModelingV0/application/

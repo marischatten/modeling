@@ -184,12 +184,16 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             handler.show_reallocation()
         if paths is not None:
             pd.insert_req(paths,hosts,event+1)
+            pd.calc_server_use(paths)
+            data.set_graph_adj_matrix()
+            picture("..\\output\\graph\\instance_3_{0}.png".format(event+1),)
         init = qtd_req
 
     if show_all_paths:
         pd.show_paths()
     if save_data:
         pd.calc_rate_admission_requests(len(handler.paths), sum(bulks))
+
         pd.save_data(path_output)
     if plot_data:
         pd.plot()
@@ -350,7 +354,7 @@ def show_vars():
     # id.show_vars_dict()
 
 
-def picture():
+def picture(path = path_graph):
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
 
     g = ig.Graph(directed=1)
@@ -365,7 +369,7 @@ def picture():
                 g.add_edge(name_orig, name_dest)
     
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
-    ig.plot(g, vertex_label=key_nodes, target=path_graph, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+    ig.plot(g, vertex_label=key_nodes, target= path, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
 
 

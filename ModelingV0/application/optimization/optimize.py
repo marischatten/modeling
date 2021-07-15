@@ -9,15 +9,12 @@ import pandas as pds
 NO_EDGE = 9999999999
 DELTA = 0.0001
 EPSILON = 0.9999
-TAG_COORD = 0
-X_COORD = 1
-Y_COORD = 2
 
 CURRENT_NODE = 0
 NEXT_HOP = 1
 
 CONTENT = 0
-STORE = 1
+HOST = 1
 
 INCREASE = 1
 DECREASE = 0
@@ -545,6 +542,7 @@ class HandleData:
         self.__old_paths = self.paths
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
+            print("MOVIMENTO")
             sense = self.__update_ue_position()
 
         self.__update_rtt(sense)
@@ -752,7 +750,7 @@ class OptimizeData:
             return (None, None)
         if show_path:
             for req in range(len(self.__paths)):
-                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req,self.__paths[req],self.__hosts[req]), RESET)
+                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req+1,self.__paths[req],self.__hosts[req]), RESET)
         return (self.__paths, self.__hosts)
 
     def __solution_host(self):
@@ -1041,6 +1039,7 @@ class PlotData:
     all_requests = 0
     admission_requests = 0
     __rate_admission_requests = 0
+    __server_use = None
 
     def __init__(self, data):
         self.__data = data
@@ -1052,11 +1051,6 @@ class PlotData:
         self.__events_count = event
         for r in range(len(paths)):
             self.__paths = self.__paths.append({'Event': event, 'Request': r ,'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],'Host': hosts[r]}, ignore_index=True)
-
-    def calc_rate_admission_requests(self, admission_requests, all_requests):
-        self.admission_requests = admission_requests
-        self.all_requests = all_requests
-        self.__rate_admission_requests = admission_requests / all_requests
 
     def insert_path(self, path, source, sink, event, req):
         self.__events_count = event
@@ -1113,6 +1107,24 @@ class PlotData:
         for i, row in select_event.iterrows():
             all_delay_event.append(row['Delay'])
         return np.mean(all_delay_event)
+
+    def calc_rate_admission_requests(self, admission_requests, all_requests):
+        self.admission_requests = admission_requests
+        self.all_requests = all_requests
+        self.__rate_admission_requests = admission_requests / all_requests
+
+    def calc_server_use(self,paths):
+        self.__server_use = [0 for i in range(self.__data.num_bs)]
+        for i in range(len(paths)):
+            for j in range(len(self.__data.key_index_bs)):
+                if paths[i][HOST] == self.__data.key_index_bs[j]:
+                    print("QUANTO",self.__data.resources_file[CONTENT],self.__data.key_index_bs[j])
+                    self.__server_use[j] += self.__data.resources_file[CONTENT]
+
+        for i in range(len(self.__data.key_index_bs)):
+            self.__server_use[i] = self.__server_use[i]/self.__data.resources_node[i]
+            print("PERCENTUAL",self.__server_use[i],self.__data.resources_node[i],self.__data.key_index_bs[i])
+        print(RED,self.__server_use,RESET)
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame({'Rate Admission':[self.__rate_admission_requests],'Admission Requests':[self.admission_requests],'All Requests':[self.all_requests]})

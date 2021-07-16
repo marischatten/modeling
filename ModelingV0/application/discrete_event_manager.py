@@ -162,12 +162,12 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
 
-        while True:
+        if qtd_req == 0:
+            qtd_req += 1
+        # This line ensures that the paths previous keep path complete.
+        while (len(sources) == 0) or (len(sinks) == 0):
             sources = get_req(zipf, init, qtd_req)
             sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-            if (len(sources) != 0) or (len(sinks) != 0):
-                break
-            print("REPLICATED REQUEST.")
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)

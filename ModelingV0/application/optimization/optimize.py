@@ -1118,12 +1118,10 @@ class PlotData:
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    print("QUANTO",self.__data.resources_file[CONTENT],self.__data.key_index_bs[j])
                     self.__server_use[j] += self.__data.resources_file[CONTENT]
 
         for i in range(len(self.__data.key_index_bs)):
             self.__server_use[i] = self.__server_use[i]/self.__data.resources_node[i]
-            print("PERCENTUAL",self.__server_use[i],self.__data.resources_node[i],self.__data.key_index_bs[i])
         print(RED,self.__server_use,RESET)
 
     def save_data(self, path):

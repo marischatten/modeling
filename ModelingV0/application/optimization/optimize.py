@@ -626,16 +626,15 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMICONT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[c[SOURCE]] * self.__data.req_dict[u[SINK], c[SOURCE]] *(self.y[c[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[c[SOURCE], i]) + DELTA)
-                                for i in self.__data.key_index_bs for c in self.__data.requests for u in self.__data.requests)))
+        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] *(self.y[req[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)
+                                for i in self.__data.key_index_bs for req in self.__data.requests)))
                                 +
                                 ((1 - self.__data.alpha) * (gp.quicksum(
-                                    self.__data.weight_network_dict[c[SOURCE], i, j] * self.x[c[KEY], i, j]
-                                    * self.__data.req_dict[u[SINK], c[SOURCE]]
-                                    * self.__data.psi_edge_dict[c[SOURCE], i, j]
-                                    * self.__data.connectivity_edges_dict[c[SOURCE], i, j] for j in
-                                    self.__data.key_index_all for i in self.__data.key_index_all for c in
-                                    self.__data.requests for u in self.__data.requests)))
+                                    self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]
+                                    * self.__data.req_dict[req[SINK], req[SOURCE]]
+                                    * self.__data.psi_edge_dict[req[SOURCE], i, j]
+                                    * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
+                                    self.__data.key_index_all for i in self.__data.key_index_all for req in self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
     def __create_constraints(self):
@@ -664,9 +663,8 @@ class OptimizeData:
                 self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]))
 
     def __set_constraint_node_resources_capacity(self):
-        for req in self.__data.requests:
-            for i in self.__data.key_index_bs:
-                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY],i] for i in self.__data.key_index_bs))
+        for i in self.__data.key_index_bs:
+                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests))
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -1118,7 +1116,7 @@ class PlotData:
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    self.__server_use[j] += self.__data.resources_file[CONTENT]
+                    self.__server_use[j] = self.__data.resources_file[CONTENT]
 
         for i in range(len(self.__data.key_index_bs)):
             self.__server_use[i] = self.__server_use[i]/self.__data.resources_node[i]

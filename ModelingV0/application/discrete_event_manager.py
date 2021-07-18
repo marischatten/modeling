@@ -74,6 +74,7 @@ save_data = False
 path_output = ''
 plot_graph = False
 path_graph = ''
+enable_ceil_nodes_capacity = False
 
 # random and distribution.
 avg_qtd_bulk = 2
@@ -181,15 +182,14 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             handler.show_reallocation()
         if paths is not None:
             pd.insert_req(paths,hosts,event+1)
-            pd.calc_server_use(paths)
+            pd.calc_server_use(paths,event+1)
             data.set_graph_adj_matrix()
             picture("..\\output\\graph\\instance_3_{0}.png".format(event+1),)
         init = qtd_req
 
-
     if show_all_paths:
         pd.show_paths()
-    if save_data:
+    if save_data and paths is not None:
         pd.calc_rate_admission_requests(len(handler.paths), sum(bulks))
 
         pd.save_data(path_output)
@@ -341,7 +341,7 @@ def run_model(source, sink, event):
     start_time = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
-    od.run_model(show_log)
+    od.run_model(show_log,enable_ceil_nodes_capacity)
     paths = None
     hosts = None
 
@@ -457,7 +457,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, enable_ceil_nodes_capacity, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -475,6 +475,7 @@ def load_config(config: object):
     plot_graph = config["plot_graph"]
     path_graph = config["path_graph"]
     show_reallocation = config["show_reallocation"]
+    enable_ceil_nodes_capacity = config["enable_ceil_nodes_capacity"]
     # random and distribution.
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]

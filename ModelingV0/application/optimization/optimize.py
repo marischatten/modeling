@@ -354,7 +354,6 @@ class Data:
                         self.graph_adj_matrix[i][j] = self.weight_network[c][i][j]
 
 
-
 # This class handles and calculates the variables and parameters.
 class HandleData:
     hosts = None
@@ -551,7 +550,6 @@ class HandleData:
         self.__old_paths = self.paths
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
-            print("MOVIMENTO")
             sense = self.__update_ue_position()
 
         self.__update_rtt(sense)
@@ -613,11 +611,11 @@ class OptimizeData:
         self.t = sinks
         self.s = self.__data.insert_requests(sources, sinks)
 
-    def run_model(self, show_log):
+    def run_model(self, show_log,enable_ceil_nodes_capacity):
         self.model.reset()
         self.create_vars()
         self.__set_function_objective()
-        self.__create_constraints()
+        self.__create_constraints(enable_ceil_nodes_capacity)
         self.execute(show_log)
 
     def create_vars(self):
@@ -646,12 +644,13 @@ class OptimizeData:
                                     self.__data.key_index_all for i in self.__data.key_index_all for req in self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
-    def __create_constraints(self):
+    def __create_constraints(self,enable_ceil_nodes_capacity):
         # This constraint set y value.
         self.__set_constraint_y_value()
 
         # This constraint limit the use  of node resources.
-        self.__set_constraint_node_resources_capacity()
+        if enable_ceil_nodes_capacity:
+            self.__set_constraint_node_resources_capacity()
 
         # This constraint ensures that the throughput current being the most than the throughput minimum of content.
         self.__set_constraint_throughput()
@@ -1047,12 +1046,14 @@ class PlotData:
     admission_requests = 0
     __rate_admission_requests = 0
     __server_use = None
+    __all_server_use = None
 
     def __init__(self, data):
         self.__data = data
         self.set_path = pds.DataFrame(columns=['Path', 'Source', 'Sink', 'Delay'])
         self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
+        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS','Use'])
 
     def insert_req(self,paths,hosts,event):
         self.__events_count = event
@@ -1118,23 +1119,29 @@ class PlotData:
     def calc_rate_admission_requests(self, admission_requests, all_requests):
         self.admission_requests = admission_requests
         self.all_requests = all_requests
-        self.__rate_admission_requests = admission_requests / all_requests
+        self.__rate_admission_requests = (admission_requests / all_requests) * 100
 
-    def calc_server_use(self,paths):
+    def calc_server_use(self,paths,event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
+        aux = [0 for i in range(self.__data.num_bs)]
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    self.__server_use[j] = self.__data.resources_file[CONTENT]
+                    if aux[j] != paths[i][CONTENT]:
+                        self.__server_use[j] = self.__data.resources_file[CONTENT]
+                        aux[j] = paths[i][CONTENT]
 
-        for i in range(len(self.__data.key_index_bs)):
+        for i,tag_i in enumerate(self.__data.key_index_bs):
             self.__server_use[i] = self.__server_use[i]/self.__data.resources_node[i]
-        print(RED,self.__server_use,RESET)
+            self.__all_server_use = self.__all_server_use.append(
+                {'Event': event, 'BS': tag_i, 'Use': self.__server_use[i]}, ignore_index=True)
+
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame({'Rate Admission':[self.__rate_admission_requests],'Admission Requests':[self.admission_requests],'All Requests':[self.all_requests]})
         with pds.ExcelWriter(path) as writer:
             # self.__delay.to_excel(writer, sheet_name='Delay')
             # self.set_path.to_excel(writer, sheet_name='Request')
-            self.__paths.to_excel(writer,sheet_name='Requests')
-            dt_rate_admission.to_excel(writer,sheet_name='Rate Admission')
+            self.__paths.to_excel(writer, sheet_name='Requests')
+            dt_rate_admission.to_excel(writer, sheet_name='Rate Admission')
+            self.__all_server_use.to_excel(writer, sheet_name='Server Use')

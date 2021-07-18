@@ -484,6 +484,7 @@ def load_config(config: object):
         path_dataset = path_dataset.replace('\\','/')
         path_output = path_output.replace('\\','/')
         path_graph = path_graph.replace('\\','/')
+        path_time = path_graph.replace('\\','/')
 
     print(CYAN, "LOADED CONFIGURATION.", RESET)
 

@@ -154,6 +154,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     hosts = None
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_sources_zip(num_alpha, sum_requests(bulks), key_index_file)
+    bulks = remove_bulk_empty(bulks.copy())
 
     if plot_distribution:
         plot_poisson(bulks)
@@ -162,12 +163,8 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
 
-        if qtd_req == 0:
-            qtd_req += 1
-        # This line ensures that the paths previous keep path complete.
-        while (len(sources) == 0) or (len(sinks) == 0):
-            sources = get_req(zipf, init, qtd_req)
-            sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
+        sources = get_req(zipf, init, qtd_req)
+        sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
         # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
@@ -189,6 +186,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             picture("..\\output\\graph\\instance_3_{0}.png".format(event+1),)
         init = qtd_req
 
+
     if show_all_paths:
         pd.show_paths()
     if save_data:
@@ -199,16 +197,39 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         pd.plot()
 
 
+def remove_bulk_empty(bulks):
+    for b in range(len(bulks)):
+        if bulks[b] == 0:
+            bulks[b] = 1
+    return bulks
+
+
+def remove_replicate_reqs(pd, sources, sinks):
+    new_sources = sources.copy()
+    new_sinks = sinks.copy()
+    print(new_sources,new_sinks)
+    if len(sources) == len(sinks):
+        for i in range(len(sources)):
+            for j in range(len(sources)):
+                if i != j:
+                    if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
+                        print("Replicated Requests Removed.")
+                        new_sources[i] = new_sinks[i] = "0"
+                    if not is_unique(pd, sources[i], sinks[i]):
+                        print("Replicated Requests in Previous Events Removed.")
+                        new_sources[i] = new_sinks[i] = "0"
+
+    return (remove_zero(new_sources), remove_zero(new_sinks))
+
+
+def remove_zero(lst):
+    removed = [i for i in range(len(lst)) if lst[i] == 0]
+    if len(removed) == 0:
+        return lst
+    return removed
+
 def insert_reqs(sources, sinks):
     global data
-    req = [[0 for f in range(num_files)] for u in range(num_ue)]
-
-    for u in range(len(key_index_ue)):
-        for f in range(len(key_index_file)):
-            tag_ue = key_index_ue[u]
-            tag_file = key_index_file[f]
-            data.req_dict[tag_ue, tag_file] = req[u][f]
-
     for s, t in zip(sinks, sources):
         data.req_dict[s, t] = 1
 

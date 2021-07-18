@@ -206,6 +206,7 @@ class Data:
             self.__e_bs_adj_to_dictionary()
             self.rtt_min_to_dictionary()
             self.distance_ue_to_dictionary()
+            self.req_to_dictionary()
 
     def clear_requests(self):
         self.requests.clear()
@@ -326,6 +327,13 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.weight_network_dict[tag_file, tag_orig, tag_dest] = self.weight_network[f][i][j]
 
+    def req_to_dictionary(self):
+        for u in range(len(self.key_index_ue)):
+            for f in range(len(self.key_index_file)):
+                tag_ue = self.key_index_ue[u]
+                tag_file = self.key_index_file[f]
+                self.req_dict[tag_ue, tag_file] = self.req[u][f]
+
     def connectivity_edges_to_dictionary(self):
         for c in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -344,6 +352,7 @@ class Data:
                 for j in range(len(self.key_index_all)):
                     if (self.weight_network[c][i][j] != NO_EDGE) and (self.graph_adj_matrix[i][j] == NO_EDGE):
                         self.graph_adj_matrix[i][j] = self.weight_network[c][i][j]
+
 
 
 # This class handles and calculates the variables and parameters.
@@ -623,7 +632,7 @@ class OptimizeData:
     # y_ik \in R+
     def __create_var_host(self):
         self.y = self.model.addVars(self.s, self.__data.key_index_bs,
-                                    vtype=gp.GRB.SEMICONT, name="host")
+                                    vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
         self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] *(self.y[req[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)

@@ -73,6 +73,7 @@ path_dataset = ''
 save_data = False
 path_output = ''
 plot_graph = False
+plot_graph_mobility = False
 path_graph = ''
 enable_ceil_nodes_capacity = False
 
@@ -114,7 +115,7 @@ def application():
 
     if plot_graph:
         data.set_graph_adj_matrix()
-        picture()
+        picture(path_graph)
 
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
@@ -167,31 +168,37 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
-        # sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
+        #sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
-        paths,hosts = create_model(sources, sinks, event)
-        handler.paths = paths
-        handler.hosts = hosts
+
+        for req in range(qtd_req):
+            source = sources[req]
+            sink = sinks[req]
+
+            source = [source]
+            sink = [sink]
+            paths, hosts = create_model(source, sink, event)
+            handler.paths = paths
+            handler.hosts = hosts
 
         if paths is not None:
             start_time = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
-
-        if show_reallocation:
-            handler.show_reallocation()
-        if paths is not None:
+            if show_reallocation:
+                handler.show_reallocation()
             pd.insert_req(paths,hosts,event+1)
             pd.calc_server_use(paths,event+1)
+        if plot_graph_mobility:
             data.set_graph_adj_matrix()
-            picture("..\\output\\graph\\instance_3_{0}.png".format(event+1),)
+            picture(path_graph+"_{0}".format(event+1))
         init = qtd_req
 
     if show_all_paths:
         pd.show_paths()
-    if save_data and paths is not None:
-        pd.calc_rate_admission_requests(len(handler.paths), sum(bulks))
-
+    if paths is not None:
+        pd.calc_rate_admission_requests(len(handler.old_paths), sum(bulks))
+    if save_data:
         pd.save_data(path_output)
     if plot_data:
         pd.plot()
@@ -375,7 +382,8 @@ def show_vars():
     # id.show_vars_dict()
 
 
-def picture(path = path_graph):
+def picture(path):
+    path_with_ext = path + ".png"
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
 
     g = ig.Graph(directed=1)
@@ -390,7 +398,7 @@ def picture(path = path_graph):
                 g.add_edge(name_orig, name_dest)
     
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
-    ig.plot(g, vertex_label=key_nodes, target= path, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+    ig.plot(g, vertex_label=key_nodes, target = path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
 
 
@@ -457,7 +465,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, path_graph, enable_ceil_nodes_capacity, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -473,6 +481,7 @@ def load_config(config: object):
     save_data = config["save_data"]
     path_output = config["path_output"]
     plot_graph = config["plot_graph"]
+    plot_graph_mobility = config["plot_graph_mobility"]
     path_graph = config["path_graph"]
     show_reallocation = config["show_reallocation"]
     enable_ceil_nodes_capacity = config["enable_ceil_nodes_capacity"]

@@ -359,7 +359,7 @@ class HandleData:
     hosts = None
     paths = None
     __old_hosts = None
-    __old_paths = None
+    old_paths = None
     __data = Data()
 
     def __init__(self, data):
@@ -547,7 +547,7 @@ class HandleData:
     # This follow method update data of the problem.
     def update_data(self):
         self.__old_hosts = self.hosts
-        self.__old_paths = self.paths
+        self.old_paths = self.paths
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
             sense = self.__update_ue_position()
@@ -581,7 +581,7 @@ class HandleData:
         return sense
 
     def show_reallocation(self):
-        for op, np in zip(self.__old_paths, self.paths[:len(self.__old_paths)]):
+        for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
             if op != np:
                 print("SHIFT PATH [{0}]".format(self.paths.index(np)))
             else:

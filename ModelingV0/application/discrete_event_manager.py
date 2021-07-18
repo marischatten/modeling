@@ -23,6 +23,8 @@ import utils.utils as u
 import simulation.request as r
 from optimization.optimize import *
 
+lst_time = list()
+
 mobility_rate = 10
 
 alpha = 0
@@ -76,7 +78,7 @@ plot_graph = False
 plot_graph_mobility = False
 path_graph = ''
 enable_ceil_nodes_capacity = False
-
+path_time = ''
 # random and distribution.
 avg_qtd_bulk = 2
 num_events = 2
@@ -97,26 +99,27 @@ def application():
         config = u.get_data(path_config)
         load_config(config)
 
-    start_time = time.time()
+    start_time_1 = time.time()
     dataset = u.get_data(path_dataset)
     load_dataset(dataset)
-    print(CYAN, "READ INSTANCE FILE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+    print(CYAN, "READ INSTANCE FILE TIME --- %s seconds ---" % round((time.time() - start_time_1), 4), RESET)
 
-    start_time = time.time()
+    start_time_2 = time.time()
     global data
     data = make_data()
     calc_vars()
-    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+    print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time_2), 4), RESET)
 
-    start_time = time.time()
+    start_time_3 = time.time()
     discrete_events(type, source=s, sink=t, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
-    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time_3), 4), RESET)
 
     if plot_graph:
         data.set_graph_adj_matrix()
         picture(path_graph)
 
+    write_optimization_time()
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
@@ -182,9 +185,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             handler.hosts = hosts
 
         if paths is not None:
-            start_time = time.time()
+            start_time_4 = time.time()
             handler.update_data()
-            print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+            print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
             if show_reallocation:
                 handler.show_reallocation()
             pd.insert_req(paths,hosts,event+1)
@@ -239,27 +242,6 @@ def insert_reqs(sources, sinks):
     global data
     for s, t in zip(sinks, sources):
         data.req_dict[s, t] = 1
-
-
-def remove_replicate_reqs(pd, sources, sinks):
-
-    new_sources = list()
-    new_sinks = list()
-    if len(sources) == len(sinks):
-        for i in range(len(sources)):
-            for j in range(len(sources)):
-                if i != j:
-                    if (sources[i] == sources[j]) and (sinks[i] == sinks[j]):
-                        print("Replicated Requests Removed.")
-                        continue
-                    if not is_unique(pd, sources[i], sinks[i]):
-                        print("Replicated Requests in Previous Events Removed.")
-                        continue
-
-                    new_sources.append(sources[i])
-                    new_sinks.append(sinks[i])
-
-    return (new_sources, new_sinks)
 
 
 def is_unique(pd, source, sink):
@@ -345,10 +327,12 @@ def create_model(source, sink, event=0):
 
 
 def run_model(source, sink, event):
-    start_time = time.time()
+    global lst_time
+    start_time_5 = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
     od.run_model(show_log,enable_ceil_nodes_capacity)
+    end_time_5 = time.time()
     paths = None
     hosts = None
 
@@ -358,7 +342,9 @@ def run_model(source, sink, event):
         od.result()
 
     print(RED, "EVENT: ", event + 1, RESET)
-    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time), 4), RESET)
+    time_optimize = round((end_time_5 - start_time_5), 4)
+    lst_time.append(time_optimize)
+    print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % time_optimize, RESET)
 
     if od.model.status == gp.GRB.OPTIMAL:
         paths,hosts = od.solutions(show_path)
@@ -465,7 +451,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -485,6 +471,7 @@ def load_config(config: object):
     path_graph = config["path_graph"]
     show_reallocation = config["show_reallocation"]
     enable_ceil_nodes_capacity = config["enable_ceil_nodes_capacity"]
+    path_time = config["path_time"]
     # random and distribution.
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]
@@ -500,6 +487,11 @@ def load_config(config: object):
 
     print(CYAN, "LOADED CONFIGURATION.", RESET)
 
+
+def write_optimization_time():
+    with open(path_time, 'w') as f:
+        for i in lst_time:
+            f.write("%s\n" % i)
 
 if __name__ == "__main__":
     application()

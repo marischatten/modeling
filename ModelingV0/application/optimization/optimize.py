@@ -630,7 +630,7 @@ class OptimizeData:
     # y_ik \in R+
     def __create_var_host(self):
         self.y = self.model.addVars(self.s, self.__data.key_index_bs,
-                                    vtype=gp.GRB.SEMIINT, name="host")
+                                    vtype=gp.GRB.SEMICONT, name="host")
 
     def __set_function_objective(self):
         self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] *(self.y[req[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)

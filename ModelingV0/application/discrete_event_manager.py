@@ -166,10 +166,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         plot_zipf(zipf, num_alpha)
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
-        data.clear_hops()
         qtd_req = bulks[event]
-
-
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
 
@@ -177,6 +174,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         insert_reqs(sources, sinks)
 
         for req in range(qtd_req):
+            data.clear_hops()
             source = sources[req]
             sink = sinks[req]
 
@@ -194,7 +192,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
                 handler.show_reallocation()
             pd.insert_req(paths,hosts,event+1)
             pd.calc_server_use(paths,event+1)
+            # Get a lasts hops of event for scattering. Because every request can change the path.
             pd.calc_scattering(event+1)
+            pd.calc_avg_load_link()
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))

@@ -5,7 +5,6 @@ import numpy as np
 from enum import Enum
 import pandas as pds
 
-
 NO_EDGE = 9999999999
 DELTA = 0.0001
 EPSILON = 0.9999
@@ -158,7 +157,7 @@ class Data:
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
-                 e_bs_adj=None,rf=None,
+                 e_bs_adj=None, rf=None,
                  sf=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
@@ -344,8 +343,8 @@ class Data:
                     self.connectivity_edges_dict[tag_file, tag_orig, tag_dest] = self.connectivity_edges[c][i][j]
 
     def set_graph_adj_matrix(self):
-        self.graph_adj_matrix= [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
-                                       range(self.num_nodes + self.num_files)]
+        self.graph_adj_matrix = [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
+                                 range(self.num_nodes + self.num_files)]
 
         for c in range(len(self.key_index_file)):
             for i in range(len(self.key_index_all)):
@@ -611,8 +610,8 @@ class OptimizeData:
         self.t = sinks
         self.s = self.__data.insert_requests(sources, sinks)
 
-    def run_model(self, show_log,enable_ceil_nodes_capacity):
-        self.model.reset()
+    def run_model(self, show_log, enable_ceil_nodes_capacity):
+        # self.model.reset()
         self.create_vars()
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)
@@ -633,18 +632,27 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMICONT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] * self.__data.req_dict[req[SINK], req[SOURCE]] *(self.y[req[KEY],i]))/((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)
-                                for i in self.__data.key_index_bs for req in self.__data.requests)))
+        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
+                                                                   self.__data.req_dict[req[SINK], req[SOURCE]] * (
+                                                                   self.y[req[KEY], i])) / ((
+                                                                                                        self.__data.resources_node_dict[
+                                                                                                            i] *
+                                                                                                        self.__data.gama_file_node_dict[
+                                                                                                            req[
+                                                                                                                SOURCE], i]) + DELTA)
+                                                                  for i in self.__data.key_index_bs for req in
+                                                                  self.__data.requests)))
                                 +
                                 ((1 - self.__data.alpha) * (gp.quicksum(
                                     self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
                                     * self.__data.psi_edge_dict[req[SOURCE], i, j]
                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
-                                    self.__data.key_index_all for i in self.__data.key_index_all for req in self.__data.requests)))
+                                    self.__data.key_index_all for i in self.__data.key_index_all for req in
+                                    self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
-    def __create_constraints(self,enable_ceil_nodes_capacity):
+    def __create_constraints(self, enable_ceil_nodes_capacity):
         # This constraint set y value.
         self.__set_constraint_y_value()
 
@@ -667,12 +675,15 @@ class OptimizeData:
     def __set_constraint_y_value(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON)
-                self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]))
+                self.model.addConstr(self.y[req[KEY], i] <= (
+                            self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON)
+                self.model.addConstr(
+                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]))
 
     def __set_constraint_node_resources_capacity(self):
         for i in self.__data.key_index_bs:
-                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum( self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests))
+            self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
+                self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests))
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -704,34 +715,34 @@ class OptimizeData:
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
             self.model.addConstr(
-                    (self.__data.throughput_min_file_dict[req[SOURCE]]) == (
-                                             gp.quicksum(
-                                                 self.x[req[KEY], req[SOURCE], i]
-                                                 * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
-                                                 for i in self.__data.key_index_bs
-                                             )
-                                             - gp.quicksum(
-                                         self.x[req[KEY], i, req[SOURCE]]
-                                         * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
-                                         for i in self.__data.key_index_bs
-                                     ))
-                                     , 'c5')
+                (self.__data.throughput_min_file_dict[req[SOURCE]]) == (
+                        gp.quicksum(
+                            self.x[req[KEY], req[SOURCE], i]
+                            * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
+                            for i in self.__data.key_index_bs
+                        )
+                        - gp.quicksum(
+                    self.x[req[KEY], i, req[SOURCE]]
+                    * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
+                    for i in self.__data.key_index_bs
+                ))
+                , 'c5')
 
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
             self.model.addConstr(
                 (- self.__data.throughput_min_file_dict[req[SOURCE]]) == (
-                                         gp.quicksum(
-                                             self.x[req[KEY], req[SINK], i]
-                                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
-                                             for i in self.__data.key_index_bs
-                                         )
-                                         - gp.quicksum(
-                                     self.x[req[KEY], i, req[SINK]]
-                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
-                                     for i in self.__data.key_index_bs
-                                 ))
-                                 , 'c6')
+                        gp.quicksum(
+                            self.x[req[KEY], req[SINK], i]
+                            * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
+                            for i in self.__data.key_index_bs
+                        )
+                        - gp.quicksum(
+                    self.x[req[KEY], i, req[SINK]]
+                    * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
+                    for i in self.__data.key_index_bs
+                ))
+                , 'c6')
 
     def execute(self, log):
         self.model.setParam("LogToConsole", log)
@@ -756,7 +767,8 @@ class OptimizeData:
             return (None, None)
         if show_path:
             for req in range(len(self.__paths)):
-                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req+1,self.__paths[req],self.__hosts[req]), RESET)
+                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req + 1, self.__paths[req], self.__hosts[req]),
+                      RESET)
         return (self.__paths, self.__hosts)
 
     def __solution_host(self):
@@ -767,29 +779,28 @@ class OptimizeData:
                     self.__hosts.append(str(var.VarName).split(',')[1][:-1])
 
     def __solution_path(self):
-        self.__path.clear()
         self.__paths.clear()
         hops = list()
+        aux = list()
+
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
                 if var.X != 0 and var.VarName[:4] == "flow":
                     hops.append(self.__get_solution(str(var.VarName)))
-        for req in self.__data.requests:
-            self.__make_path(hops, req[SOURCE], req[SINK])
-        self.__split_paths()
 
-    def __split_paths(self):
-        init = 0
-        for u, tag_u in enumerate(self.__path):
-            if tag_u[:2] == "UE":
-                self.__paths.append(self.__path[init:u + 1])
-                init = u + 1
+            for req in self.__data.requests:
+                for h in range(len(hops)):
+                    if hops[h][0] == req[KEY]:
+                        aux.append(hops[h][1:])
+                self.__make_path(aux, req[SOURCE], req[SINK])
+                aux.clear()
 
     def __get_solution(self, hop):
         next_hop = list()
         hop = hop[5:]
         hop = hop[:-1]
         aux = hop.split(',')
+        next_hop.append(aux[0])
         next_hop.append(aux[1])
         next_hop.append(aux[2])
         return next_hop
@@ -797,6 +808,8 @@ class OptimizeData:
     def __make_path(self, hops, source, sink):
         self.__next_hop(hops, source)
         self.__path.append(sink)
+        self.__paths.append(self.__path.copy())
+        self.__path.clear()
 
     def __next_hop(self, hops, node):
         for i in range(len(hops)):
@@ -1053,12 +1066,14 @@ class PlotData:
         self.set_path = pds.DataFrame(columns=['Path', 'Source', 'Sink', 'Delay'])
         self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
-        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS','Use'])
+        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
 
-    def insert_req(self,paths,hosts,event):
+    def insert_req(self, paths, hosts, event):
         self.__events_count = event
         for r in range(len(paths)):
-            self.__paths = self.__paths.append({'Event': event, 'Request': r ,'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],'Host': hosts[r]}, ignore_index=True)
+            self.__paths = self.__paths.append(
+                {'Event': event, 'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
+                 'Host': hosts[r]}, ignore_index=True)
 
     def insert_path(self, path, source, sink, event, req):
         self.__events_count = event
@@ -1121,7 +1136,7 @@ class PlotData:
         self.all_requests = all_requests
         self.__rate_admission_requests = (admission_requests / all_requests) * 100
 
-    def calc_server_use(self,paths,event):
+    def calc_server_use(self, paths, event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
         aux = [0 for i in range(self.__data.num_bs)]
         for i in range(len(paths)):
@@ -1131,14 +1146,15 @@ class PlotData:
                         self.__server_use[j] = self.__data.resources_file[CONTENT]
                         aux[j] = paths[i][CONTENT]
 
-        for i,tag_i in enumerate(self.__data.key_index_bs):
-            self.__server_use[i] = self.__server_use[i]/self.__data.resources_node[i]
+        for i, tag_i in enumerate(self.__data.key_index_bs):
+            self.__server_use[i] = self.__server_use[i] / self.__data.resources_node[i]
             self.__all_server_use = self.__all_server_use.append(
                 {'Event': event, 'BS': tag_i, 'Use': self.__server_use[i]}, ignore_index=True)
 
-
     def save_data(self, path):
-        dt_rate_admission = pds.DataFrame({'Rate Admission':[self.__rate_admission_requests],'Admission Requests':[self.admission_requests],'All Requests':[self.all_requests]})
+        dt_rate_admission = pds.DataFrame(
+            {'Rate Admission': [self.__rate_admission_requests], 'Admission Requests': [self.admission_requests],
+             'All Requests': [self.all_requests]})
         with pds.ExcelWriter(path) as writer:
             # self.__delay.to_excel(writer, sheet_name='Delay')
             # self.set_path.to_excel(writer, sheet_name='Request')

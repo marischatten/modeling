@@ -166,7 +166,9 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         plot_zipf(zipf, num_alpha)
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
+        data.clear_hops()
         qtd_req = bulks[event]
+
 
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
@@ -192,19 +194,17 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
                 handler.show_reallocation()
             pd.insert_req(paths,hosts,event+1)
             pd.calc_server_use(paths,event+1)
+            pd.calc_scattering(event+1)
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
         init = qtd_req
 
-    if show_all_paths:
-        pd.show_paths()
-    if paths is not None:
-        pd.calc_rate_admission_requests(len(handler.old_paths), sum(bulks))
+    pd.calc_rate_admission_requests(len(handler.old_paths), sum(bulks))
     if save_data:
         pd.save_data(path_output)
     if plot_data:
-        pd.plot()
+        pass
 
 
 def remove_bulk_empty(bulks):
@@ -388,7 +388,6 @@ def picture(path):
             bbox=(1000, 1000), )
 
 
-
 def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
@@ -493,6 +492,7 @@ def write_optimization_time():
     with open(path_time, 'w') as f:
         for i in lst_time:
             f.write("%s\n" % i)
+
 
 if __name__ == "__main__":
     application()

@@ -57,7 +57,7 @@ class Data:
     id_req = 0
     __id_event = 0
     __s = list()
-
+    hops = list()
     graph_adj_matrix = None
     req = list()
     req_dict = dict()
@@ -207,9 +207,8 @@ class Data:
             self.distance_ue_to_dictionary()
             self.req_to_dictionary()
 
-    def clear_requests(self):
-        self.requests.clear()
-        self.id_req = 0
+    def clear_hops(self):
+        self.hops.clear()
 
     def insert_requests(self, sources, sinks):
         self.__id_event += 1
@@ -611,7 +610,7 @@ class OptimizeData:
         self.s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self, show_log, enable_ceil_nodes_capacity):
-        # self.model.reset()
+        self.model.reset()
         self.create_vars()
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)
@@ -755,8 +754,8 @@ class OptimizeData:
             print(CYAN, "OBJECTIVE FUNCTION: ", RED, str(obj.getValue()), RESET)
             print(BOLD, "DECISION VARIABLE:", BOLD)
             for var in self.model.getVars():
-                if var.X > 0:
-                    print(var.VarName, round(var.X, 2))
+                if var.X != 0:
+                    print(var.VarName, round(var.X, 6))
         else:
             print(RED, "THE SOLVE IS INFEASIBLE.")
 
@@ -780,9 +779,8 @@ class OptimizeData:
 
     def __solution_path(self):
         self.__paths.clear()
-        hops = list()
         aux = list()
-
+        hops = list()
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
                 if var.X != 0 and var.VarName[:4] == "flow":
@@ -792,7 +790,9 @@ class OptimizeData:
                 for h in range(len(hops)):
                     if hops[h][0] == req[KEY]:
                         aux.append(hops[h][1:])
+                        self.__data.hops.append(hops[h][1:])
                 self.__make_path(aux, req[SOURCE], req[SINK])
+
                 aux.clear()
 
     def __get_solution(self, hop):
@@ -1049,24 +1049,22 @@ class LogData:
 # This class store all result and plot a graphics.
 class PlotData:
     __data = Data()
-    set_path = None
-    __delay = None
-    __events_count = 0
-    __req_count = 0
-
     __paths = None
-    all_requests = 0
-    admission_requests = 0
+    __all_requests = 0
+    __admission_requests = 0
     __rate_admission_requests = 0
     __server_use = None
     __all_server_use = None
+    __all_links = 0
+    __enabled_links = 0
+    __scattering = None
+    __avg_load_links = None
 
     def __init__(self, data):
         self.__data = data
-        self.set_path = pds.DataFrame(columns=['Path', 'Source', 'Sink', 'Delay'])
-        self.__delay = pds.DataFrame(columns=['Event', 'Delay'])
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
+        self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
 
     def insert_req(self, paths, hosts, event):
         self.__events_count = event
@@ -1075,65 +1073,9 @@ class PlotData:
                 {'Event': event, 'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
                  'Host': hosts[r]}, ignore_index=True)
 
-    def insert_path(self, path, source, sink, event, req):
-        self.__events_count = event
-        self.__req_count = req
-        self.set_path = self.set_path.append(
-            {'Path': path.copy(), 'Source': source, 'Sink': sink, 'Delay': self.__sum_rtt(path)},
-            ignore_index=True)
-        self.__insert_delay(path)
-
-    def update_path(self, path, req):
-        self.set_path._set_value(req, 'Path', path.copy())
-        self.__update_delay()
-
-    def __sum_rtt(self, path):
-        rtt = 0
-        for i, j in zip(path[1:], path[2:]):
-            if self.__data.rtt_edge_dict[i, j] >= NO_EDGE:
-                continue
-            rtt += self.__data.rtt_edge_dict[i, j]
-        return rtt
-
-    def show_paths(self):
-        print("SET PATH.")
-        print(self.set_path)
-        print(self.__delay)
-
-    def __insert_delay(self, path, ):
-        self.__delay = self.__delay.append(
-            {'Id': self.set_path.shape[0] - 1, 'Event': self.__events_count, 'Delay': self.__sum_rtt(path)},
-            ignore_index=True)
-
-    def __update_delay(self):
-        for i, row in self.set_path.iterrows():
-            self.__delay = self.__delay.append(
-                {'Id': i, 'Event': self.__events_count, 'Delay': self.__sum_rtt(row['Path'])}, ignore_index=True)
-            self.set_path._set_value(i, 'Delay', self.__sum_rtt(row['Path']))
-
-    def plot(self):
-        plt.title('Average delay per time')
-        plt.ylabel('Average delay')
-        plt.xlabel('Time')
-        plt.plot(self.__average_delay_per_requisitions())
-        plt.show()
-
-    def __average_delay_per_requisitions(self):
-        avg_delay_event = list()
-        for event in range(self.__events_count):
-            select_event = self.__delay.loc[self.__delay['Event'] == event]
-            avg_delay_event.append(self.__calc_avg(select_event))
-        return avg_delay_event
-
-    def __calc_avg(self, select_event):
-        all_delay_event = list()
-        for i, row in select_event.iterrows():
-            all_delay_event.append(row['Delay'])
-        return np.mean(all_delay_event)
-
     def calc_rate_admission_requests(self, admission_requests, all_requests):
-        self.admission_requests = admission_requests
-        self.all_requests = all_requests
+        self.__admission_requests = admission_requests
+        self.__all_requests = all_requests
         self.__rate_admission_requests = (admission_requests / all_requests) * 100
 
     def calc_server_use(self, paths, event):
@@ -1147,17 +1089,37 @@ class PlotData:
                         aux[j] = paths[i][CONTENT]
 
         for i, tag_i in enumerate(self.__data.key_index_bs):
-            self.__server_use[i] = self.__server_use[i] / self.__data.resources_node[i]
+            self.__server_use[i] = (self.__server_use[i] / self.__data.resources_node[i])
             self.__all_server_use = self.__all_server_use.append(
                 {'Event': event, 'BS': tag_i, 'Use': self.__server_use[i]}, ignore_index=True)
 
+    def __calc_all_links(self):
+        self.__data.set_graph_adj_matrix()
+        for i in range(len(self.__data.graph_adj_matrix)):
+            for j in range(len(self.__data.graph_adj_matrix)):
+                if self.__data.graph_adj_matrix[i][j] != NO_EDGE:
+                    self.__all_links +=1
+
+    def __calc_enabled_links(self):
+        df = pds.DataFrame(columns= ['hop1','hop2'])
+        for i in range(len(self.__data.hops)):
+            df =df.append({'hop1':self.__data.hops[i][0],'hop2':self.__data.hops[i][1]},ignore_index=True)
+        df = df.drop_duplicates()
+        hops = df.values.tolist()
+        self.__enabled_links = len(hops)
+
+    def calc_scattering(self,event):
+        self.__calc_all_links()
+        self.__calc_enabled_links()
+        scattering =  self.__enabled_links/self.__all_links
+        self.__scattering = self.__scattering.append({'Event':event, 'Enabled':self.__enabled_links, 'All':self.__all_links,'Scattering': scattering},ignore_index=True)
+
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
-            {'Rate Admission': [self.__rate_admission_requests], 'Admission Requests': [self.admission_requests],
-             'All Requests': [self.all_requests]})
+            {'Rate Admission': [self.__rate_admission_requests], 'Admission Requests': [self.__admission_requests],
+             'All Requests': [self.__all_requests]})
         with pds.ExcelWriter(path) as writer:
-            # self.__delay.to_excel(writer, sheet_name='Delay')
-            # self.set_path.to_excel(writer, sheet_name='Request')
             self.__paths.to_excel(writer, sheet_name='Requests')
             dt_rate_admission.to_excel(writer, sheet_name='Rate Admission')
             self.__all_server_use.to_excel(writer, sheet_name='Server Use')
+            self.__scattering.to_excel(writer, sheet_name='Scattering')

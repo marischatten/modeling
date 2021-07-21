@@ -58,9 +58,11 @@ class Data:
     __id_event = 0
     __s = list()
     hops = list()
+    hops_with_id = list()
     graph_adj_matrix = None
     req = list()
     req_dict = dict()
+    load_links = list()
 
     mobility = Mobility
     mobility_rate = 0
@@ -139,6 +141,7 @@ class Data:
     connectivity_edges = None
     connectivity_edges_dict = dict()
 
+    load_links_dict = dict()
     throughput_current_edge_dict = dict()
     throughput_diff_edge_dict = dict()
     resources_file_dict = dict()
@@ -195,8 +198,11 @@ class Data:
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
+            self.load_links = [[0 for i in range(self.num_nodes + self.num_files)] for j in
+                                     range(self.num_nodes + self.num_files)]
             self.gama_file_node = gama_file_node
 
+            self.load_links_to_dictionary()
             self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
@@ -209,6 +215,10 @@ class Data:
 
     def clear_hops(self):
         self.hops.clear()
+
+    def clear_hops_with_id(self):
+        self.hops_with_id.clear()
+        self.clear_dict(self.load_links_dict)
 
     def insert_requests(self, sources, sinks):
         self.__id_event += 1
@@ -341,6 +351,14 @@ class Data:
                     tag_dest = self.key_index_all[j]
                     self.connectivity_edges_dict[tag_file, tag_orig, tag_dest] = self.connectivity_edges[c][i][j]
 
+    def load_links_to_dictionary(self):
+
+        for i in range(len(self.key_index_all)):
+            for j in range(len(self.key_index_all)):
+                tag_i = self.key_index_all[i]
+                tag_j = self.key_index_all[j]
+                self.load_links_dict[tag_i, tag_j] = self.load_links[i][j]
+
     def set_graph_adj_matrix(self):
         self.graph_adj_matrix = [[NO_EDGE for i in range(self.num_nodes + self.num_files)] for j in
                                  range(self.num_nodes + self.num_files)]
@@ -351,6 +369,10 @@ class Data:
                     if (self.weight_network[c][i][j] != NO_EDGE) and (self.graph_adj_matrix[i][j] == NO_EDGE):
                         self.graph_adj_matrix[i][j] = self.weight_network[c][i][j]
 
+    def clear_dict(self, dictionary):
+        for k in dictionary.keys():
+            dictionary[k] = 0
+        return dictionary
 
 # This class handles and calculates the variables and parameters.
 class HandleData:
@@ -791,6 +813,7 @@ class OptimizeData:
                     if hops[h][0] == req[KEY]:
                         aux.append(hops[h][1:])
                         self.__data.hops.append(hops[h][1:])
+                        self.__data.hops_with_id.append(hops[h])
                 self.__make_path(aux, req[SOURCE], req[SINK])
 
                 aux.clear()
@@ -1058,6 +1081,7 @@ class PlotData:
     __all_links = 0
     __enabled_links = 0
     __scattering = None
+    __load_links = None
     __avg_load_links = None
 
     def __init__(self, data):
@@ -1065,6 +1089,8 @@ class PlotData:
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
         self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
+        self.__load_links = pds.DataFrame(columns=['Event','Link','Total Load'])
+        self.__avg_load_links = pds.DataFrame(columns=['Event', 'Average Load'])
 
     def insert_req(self, paths, hosts, event):
         self.__events_count = event
@@ -1103,7 +1129,7 @@ class PlotData:
     def __calc_enabled_links(self):
         df = pds.DataFrame(columns= ['hop1','hop2'])
         for i in range(len(self.__data.hops)):
-            df =df.append({'hop1':self.__data.hops[i][0],'hop2':self.__data.hops[i][1]},ignore_index=True)
+            df = df.append({'hop1':self.__data.hops[i][0],'hop2':self.__data.hops[i][1]},ignore_index=True)
         df = df.drop_duplicates()
         hops = df.values.tolist()
         self.__enabled_links = len(hops)
@@ -1111,8 +1137,22 @@ class PlotData:
     def calc_scattering(self,event):
         self.__calc_all_links()
         self.__calc_enabled_links()
-        scattering =  self.__enabled_links/self.__all_links
-        self.__scattering = self.__scattering.append({'Event':event, 'Enabled':self.__enabled_links, 'All':self.__all_links,'Scattering': scattering},ignore_index=True)
+        scattering = self.__enabled_links/self.__all_links
+        self.__scattering = self.__scattering.append({'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
+
+    def calc_avg_load_link(self,event):
+        for req in self.__data.requests:
+            for h in self.__data.hops_with_id:
+                if req[KEY] == h[0]:
+                    thp = self.__data.throughput_min_file_dict[req[SOURCE]]
+                    self.__data.load_links_dict[h[1],h[2]] += thp
+
+        for k in self.__data.load_links_dict.keys():
+            self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total Load': self.__data.load_links_dict[k]}, ignore_index=True)
+
+        enabled = self.__load_links.loc[self.__load_links['Total Load'] != 0]
+        mean = enabled['Total Load'].mean()
+        self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average Load': mean}, ignore_index=True)
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
@@ -1123,3 +1163,5 @@ class PlotData:
             dt_rate_admission.to_excel(writer, sheet_name='Rate Admission')
             self.__all_server_use.to_excel(writer, sheet_name='Server Use')
             self.__scattering.to_excel(writer, sheet_name='Scattering')
+            self.__load_links.to_excel(writer,sheet_name='Load Links')
+            self.__avg_load_links.to_excel(writer, sheet_name='Average Load Links')

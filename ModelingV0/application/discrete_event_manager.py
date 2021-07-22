@@ -13,6 +13,7 @@ import os
 import time
 import tqdm
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 # import ortools.linear_solver.pywraplp as otlp
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
@@ -64,7 +65,6 @@ show_var = False
 show_par = False
 plot_distribution = False
 plot_data = False
-show_all_paths = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
 model = Model.ONLINE
@@ -90,7 +90,7 @@ t = np.array(['UE3'])
 
 
 def application():
-    if os.name  == 'nt':
+    if os.name == 'nt':
         path_config = r'..\config\config_model.json'
     else:
         path_config = r'../config/config_model.json'
@@ -113,7 +113,9 @@ def application():
     start_time_3 = time.time()
     discrete_events(type, source=s, sink=t, avg_qtd_bulk=avg_qtd_bulk, num_events=num_events,
                     num_alpha=num_alpha)
-    print(CYAN, "FULL TIME --- %s seconds ---" % round((time.time() - start_time_3), 4), RESET)
+    full_time = time.time() - start_time_3
+    lst_time.append(full_time)
+    print(CYAN, "FULL TIME --- %s seconds ---" % round(full_time, 4), RESET)
 
     if plot_graph:
         data.set_graph_adj_matrix()
@@ -141,8 +143,6 @@ def single(source, sink):
     handler.paths = path
     # handler.update_data()
     # allocated_request(pd, path, source, sink)
-    if show_all_paths:
-        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
@@ -184,24 +184,26 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             paths, hosts = create_model(source, sink, event)
             handler.paths = paths
             handler.hosts = hosts
+            if show_reallocation and paths is not None:
+                handler.show_reallocation(event+1)
 
         if paths is not None:
             start_time_4 = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
-            if show_reallocation:
-                handler.show_reallocation()
             pd.insert_req(paths,hosts,event+1)
             pd.calc_server_use(paths,event+1)
-            # Get a lasts hops of event for scattering. Because a request can change the path.
-            pd.calc_scattering(event+1)
+            pd.calc_scattering(event+1) # Get a lasts hops of event for scattering. Because a request can change the path.
             pd.calc_avg_load_link(event+1)
+
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
         init = qtd_req
 
     pd.calc_rate_admission_requests(len(handler.old_paths), sum(bulks))
+    pd.calc_reallocation()
+
     if save_data:
         pd.save_data(path_output)
     if plot_data:
@@ -275,8 +277,6 @@ def all_to_all():
             # handler.update_data()
             # allocated_request(pd, path)
 
-    if show_all_paths:
-        pd.show_paths()
     if save_data:
         pd.save_data(path_output)
     # pd.plot()
@@ -451,7 +451,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_all_paths, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s, t
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -460,7 +460,6 @@ def load_config(config: object):
     show_par = config["show_par"]
     plot_distribution = config["plot_distribution"]
     plot_data = config["plot_data"]
-    show_all_paths = config["show_all_paths"]
     load_type_enum(config["type"])
     load_is_mobile_enum(config["mobility"])
     path_dataset = config["path_dataset"]

@@ -1,5 +1,5 @@
 import gurobipy as gp
-import matplotlib.pyplot as plt
+
 import numpy as np
 # import ortools as otlp  # somente LP
 from enum import Enum
@@ -63,6 +63,8 @@ class Data:
     req = list()
     req_dict = dict()
     load_links = list()
+    reallocation_path = list()
+    reallocation_host = list()
 
     mobility = Mobility
     mobility_rate = 0
@@ -374,6 +376,7 @@ class Data:
             dictionary[k] = 0
         return dictionary
 
+
 # This class handles and calculates the variables and parameters.
 class HandleData:
     hosts = None
@@ -566,8 +569,6 @@ class HandleData:
 
     # This follow method update data of the problem.
     def update_data(self):
-        self.__old_hosts = self.hosts
-        self.old_paths = self.paths
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
             sense = self.__update_ue_position()
@@ -600,18 +601,23 @@ class HandleData:
                 self.__data.distance_ue[u][i] += new_dis
         return sense
 
-    def show_reallocation(self):
-        for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
-            if op != np:
-                print("SHIFT PATH [{0}]".format(self.paths.index(np)))
-            else:
-                print("NON-SHIFT PATH [{0}]".format(self.paths.index(np)))
+    def show_reallocation(self,event):
+        realloc_path = list()
+        realloc_host = list()
+        if self.__old_hosts is not None and self.old_paths is not None:
+            for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
+                if op != np:
+                    print("SHIFT PATH [{0}]".format(self.paths.index(np)+1))
+                    self.__data.reallocation_path.append([event,self.paths.index(np)+1])
 
-        for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
-            if oh != nh:
-                print("SHIFT HOST.")
-            else:
-                print("NON-SHIFT.")
+            for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
+                if oh != nh:
+                    print("SHIFT HOST [{0}].".format(self.hosts.index(nh)+1))
+                    self.__data.reallocation_host.append([event,self.hosts.index(nh)+1])
+
+        if self.paths is not None:
+            self.__old_hosts = self.hosts.copy()
+            self.old_paths = self.paths.copy()
 
 
 # This class execute the application model.
@@ -632,7 +638,7 @@ class OptimizeData:
         self.s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self, show_log, enable_ceil_nodes_capacity):
-        self.model.reset()
+        #self.model.reset()
         self.create_vars()
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)
@@ -777,7 +783,7 @@ class OptimizeData:
             print(BOLD, "DECISION VARIABLE:", BOLD)
             for var in self.model.getVars():
                 if var.X != 0:
-                    print(var.VarName, round(var.X, 6))
+                    print(var.VarName, round(var.X, 2))
         else:
             print(RED, "THE SOLVE IS INFEASIBLE.")
 
@@ -1083,6 +1089,8 @@ class PlotData:
     __scattering = None
     __load_links = None
     __avg_load_links = None
+    __reallocation_path = None
+    __reallocation_host = None
 
     def __init__(self, data):
         self.__data = data
@@ -1091,6 +1099,8 @@ class PlotData:
         self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
         self.__load_links = pds.DataFrame(columns=['Event','Link','Total Load'])
         self.__avg_load_links = pds.DataFrame(columns=['Event', 'Average Load'])
+        self.__reallocation_path = pds.DataFrame(columns=['Event','Request'])
+        self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
 
     def insert_req(self, paths, hosts, event):
         self.__events_count = event
@@ -1120,6 +1130,7 @@ class PlotData:
                 {'Event': event, 'BS': tag_i, 'Use': self.__server_use[i]}, ignore_index=True)
 
     def __calc_all_links(self):
+        self.__all_links = 0
         self.__data.set_graph_adj_matrix()
         for i in range(len(self.__data.graph_adj_matrix)):
             for j in range(len(self.__data.graph_adj_matrix)):
@@ -1150,9 +1161,15 @@ class PlotData:
         for k in self.__data.load_links_dict.keys():
             self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total Load': self.__data.load_links_dict[k]}, ignore_index=True)
 
-        enabled = self.__load_links.loc[self.__load_links['Total Load'] != 0]
-        mean = enabled['Total Load'].mean()
+        self.__load_links = self.__load_links.loc[self.__load_links['Total Load'] != 0]
+        mean = self.__load_links['Total Load'].mean()
         self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average Load': mean}, ignore_index=True)
+
+    def calc_reallocation(self):
+        for i in self.__data.reallocation_path:
+            self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]},ignore_index=True)
+        for i in self.__data.reallocation_host:
+            self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]}, ignore_index=True)
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
@@ -1165,3 +1182,5 @@ class PlotData:
             self.__scattering.to_excel(writer, sheet_name='Scattering')
             self.__load_links.to_excel(writer,sheet_name='Load Links')
             self.__avg_load_links.to_excel(writer, sheet_name='Average Load Links')
+            self.__reallocation_path.to_excel(writer, sheet_name='Paths Reallocation')
+            self.__reallocation_host.to_excel(writer, sheet_name='Hosts Reallocation')

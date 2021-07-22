@@ -167,7 +167,6 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         qtd_req = bulks[event]
         sources = get_req(zipf, init, qtd_req)
         sinks = r.Request.generate_sinks_random(qtd_req, key_index_ue)
-
         #sources_unreplicated,sinks_unreplicated = remove_replicate_reqs(pd,sources,sinks)
         insert_reqs(sources, sinks)
 
@@ -198,7 +197,6 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
         init = qtd_req
 
     pd.calc_rate_admission_requests(admission, sum(bulks))
-    pd.calc_reallocation()
 
     if save_data:
         start_time_save = time.time()

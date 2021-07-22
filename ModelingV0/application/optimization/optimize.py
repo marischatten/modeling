@@ -1,5 +1,5 @@
 import gurobipy as gp
-
+import time
 import numpy as np
 # import ortools as otlp  # somente LP
 from enum import Enum
@@ -1109,7 +1109,7 @@ class PlotData:
     def calc_rate_admission_requests(self, admission_requests, all_requests):
         self.__admission_requests = admission_requests
         self.__all_requests = all_requests
-        self.__rate_admission_requests = (admission_requests / all_requests) * 100
+        self.__rate_admission_requests = admission_requests / all_requests
 
     def calc_server_use(self, paths, event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
@@ -1132,7 +1132,7 @@ class PlotData:
         for i in range(len(self.__data.graph_adj_matrix)):
             for j in range(len(self.__data.graph_adj_matrix)):
                 if self.__data.graph_adj_matrix[i][j] != NO_EDGE:
-                    self.__all_links +=1
+                    self.__all_links += 1
 
     def __calc_enabled_links(self):
         df = pds.DataFrame(columns= ['hop1','hop2'])
@@ -1143,7 +1143,8 @@ class PlotData:
         self.__enabled_links = len(hops)
 
     def calc_scattering(self,event):
-        self.__calc_all_links()
+        if self.__all_links == 0:
+            self.__calc_all_links()
         self.__calc_enabled_links()
         scattering = self.__enabled_links/self.__all_links
         self.__scattering = self.__scattering.append({'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
@@ -1156,15 +1157,15 @@ class PlotData:
                     self.__data.load_links_dict[h[1],h[2]] += thp
 
         for k in self.__data.load_links_dict.keys():
-            self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total Load': self.__data.load_links_dict[k]}, ignore_index=True)
+            if self.__data.load_links_dict[k] != 0:
+                self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total Load': self.__data.load_links_dict[k]}, ignore_index=True)
 
-        self.__load_links = self.__load_links.loc[self.__load_links['Total Load'] != 0]
         mean = self.__load_links['Total Load'].mean()
         self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average Load': mean}, ignore_index=True)
 
     def calc_reallocation(self):
         for i in self.__data.reallocation_path:
-            self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]},ignore_index=True)
+            self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]}, ignore_index=True)
         for i in self.__data.reallocation_host:
             self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]}, ignore_index=True)
 

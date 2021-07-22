@@ -185,13 +185,13 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             if paths is not None:
                 handler.show_reallocation(show_reallocation, event+1)
 
-        if paths is not None:
-            admission = len(paths)
+        if event != (num_events-1):
             start_time_4 = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
+        if paths is not None:
+            admission = len(paths)
             process_datas(pd,paths,hosts,event+1)
-
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
@@ -338,8 +338,9 @@ def run_model(source, sink, event):
     print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % time_optimize, RESET)
 
     if od.model.status == gp.GRB.OPTIMAL:
+        start_time_make_path = time.time()
         paths,hosts = od.solutions(show_path)
-
+        print(CYAN, "MAKE PATHS TIME --- %s seconds ---" % round(time.time() - start_time_make_path,4), RESET)
     return (paths, hosts)
 
 

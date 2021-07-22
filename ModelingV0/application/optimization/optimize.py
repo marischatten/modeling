@@ -38,17 +38,11 @@ REVERSE = "\033[;7m"
 class Type(Enum):
     SINGLE = 1
     ZIPF = 2
-    ALLTOALL = 3
 
 
 class Mobility(Enum):
     IS_MOBILE = 1
     NON_MOBILE = 0
-
-
-class Model(Enum):
-    ONLINE = 1
-    OFFLINE = 0
 
 
 # This class manages and handles the data of an instance of the problem.
@@ -601,18 +595,21 @@ class HandleData:
                 self.__data.distance_ue[u][i] += new_dis
         return sense
 
-    def show_reallocation(self,event):
-        realloc_path = list()
-        realloc_host = list()
+    def show_reallocation(self, show_reallocation, event):
+        self.__data.reallocation_path.clear()
+        self.__data.reallocation_host.clear()
+
         if self.__old_hosts is not None and self.old_paths is not None:
             for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
                 if op != np:
-                    print("SHIFT PATH [{0}]".format(self.paths.index(np)+1))
+                    if show_reallocation:
+                        print("SHIFT PATH [{0}]".format(self.paths.index(np)+1))
                     self.__data.reallocation_path.append([event,self.paths.index(np)+1])
 
             for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
                 if oh != nh:
-                    print("SHIFT HOST [{0}].".format(self.hosts.index(nh)+1))
+                    if show_reallocation:
+                        print("SHIFT HOST [{0}].".format(self.hosts.index(nh)+1))
                     self.__data.reallocation_host.append([event,self.hosts.index(nh)+1])
 
         if self.paths is not None:

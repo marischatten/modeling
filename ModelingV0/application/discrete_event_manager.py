@@ -67,7 +67,6 @@ plot_distribution = False
 plot_data = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
-model = Model.ONLINE
 show_reallocation = False
 
 path_dataset = ''
@@ -131,8 +130,6 @@ def discrete_events(type, source=None, sink=None, avg_qtd_bulk=0, num_events=0, 
         single(source, sink)
     if type == Type.ZIPF:
         bulk_poisson_req_zipf(num_alpha, avg_qtd_bulk, num_events)
-    if type == Type.ALLTOALL:
-        all_to_all()
 
 
 def single(source, sink):
@@ -160,6 +157,7 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
     bulks = r.Request.generate_bulk_poisson(avg_size_bulk, num_events)
     zipf = r.Request.generate_sources_zip(num_alpha, sum_requests(bulks), key_index_file)
     bulks = remove_bulk_empty(bulks.copy())
+    admission = 0
 
     if plot_distribution:
         plot_poisson(bulks)
@@ -184,30 +182,40 @@ def bulk_poisson_req_zipf(num_alpha, avg_size_bulk, num_events):
             paths, hosts = create_model(source, sink, event)
             handler.paths = paths
             handler.hosts = hosts
-            if show_reallocation and paths is not None:
-                handler.show_reallocation(event+1)
+            if paths is not None:
+                handler.show_reallocation(show_reallocation, event+1)
 
         if paths is not None:
+            admission = len(paths)
             start_time_4 = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
-            pd.insert_req(paths,hosts,event+1)
-            pd.calc_server_use(paths,event+1)
-            pd.calc_scattering(event+1) # Get a lasts hops of event for scattering. Because a request can change the path.
-            pd.calc_avg_load_link(event+1)
+            process_datas(pd,paths,hosts,event+1)
 
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
         init = qtd_req
 
-    pd.calc_rate_admission_requests(len(handler.old_paths), sum(bulks))
+    pd.calc_rate_admission_requests(admission, sum(bulks))
     pd.calc_reallocation()
 
     if save_data:
+        start_time_save = time.time()
         pd.save_data(path_output)
+        print(CYAN, "SAVE DATA TIME --- %s seconds ---" % round((time.time() - start_time_save), 4), RESET)
     if plot_data:
         pass
+
+
+def process_datas(pd, paths, hosts, event):
+    start_time_process = time.time()
+    pd.insert_req(paths, hosts, event)
+    pd.calc_server_use(paths, event)
+    pd.calc_scattering(event)  # Get a lasts hops of event for scattering. Because a request can change the path.
+    pd.calc_avg_load_link(event)
+    pd.calc_reallocation()
+    print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
 
 
 def remove_bulk_empty(bulks):
@@ -241,6 +249,7 @@ def remove_zero(lst):
         return lst
     return removed
 
+
 def insert_reqs(sources, sinks):
     global data
     for s, t in zip(sinks, sources):
@@ -261,25 +270,6 @@ def get_req(zipf, qtd_previous, qtd):
         return zipf[:qtd]
     else:
         return zipf[qtd_previous:qtd_previous + qtd]
-
-
-def all_to_all():
-    pd = PlotData(data)
-    handler = HandleData(data)
-
-    for s in tqdm.tqdm(key_index_file):
-        for t in key_index_ue:
-            source = np.array([s])
-            sink = np.array([t])
-            insert_reqs(source, sink)
-            path = create_model(source, sink)
-            handler.paths = path
-            # handler.update_data()
-            # allocated_request(pd, path)
-
-    if save_data:
-        pd.save_data(path_output)
-    # pd.plot()
 
 
 def sum_requests(bulks):
@@ -438,8 +428,6 @@ def load_type_enum(t):
         type = type.SINGLE
     if str(t).upper() == 'ZIPF':
         type = type.ZIPF
-    if str(t).upper() == 'ALLTOALL':
-        type = type.ALLTOALL
 
 
 def load_is_mobile_enum(mob):

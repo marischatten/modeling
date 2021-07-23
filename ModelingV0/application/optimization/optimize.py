@@ -1094,8 +1094,8 @@ class PlotData:
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
         self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
-        self.__load_links = pds.DataFrame(columns=['Event','Link','Total Load'])
-        self.__avg_load_links = pds.DataFrame(columns=['Event', 'Average Load'])
+        self.__load_links = pds.DataFrame(columns=['Event','Link','Total_Load'])
+        self.__avg_load_links = pds.DataFrame(columns=['Event', 'Average_Load'])
         self.__reallocation_path = pds.DataFrame(columns=['Event','Request'])
         self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
 
@@ -1158,10 +1158,10 @@ class PlotData:
 
         for k in self.__data.load_links_dict.keys():
             if self.__data.load_links_dict[k] != 0:
-                self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total Load': self.__data.load_links_dict[k]}, ignore_index=True)
+                self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total_Load': self.__data.load_links_dict[k]}, ignore_index=True)
 
-        mean = self.__load_links['Total Load'].mean()
-        self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average Load': mean}, ignore_index=True)
+        mean = self.__load_links['Total_Load'].mean()
+        self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average_Load': mean}, ignore_index=True)
 
     def calc_reallocation(self):
         for i in self.__data.reallocation_path:
@@ -1171,14 +1171,14 @@ class PlotData:
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
-            {'Rate Admission': [self.__rate_admission_requests], 'Admission Requests': [self.__admission_requests],
-             'All Requests': [self.__all_requests]})
+            {'Rate_Admission': [self.__rate_admission_requests], 'Admission_Requests': [self.__admission_requests],
+             'All_Requests': [self.__all_requests]})
         with pds.ExcelWriter(path) as writer:
             self.__paths.to_excel(writer, sheet_name='Requests')
-            dt_rate_admission.to_excel(writer, sheet_name='Rate Admission')
-            self.__all_server_use.to_excel(writer, sheet_name='Server Use')
+            dt_rate_admission.to_excel(writer, sheet_name='Rate_Admission')
+            self.__all_server_use.to_excel(writer, sheet_name='Server_Use')
             self.__scattering.to_excel(writer, sheet_name='Scattering')
-            self.__load_links.to_excel(writer,sheet_name='Load Links')
-            self.__avg_load_links.to_excel(writer, sheet_name='Average Load Links')
-            self.__reallocation_path.to_excel(writer, sheet_name='Paths Reallocation')
-            self.__reallocation_host.to_excel(writer, sheet_name='Hosts Reallocation')
+            self.__load_links.to_excel(writer,sheet_name='Load_Links')
+            self.__avg_load_links.to_excel(writer, sheet_name='Average_Load_Links')
+            self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
+            self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')

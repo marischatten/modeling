@@ -17,11 +17,11 @@
     "key_index_bs": ["SBS1", "SBS2"],
     "key_index_ue": ["UE1", "UE2", "UE3"],
 
-    "resources_file": [100, 200, 300],
+    "resources_file": [200, 100, 200],
     "size_file" :  [100, 200, 300],
     "throughput_min_file": [5, 5, 5],
 
-    "resources_node": [254, 254],
+    "resources_node": [400, 100],
 
     "rtt_min" : [
         [9999999999,3,8,8,9999999999,9999999999,9999999999,9999999999],
@@ -45,7 +45,7 @@
     "gama" : [
         [1,1],
         [1,1],
-        [0,1]
+        [1,1]
     ],
     "radius_sbs" : 3.0,
     "radius_mbs" : 0,

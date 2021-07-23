@@ -1,0 +1,49 @@
+---
+title: "data_analysis"
+author: "Marisangila Alves"
+date: "07/21/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(readxl)
+#requests <- read_excel("../ModelingV0/output/data/instance_8.xlsx", sheet='Requests', col_names=TRUE)
+#rate.admission <- read_excel("../ModelingV0/output/data/instance_8.xlsx", sheet='Rate Admission', #col_names=TRUE)
+#server_use <- read_excel("../ModelingV0/output/data/instance_8.xlsx", sheet='Server Use', col_names=TRUE)
+#scattering <- read_excel("../ModelingV0/output/data/instance_8.xlsx", sheet='Scattering', col_names=TRUE)
+#load.links <- read_excel("../ModelingV0/output/data/instance_8.xlsx", sheet='Load Links', col_names=TRUE)
+
+#load.links.mean <- mean(load.links$Total_Load)
+#load.links.sd <- sd(load.links$Total_Load)
+```
+Carga Média dos Enlaces: `r `
+
+
+Desvio Padrão dos Enlaces: `r `
+
+
+```{r}
+library(dplyr)
+times <- read.table("../ModelingV0/output/data/instance_8.dat", header = TRUE)
+max <- max(times$times)
+times.optimize <- times$times[times$times != max]
+times.optimize 
+events <- c(1:length(times.optimize))
+dt <- data.frame(events,times.optimize)
+
+times.lm <- lm(times.optimize~events,data=dt)
+(summary(times.lm))
+times.next <- data.frame(n=c(1000))
+times.pred <- data.frame(predict(times.lm,newdata=times.next,int="p",level=0.95))
+(times.pred)
+plot(dt)
+abline(times.lm, col="red")
+
+all.req <-length(times.optimize)
+```
+
+
+

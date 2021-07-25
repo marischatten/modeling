@@ -233,6 +233,10 @@ class Data:
         self.__s += new_source
         return self.__s
 
+    def drop_requests(self):
+        self.__s = self.__s[:-1]
+        self.requests.pop()
+
     # PARAMETERS TO DICTIONARY
     def __size_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -662,7 +666,7 @@ class OptimizeData:
     # y_ik \in R+
     def __create_var_host(self):
         self.y = self.model.addVars(self.s, self.__data.key_index_bs,
-                                    vtype=gp.GRB.SEMICONT, name="host")
+                                    vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
         self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *

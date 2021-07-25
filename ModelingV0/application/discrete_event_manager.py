@@ -172,6 +172,7 @@ def bulk_poisson_req_zipf():
                 handler.reallocation(show_reallocation, event+1)
             else:
                 drop_reqs(source, sink)
+                data.drop_requests()
 
         if event != (num_events-1):
             start_time_4 = time.time()

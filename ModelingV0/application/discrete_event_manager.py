@@ -10,7 +10,6 @@
 # pip install openpyxl
 
 import os
-import time
 import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -27,10 +26,7 @@ from optimization.optimize import *
 lst_time = list()
 
 mobility_rate = 10
-
 alpha = 0
-beta = 0
-
 num_bs = 0
 num_ue = 0
 num_files = 0
@@ -44,6 +40,7 @@ e_bs_adj = list()
 resources_file = list()
 size_file = list()
 throughput_min_file = list()
+beta_file = list()
 
 resources_node = list()
 
@@ -281,10 +278,10 @@ def plot_zipf(distribution):
 
 
 def make_data():
-    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
-                key_index_ue, e_bs_adj,resources_file,
+    return Data(mobility, mobility_rate, alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+                key_index_ue, e_bs_adj,
                 size_file,
-                throughput_min_file, resources_node, rtt_min, radius_mbs, radius_sbs,
+                throughput_min_file, beta_file, resources_file,resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
@@ -361,12 +358,11 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, beta_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     mobility_rate = dataset["mobility_rate"]
 
     alpha = dataset['alpha']
-    beta = dataset["beta"]
 
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])
@@ -378,10 +374,10 @@ def load_dataset(dataset: object):
 
     e_bs_adj = dataset["e_bs_adj"]
 
-    resources_file = dataset["resources_file"]
     size_file = dataset["size_file"]
-
     throughput_min_file = dataset["throughput_min_file"]
+    beta_file = dataset["beta_file"]
+    resources_file = dataset["resources_file"]
 
     resources_node = dataset["resources_node"]
 

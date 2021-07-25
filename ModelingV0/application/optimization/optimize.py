@@ -64,7 +64,6 @@ class Data:
     mobility_rate = 0
     # Input
     alpha = 0
-    beta = 0
 
     # Parameters
     num_bs = 0
@@ -87,14 +86,14 @@ class Data:
     # ij \in E
     e_bs_adj = list()
 
-    # cr_k \in N
-    resources_file = list()
     # cs_k \in N
     size_file = list()
-
     # thp \in N
     throughput_min_file = list()
-
+    # cr_k \in N
+    resources_file = list()
+    # b \in F
+    beta_file = list()
     # bsr_i \in R
     resources_node = list()
 
@@ -140,11 +139,14 @@ class Data:
     load_links_dict = dict()
     throughput_current_edge_dict = dict()
     throughput_diff_edge_dict = dict()
-    resources_file_dict = dict()
+
     size_file_dict = dict()
-    resources_node_dict = dict()
-    current_resources_node_dict = dict()
     throughput_min_file_dict = dict()
+    beta_file_dict = dict()
+    resources_file_dict = dict()
+
+    resources_node_dict = dict()
+
     gama_file_node_dict = dict()
     omega_user_node_dict = dict()
     e_bs_adj_dict = dict()
@@ -154,16 +156,15 @@ class Data:
     distance_ue_dict = dict()
 
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
-                 alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
+                 alpha=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
-                 e_bs_adj=None, rf=None,
-                 sf=None, bwf=None, rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
+                 e_bs_adj=None,
+                 sf=None, thp=None, bf=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
         self.mobility = mobility
         self.mobility_rate = mr
         self.alpha = alpha
-        self.beta = beta
 
         self.num_bs = num_bs
         self.num_ue = num_ue
@@ -181,9 +182,11 @@ class Data:
 
         self.e_bs_adj = e_bs_adj
 
-        self.resources_file = rf
         self.size_file = sf
-        self.throughput_min_file = bwf
+        self.throughput_min_file = thp
+        self.resources_file = rf
+        self.beta_file = bf
+
         self.resources_node = rt_i
 
         self.rtt_min = rtt_min
@@ -198,6 +201,7 @@ class Data:
                                      range(self.num_nodes + self.num_files)]
             self.gama_file_node = gama_file_node
 
+            self.__beta_file_to_dictionary()
             self.load_links_to_dictionary()
             self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
@@ -230,11 +234,6 @@ class Data:
         return self.__s
 
     # PARAMETERS TO DICTIONARY
-    def __resources_file_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            tag = self.key_index_file[f]
-            self.resources_file_dict[tag] = self.resources_file[f]
-
     def __size_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
@@ -244,6 +243,16 @@ class Data:
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
             self.throughput_min_file_dict[tag] = self.throughput_min_file[f]
+
+    def __beta_file_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            tag = self.key_index_file[f]
+            self.beta_file_dict[tag] = self.beta_file[f]
+
+    def __resources_file_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            tag = self.key_index_file[f]
+            self.resources_file_dict[tag] = self.resources_file[f]
 
     def __resources_node_to_dictionary(self):
         for i in range(len(self.key_index_bs)):
@@ -514,7 +523,7 @@ class HandleData:
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
-                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
+                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta_file[f]:
                         self.__data.psi_edge[f][i][j] = 1
         self.__data.psi_edge_to_dictionary()
 
@@ -872,28 +881,34 @@ class LogData:
             print(k, self.data.rtt_edge_dict[k])
         print()
 
-    def __log_resources_file_dict(self):
-        print("RESOURCES FILE.")
-        for k in self.data.resources_file_dict.keys():
-            print(k, self.data.resources_file_dict[k])
-        print()
-
     def __log_size_file_dict(self):
         print("SIZE FILE.")
         for k in self.data.size_file_dict.keys():
             print(k, self.data.size_file_dict[k], "MB")
         print()
 
-    def __log_resources_node_dict(self):
-        print("TOTAL RESOURCES NODE.")
-        for k in self.data.resources_node_dict.keys():
-            print(k, self.data.resources_node_dict[k])
-        print()
-
     def __log_throughput_min_dict(self):
         print("MINIMAL THROUGHPUT.")
         for k in self.data.throughput_min_file_dict.keys():
             print(k, self.data.throughput_min_file_dict[k], "MB")
+        print()
+
+    def __log_beta_file_dict(self):
+        print("BETA FILE.")
+        for k in self.data.beta_file_dict.keys():
+            print(k, self.data.beta_file_dict[k])
+        print()
+
+    def __log_resources_file_dict(self):
+        print("RESOURCES FILE.")
+        for k in self.data.resources_file_dict.keys():
+            print(k, self.data.resources_file_dict[k])
+        print()
+
+    def __log_resources_node_dict(self):
+        print("TOTAL RESOURCES NODE.")
+        for k in self.data.resources_node_dict.keys():
+            print(k, self.data.resources_node_dict[k])
         print()
 
     def __log_rtt_min(self):
@@ -936,7 +951,6 @@ class LogData:
         print()
 
     # VARS
-
     def __log_omega_user_node(self):
         print("USER COVERAGE PER BASE STATION(OMEGA).")
         for u in range(len(self.data.key_index_ue)):
@@ -1040,9 +1054,11 @@ class LogData:
 
     def show_parameters(self):
         print("PARAMETERS.\n")
-        self.__log_resources_file_dict()
+
         self.__log_size_file_dict()
         self.__log_throughput_min_dict()
+        self.__log_resources_file_dict()
+        self.__log_beta_file_dict()
 
         self.__log_resources_node_dict()
 

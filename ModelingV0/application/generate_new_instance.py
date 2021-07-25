@@ -10,7 +10,6 @@ MAX_USE_NODE = 0.5
 
 mobility_rate = 0
 alpha = 0
-beta = 0
 
 num_bs = 0
 num_mbs = 0
@@ -28,6 +27,7 @@ e_bs_adj = list()
 resources_file = list()
 size_file = list()
 throughput_min_file = list()
+beta_file = list()
 
 resources_node = list()
 
@@ -43,7 +43,7 @@ radius_sbs = 0
 resources_node_max = 0
 resources_node_min = 0
 
-# Size - Throughput - Resources
+# Size - Throughput - Resources - Beta
 requirements = 0
 
 rtt_min_mbs_mbs = 0
@@ -175,17 +175,18 @@ def generate_resources_node():
 
 
 def generate_requirements():
-    global size_file, throughput_min_file, resources_file
+    global size_file, throughput_min_file, resources_file,beta_file
 
     size_file = [0 for f in range(num_files)]
     resources_file = [0 for f in range(num_files)]
     throughput_min_file = [0 for f in range(num_files)]
-
+    beta_file = [0 for f in range(num_files)]
     for f in range(num_files):
         index = np.random.randint(0, len(requirements))
         size_file[f] = requirements[index][0]
         throughput_min_file[f] = requirements[index][1]
         resources_file[f] = requirements[index][2]
+        beta_file[f] = round(requirements[index][1] * requirements[index][3],0)
 
     print("TAMANHO DO CONTEÚDO.")
     for f in range(num_files):
@@ -202,6 +203,10 @@ def generate_requirements():
         print(resources_file[f], end=" ")
     print()
 
+    print("INTERVALO DE TOLERÃNCIA DO CONTEÚDO.")
+    for f in range(num_files):
+        print(beta_file[f], end=" ")
+    print()
 
 def generate_rtt_min():
     global rtt_min
@@ -324,16 +329,18 @@ def generate_sbs(num_mbs, num_sbs):
 def generate_json(path):
     data = {"mobility_rate": mobility_rate,
             "alpha": alpha,
-            "beta": beta,
             "num_bs": num_bs,
             "num_ue": num_ue,
             "num_files": num_files,
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,
-            "resources_file": resources_file,
+
             "size_file": size_file,
             "throughput_min_file": throughput_min_file,
+            "resources_file": resources_file,
+            "beta_file": beta_file,
+
             "resources_node": resources_node,
             "gama": gama,
             "rtt_min": rtt_min,
@@ -347,11 +354,10 @@ def generate_json(path):
 
 
 def load_config(config: object):
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, resources_node_min, resources_node_max, resources_file_min, resources_file_max, key_index_all, path
+    global mobility_rate, alpha, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, resources_node_min, resources_node_max, resources_file_min, resources_file_max, key_index_all, path
 
     mobility_rate = config["mobility_rate"]
     alpha = config["alpha"]
-    beta = config["beta"]
     num_mbs = config["num_mbs"]
     num_sbs_per_mbs = config["num_sbs_per_mbs"]
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
@@ -360,7 +366,6 @@ def load_config(config: object):
     num_nodes = num_bs + num_ue + num_files
 
     requirements = config["requirements"]
-
 
     resources_node_max = config["resources_node_max"]
     resources_node_min = config["resources_node_min"]

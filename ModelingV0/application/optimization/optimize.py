@@ -595,7 +595,7 @@ class HandleData:
                 self.__data.distance_ue[u][i] += new_dis
         return sense
 
-    def show_reallocation(self, show_reallocation, event):
+    def reallocation(self, show_reallocation, event):
         self.__data.reallocation_path.clear()
         self.__data.reallocation_host.clear()
 
@@ -1149,7 +1149,7 @@ class PlotData:
         scattering = self.__enabled_links/self.__all_links
         self.__scattering = self.__scattering.append({'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
 
-    def calc_avg_load_link(self,event):
+    def calc_load_link(self,event):
         for req in self.__data.requests:
             for h in self.__data.hops_with_id:
                 if req[KEY] == h[0]:

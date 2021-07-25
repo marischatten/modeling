@@ -15,6 +15,11 @@ class Request:
         return sinks
 
     @staticmethod
+    def generate_sink_random(key_users):
+        user_rand = randrange(0, len(key_users) - 1)
+        return key_users[user_rand]
+
+    @staticmethod
     def generate_bulk_poisson(avg_size_bulk, num_events):
         return poisson.rvs(mu=avg_size_bulk, size=num_events)
 

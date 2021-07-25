@@ -605,8 +605,8 @@ class HandleData:
         return sense
 
     def reallocation(self, show_reallocation, event):
-        self.__data.reallocation_path.clear()
-        self.__data.reallocation_host.clear()
+        # self.__data.reallocation_path.clear()
+        # self.__data.reallocation_host.clear()
 
         if self.__old_hosts is not None and self.old_paths is not None:
             for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
@@ -1101,7 +1101,6 @@ class PlotData:
     __enabled_links = 0
     __scattering = None
     __load_links = None
-    __avg_load_links = None
     __reallocation_path = None
     __reallocation_host = None
 
@@ -1111,7 +1110,6 @@ class PlotData:
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
         self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
         self.__load_links = pds.DataFrame(columns=['Event','Link','Total_Load'])
-        self.__avg_load_links = pds.DataFrame(columns=['Event', 'Average_Load'])
         self.__reallocation_path = pds.DataFrame(columns=['Event','Request'])
         self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
 
@@ -1129,13 +1127,10 @@ class PlotData:
 
     def calc_server_use(self, paths, event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
-        aux = [0 for i in range(self.__data.num_bs)]
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    if aux[j] != paths[i][CONTENT]:
-                        self.__server_use[j] = self.__data.resources_file[CONTENT]
-                        aux[j] = paths[i][CONTENT]
+                    self.__server_use[j] += self.__data.resources_file[CONTENT]
 
         for i, tag_i in enumerate(self.__data.key_index_bs):
             self.__server_use[i] = (self.__server_use[i] / self.__data.resources_node[i])
@@ -1176,9 +1171,6 @@ class PlotData:
             if self.__data.load_links_dict[k] != 0:
                 self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total_Load': self.__data.load_links_dict[k]}, ignore_index=True)
 
-        mean = self.__load_links['Total_Load'].mean()
-        self.__avg_load_links = self.__avg_load_links.append({'Event': event, 'Average_Load': mean}, ignore_index=True)
-
     def calc_reallocation(self):
         for i in self.__data.reallocation_path:
             self.__reallocation_path = self.__reallocation_path.append({'Event':i[0],'Request':i[1]}, ignore_index=True)
@@ -1195,6 +1187,5 @@ class PlotData:
             self.__all_server_use.to_excel(writer, sheet_name='Server_Use')
             self.__scattering.to_excel(writer, sheet_name='Scattering')
             self.__load_links.to_excel(writer,sheet_name='Load_Links')
-            self.__avg_load_links.to_excel(writer, sheet_name='Average_Load_Links')
             self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
             self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')

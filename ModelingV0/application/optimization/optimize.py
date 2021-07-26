@@ -64,7 +64,7 @@ class Data:
     mobility_rate = 0
     # Input
     alpha = 0
-
+    beta = 0
     # Parameters
     num_bs = 0
     num_ue = 0
@@ -142,7 +142,6 @@ class Data:
 
     size_file_dict = dict()
     throughput_min_file_dict = dict()
-    beta_file_dict = dict()
     resources_file_dict = dict()
 
     resources_node_dict = dict()
@@ -156,16 +155,16 @@ class Data:
     distance_ue_dict = dict()
 
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
-                 alpha=0, num_bs=0, num_ue=0, num_file=0,
+                 alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 sf=None, thp=None, bf=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
+                 sf=None, thp=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None):
 
         self.mobility = mobility
         self.mobility_rate = mr
         self.alpha = alpha
-
+        self.beta = beta
         self.num_bs = num_bs
         self.num_ue = num_ue
         if num_bs != 0 and num_ue != 0:
@@ -185,7 +184,6 @@ class Data:
         self.size_file = sf
         self.throughput_min_file = thp
         self.resources_file = rf
-        self.beta_file = bf
 
         self.resources_node = rt_i
 
@@ -201,7 +199,6 @@ class Data:
                                      range(self.num_nodes + self.num_files)]
             self.gama_file_node = gama_file_node
 
-            self.__beta_file_to_dictionary()
             self.load_links_to_dictionary()
             self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
@@ -247,11 +244,6 @@ class Data:
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
             self.throughput_min_file_dict[tag] = self.throughput_min_file[f]
-
-    def __beta_file_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            tag = self.key_index_file[f]
-            self.beta_file_dict[tag] = self.beta_file[f]
 
     def __resources_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -527,7 +519,7 @@ class HandleData:
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
-                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta_file[f]:
+                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
                         self.__data.psi_edge[f][i][j] = 1
         self.__data.psi_edge_to_dictionary()
 
@@ -897,12 +889,6 @@ class LogData:
             print(k, self.data.throughput_min_file_dict[k], "MB")
         print()
 
-    def __log_beta_file_dict(self):
-        print("BETA FILE.")
-        for k in self.data.beta_file_dict.keys():
-            print(k, self.data.beta_file_dict[k])
-        print()
-
     def __log_resources_file_dict(self):
         print("RESOURCES FILE.")
         for k in self.data.resources_file_dict.keys():
@@ -1062,7 +1048,6 @@ class LogData:
         self.__log_size_file_dict()
         self.__log_throughput_min_dict()
         self.__log_resources_file_dict()
-        self.__log_beta_file_dict()
 
         self.__log_resources_node_dict()
 
@@ -1107,10 +1092,10 @@ class PlotData:
     __load_links = None
     __reallocation_path = None
     __reallocation_host = None
-
+    __new_req = 1
     def __init__(self, data):
         self.__data = data
-        self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
+        self.__paths = pds.DataFrame(columns=['Event', 'New Request','Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
         self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All','Scattering'])
         self.__load_links = pds.DataFrame(columns=['Event','Link','Total_Load'])
@@ -1121,8 +1106,9 @@ class PlotData:
         self.__events_count = event
         for r in range(len(paths)):
             self.__paths = self.__paths.append(
-                {'Event': event, 'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
+                {'Event': event, 'New Request': self.__new_req ,'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
                  'Host': hosts[r]}, ignore_index=True)
+        self.__new_req += 1
 
     def calc_rate_admission_requests(self, admission_requests, all_requests):
         self.__admission_requests = admission_requests
@@ -1134,12 +1120,16 @@ class PlotData:
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    self.__server_use[j] += self.__data.resources_file[CONTENT]
+                    self.__server_use[j] += self.__data.resources_file_dict[paths[i][CONTENT]]
+                    print("ADD",self.__data.resources_file[CONTENT],"MB","ALL",self.__data.resources_node[j],"IN",self.__data.key_index_bs[j])
 
+        print(self.__data.resources_node)
+        print(self.__data.resources_file)
         for i, tag_i in enumerate(self.__data.key_index_bs):
-            self.__server_use[i] = (self.__server_use[i] / self.__data.resources_node[i])
+            rate = round(self.__server_use[i] / self.__data.resources_node[i],4)
+
             self.__all_server_use = self.__all_server_use.append(
-                {'Event': event, 'BS': tag_i, 'Use': self.__server_use[i]}, ignore_index=True)
+                {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
 
     def __calc_all_links(self):
         self.__all_links = 0

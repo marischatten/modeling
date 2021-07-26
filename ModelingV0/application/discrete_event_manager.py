@@ -27,6 +27,7 @@ lst_time = list()
 
 mobility_rate = 10
 alpha = 0
+beta = 0
 num_bs = 0
 num_ue = 0
 num_files = 0
@@ -40,7 +41,6 @@ e_bs_adj = list()
 resources_file = list()
 size_file = list()
 throughput_min_file = list()
-beta_file = list()
 
 resources_node = list()
 
@@ -173,14 +173,15 @@ def bulk_poisson_req_zipf():
             else:
                 drop_reqs(source, sink)
                 data.drop_requests()
+            if (paths is not None) and save_data:
+                admission = len(paths)
+                process_datas(pd, paths, hosts, event + 1)
 
         if event != (num_events-1):
             start_time_4 = time.time()
             handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
-        if (paths is not None) and save_data:
-            admission = len(paths)
-            process_datas(pd,paths,hosts,event+1)
+
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
@@ -279,10 +280,10 @@ def plot_zipf(distribution):
 
 
 def make_data():
-    return Data(mobility, mobility_rate, alpha, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 size_file,
-                throughput_min_file, beta_file, resources_file,resources_node, rtt_min, radius_mbs, radius_sbs,
+                throughput_min_file, resources_file,resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
@@ -359,11 +360,11 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, beta_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
 
     mobility_rate = dataset["mobility_rate"]
-
     alpha = dataset['alpha']
+    beta = dataset['beta']
 
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])
@@ -377,7 +378,6 @@ def load_dataset(dataset: object):
 
     size_file = dataset["size_file"]
     throughput_min_file = dataset["throughput_min_file"]
-    beta_file = dataset["beta_file"]
     resources_file = dataset["resources_file"]
 
     resources_node = dataset["resources_node"]

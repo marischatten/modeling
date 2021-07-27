@@ -1121,10 +1121,7 @@ class PlotData:
             for j in range(len(self.__data.key_index_bs)):
                 if paths[i][HOST] == self.__data.key_index_bs[j]:
                     self.__server_use[j] += self.__data.resources_file_dict[paths[i][CONTENT]]
-                    print("ADD",self.__data.resources_file[CONTENT],"MB","ALL",self.__data.resources_node[j],"IN",self.__data.key_index_bs[j])
 
-        print(self.__data.resources_node)
-        print(self.__data.resources_file)
         for i, tag_i in enumerate(self.__data.key_index_bs):
             rate = round(self.__server_use[i] / self.__data.resources_node[i],4)
 

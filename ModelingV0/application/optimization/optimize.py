@@ -218,6 +218,7 @@ class Data:
         self.clear_dict(self.load_links_dict)
 
     def insert_requests(self, sources, sinks):
+        self.req_dict[sinks[0], sources[0]] = 1
         self.__id_event += 1
         new_source = list()
         for r in range(len(sources)):
@@ -230,7 +231,8 @@ class Data:
         self.__s += new_source
         return self.__s
 
-    def drop_requests(self):
+    def drop_requests(self,source,sink):
+        self.req_dict[sink[0], source[0]] = 0
         self.__s = self.__s[:-1]
         self.requests.pop()
 
@@ -601,9 +603,6 @@ class HandleData:
         return sense
 
     def reallocation(self, show_reallocation, event):
-        # self.__data.reallocation_path.clear()
-        # self.__data.reallocation_host.clear()
-
         if self.__old_hosts is not None and self.old_paths is not None:
             for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
                 if op != np:
@@ -640,7 +639,7 @@ class OptimizeData:
         self.s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self, show_log, enable_ceil_nodes_capacity):
-        #self.model.reset()
+        # self.model.reset()
         self.create_vars()
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)

@@ -10,6 +10,8 @@
 # pip install openpyxl
 
 import os
+import sys
+
 import tqdm
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -131,15 +133,10 @@ def discrete_events():
 def single():
     pd = PlotData(data)
     handler = HandleData(data)
-    insert_reqs(s_single, t_single)
     path = create_model(s_single, t_single)
     handler.paths = path
-    # handler.update_data()
-    # allocated_request(pd, path, source, sink)
     if save_data:
         pd.save_data(path_output)
-    # pd.plot()
-    # data.clear_requests()
 
 
 def bulk_poisson_req_zipf():
@@ -149,21 +146,16 @@ def bulk_poisson_req_zipf():
     hosts = None
     admission = 0
     init = 0
-    all_sources, all_sinks, bulks = create_requests()
+    requests, bulks = create_requests()
+
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
-        sources, sinks = get_req(all_sources.copy(), all_sinks.copy(), init, qtd_req)
-        insert_reqs(sources, sinks)
-
-        for req in range(qtd_req):
+        for req in range(qtd_req-1):
             data.clear_hops()
             data.clear_hops_with_id()
 
-            source = sources[req]
-            sink = sinks[req]
-
-            source = [source]
-            sink = [sink]
+            source = [requests[init][0]]
+            sink = [requests[init][1]]
 
             paths, hosts = create_model(source, sink, event)
             handler.paths = paths
@@ -171,12 +163,11 @@ def bulk_poisson_req_zipf():
             if paths is not None:
                 handler.reallocation(show_reallocation, event+1)
             else:
-                drop_reqs(source, sink)
-                data.drop_requests()
+                data.drop_requests(source,sink)
             if (paths is not None) and save_data:
                 admission = len(paths)
                 process_datas(pd, paths, hosts, event + 1)
-
+            init += 1
         if event != (num_events-1):
             start_time_4 = time.time()
             handler.update_data()
@@ -185,7 +176,7 @@ def bulk_poisson_req_zipf():
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
-        init = qtd_req
+
     pd.calc_rate_admission_requests(admission, sum(bulks))
 
     if save_data:
@@ -197,30 +188,42 @@ def bulk_poisson_req_zipf():
 
 
 def create_requests():
-    sources = list()
-    sinks = list()
-    init = 0
+    requests = list()
     bulks = rr.Request.generate_bulk_poisson(avg_qtd_bulk, num_events)
     zipf = rr.Request.generate_sources_zip(num_alpha, sum(bulks), key_index_file)
     bulks = remove_bulk_empty(bulks.copy())
-    for r in range(sum(bulks)):
-        s = zipf[init]
+    count = 0
+    for r in range(sum(bulks)-1):
+        s = zipf[r]
         t = rr.Request.generate_sink_random(key_index_ue)
-        if (len(sources) != 0) and (len(sinks) != 0):
-            for i in range(len(sources)):
-                while (sources[i] == s) and (sinks[i] == t):
-                    print("Removed Replicated Request.")
-                    t = rr.Request.generate_sink_random(key_index_ue)
-            sources.append(s)
-            sinks.append(t)
+        pair = (s, t)
+        if (len(requests) != 0):
+            while is_replicated(requests, pair):
+                count += 1
+                if count == len(key_index_ue):
+                    print(REVERSE,
+                          "Impossible to generate this amount of unreplicated requests for this instance.\n Please, decrease the number of requests or change for larger instance.",
+                          RESET)
+                    sys.exit()
+                print("Removed Replicated Request.")
+                t = rr.Request.generate_sink_random(key_index_ue)
+                pair = (s, t)
+            count = 0
+            requests.append(pair)
         else:
-            sources.append(s)
-            sinks.append(t)
-        init += 1
+            pair = (s, t)
+            requests.append(pair)
+
     if plot_distribution:
         plot_poisson(bulks)
         plot_zipf(zipf)
-    return (sources, sinks, bulks)
+    return (requests, bulks)
+
+
+def is_replicated(requests, pair):
+    if pair in requests:
+        return True
+    return False
 
 
 def process_datas(pd, paths, hosts, event):
@@ -238,24 +241,6 @@ def remove_bulk_empty(bulks):
         if bulks[b] == 0:
             bulks[b] = 1
     return bulks
-
-
-def insert_reqs(sources, sinks):
-    global data
-    for t, s in zip(sinks, sources):
-        data.req_dict[t, s] = 1
-
-
-def drop_reqs(source, sink):
-    global data
-    data.req_dict[sink[0],source[0]] = 0
-
-
-def get_req(sources, sinks, qtd_previous, qtd):
-    if qtd_previous == 0:
-        return sources[:qtd], sinks[:qtd],
-    else:
-        return sources[qtd_previous:qtd_previous + qtd], sinks[qtd_previous:qtd_previous + qtd]
 
 
 def plot_poisson(distribution):

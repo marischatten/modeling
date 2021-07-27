@@ -521,7 +521,7 @@ class HandleData:
         for f in range(len(self.__data.key_index_file)):
             for i in range(len(self.__data.key_index_all)):
                 for j in range(len(self.__data.key_index_all)):
-                    if self.__data.throughput_diff_edge[f][i][j] >= self.__data.beta:
+                    if self.__data.throughput_diff_edge[f][i][j] >= (self.__data.throughput_min_file[f] * self.__data.beta):
                         self.__data.psi_edge[f][i][j] = 1
         self.__data.psi_edge_to_dictionary()
 

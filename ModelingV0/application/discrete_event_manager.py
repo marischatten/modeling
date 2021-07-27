@@ -81,8 +81,8 @@ num_events = 2
 num_alpha = 0.56
 
 # single.
-s = np.array(['F1'])
-t = np.array(['UE3'])
+s_single = np.array(['F1'])
+t_single = np.array(['UE3'])
 
 
 def application():
@@ -107,7 +107,7 @@ def application():
     print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time_2), 4), RESET)
 
     start_time_3 = time.time()
-    discrete_events(type, source=s, sink=t)
+    discrete_events()
     full_time = time.time() - start_time_3
     lst_time.append(full_time)
     print(CYAN, "FULL TIME --- %s seconds ---" % round(full_time, 4), RESET)
@@ -121,18 +121,18 @@ def application():
     # pywraplp.Solver('test', pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING)
 
 
-def discrete_events(type, source=None, sink=None):
+def discrete_events():
     if type == Type.SINGLE:
-        single(source, sink)
+        single()
     if type == Type.ZIPF:
         bulk_poisson_req_zipf()
 
 
-def single(source, sink):
+def single():
     pd = PlotData(data)
     handler = HandleData(data)
-    insert_reqs(source, sink)
-    path = create_model(source, sink)
+    insert_reqs(s_single, t_single)
+    path = create_model(s_single, t_single)
     handler.paths = path
     # handler.update_data()
     # allocated_request(pd, path, source, sink)
@@ -152,7 +152,7 @@ def bulk_poisson_req_zipf():
     all_sources, all_sinks, bulks = create_requests()
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
-        sources,sinks = get_req(all_sources.copy(),all_sinks.copy(), init, qtd_req)
+        sources, sinks = get_req(all_sources.copy(), all_sinks.copy(), init, qtd_req)
         insert_reqs(sources, sinks)
 
         for req in range(qtd_req):
@@ -283,7 +283,7 @@ def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 size_file,
-                throughput_min_file, resources_file,resources_node, rtt_min, radius_mbs, radius_sbs,
+                throughput_min_file, resources_file, resources_node, rtt_min, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs
                 )
 
@@ -301,7 +301,7 @@ def run_model(source, sink, event):
     start_time_5 = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
-    od.run_model(show_log,enable_ceil_nodes_capacity)
+    od.run_model(show_log, enable_ceil_nodes_capacity)
     end_time_5 = time.time()
     paths = None
     hosts = None
@@ -318,8 +318,8 @@ def run_model(source, sink, event):
 
     if od.model.status == gp.GRB.OPTIMAL:
         start_time_make_path = time.time()
-        paths,hosts = od.solutions(show_path)
-        print(CYAN, "MAKE PATHS TIME --- %s seconds ---" % round(time.time() - start_time_make_path,4), RESET)
+        paths, hosts = od.solutions(show_path)
+        print(CYAN, "MAKE PATHS TIME --- %s seconds ---" % round(time.time() - start_time_make_path, 4), RESET)
     return (paths, hosts)
 
 
@@ -355,12 +355,12 @@ def picture(path):
                 g.add_edge(name_orig, name_dest)
     
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
-    ig.plot(g, vertex_label=key_nodes, target = path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
+    ig.plot(g, vertex_label=key_nodes, target=path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, avg_rtt, sd_rtt
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -417,7 +417,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s, t
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s_single, t_single
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -442,14 +442,14 @@ def load_config(config: object):
     num_events = config["num_events"]
     num_alpha = config["num_alpha"]
     # single.
-    s = config["source"]
-    t = config["sink"]
+    s_single = config["source"]
+    t_single = config["sink"]
 
     if os.name != 'nt':
-        path_dataset = path_dataset.replace('\\','/')
-        path_output = path_output.replace('\\','/')
-        path_graph = path_graph.replace('\\','/')
-        path_time = path_graph.replace('\\','/')
+        path_dataset = path_dataset.replace('\\', '/')
+        path_output = path_output.replace('\\', '/')
+        path_graph = path_graph.replace('\\', '/')
+        path_time = path_graph.replace('\\', '/')
 
     print(CYAN, "LOADED CONFIGURATION.", RESET)
 

@@ -242,13 +242,13 @@ def remove_bulk_empty(bulks):
 
 def insert_reqs(sources, sinks):
     global data
-    for s, t in zip(sinks, sources):
-        data.req_dict[s, t] = 1
+    for t, s in zip(sinks, sources):
+        data.req_dict[t, s] = 1
 
 
 def drop_reqs(source, sink):
     global data
-    data.req_dict[source[0], sink[0]] = 0
+    data.req_dict[sink[0],source[0]] = 0
 
 
 def get_req(sources, sinks, qtd_previous, qtd):

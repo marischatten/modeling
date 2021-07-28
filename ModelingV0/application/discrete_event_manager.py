@@ -166,7 +166,7 @@ def bulk_poisson_req_zipf():
                 data.drop_requests(source,sink)
             if (paths is not None) and save_data:
                 admission = len(paths)
-                process_datas(pd, paths, hosts, event + 1)
+                process_datas(pd, paths, hosts, event + 1, req + 1)
             init += 1
         if event != (num_events-1):
             start_time_4 = time.time()
@@ -226,13 +226,13 @@ def is_replicated(requests, pair):
     return False
 
 
-def process_datas(pd, paths, hosts, event):
+def process_datas(pd, paths, hosts, event,req):
     start_time_process = time.time()
     pd.insert_req(paths, hosts, event)
-    pd.calc_server_use(paths, event)
-    pd.calc_scattering(event)  # Get a lasts hops of event for scattering. Because a request can change the path.
-    pd.calc_load_link(event)
-    pd.calc_reallocation()
+    pd.calc_server_use(paths, event, req)
+    pd.calc_scattering(event, req)
+    pd.calc_load_link(event, req)
+    pd.calc_reallocation(event,req)
     print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
 
 

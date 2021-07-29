@@ -161,13 +161,15 @@ def bulk_poisson_req_zipf():
             handler.paths = paths
             handler.hosts = hosts
             if paths is not None:
-                handler.reallocation(show_reallocation, event+1)
+                handler.reallocation(show_reallocation, event + 1)
+                pd.set_request(paths.copy(), hosts.copy())
+                pd.set_hops(data.hops.copy(),data.hops_with_id.copy())
             else:
                 data.drop_requests(source,sink)
             if (paths is not None) and save_data:
                 admission = len(paths)
-                process_datas(pd, paths, hosts, event + 1, req + 1)
             init += 1
+
         if event != (num_events-1):
             start_time_4 = time.time()
             handler.update_data()
@@ -176,6 +178,9 @@ def bulk_poisson_req_zipf():
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
+
+        if (len(pd.set_requests) != 0) or (len(pd.set_hosts) != 0):
+            process_datas(pd, event + 1)
 
     pd.calc_rate_admission_requests(admission, sum(bulks))
 
@@ -226,13 +231,17 @@ def is_replicated(requests, pair):
     return False
 
 
-def process_datas(pd, paths, hosts, event,req):
+def process_datas(pd, event):
     start_time_process = time.time()
-    pd.insert_req(paths, hosts, event)
-    pd.calc_server_use(paths, event, req)
-    pd.calc_scattering(event, req)
-    pd.calc_load_link(event, req)
-    pd.calc_reallocation(event,req)
+    for r,h in zip(pd.set_requests,pd.set_hosts):
+        pd.insert_req(r, h, event)
+    last_req = pd.set_requests[len(pd.set_requests)-1]
+    pd.calc_server_use(last_req, event)
+    pd.calc_scattering(event)
+    pd.calc_load_link(event)
+    pd.calc_reallocation(event)
+    pd.set_requests.clear()
+    pd.set_hosts.clear()
     print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
 
 
@@ -293,10 +302,10 @@ def run_model(source, sink, event):
 
     if show_results:
         print(RED, "##########################################", RESET)
+    print(RED, "EVENT: ", event + 1, RESET)
+    if show_results:
         print(GREEN, "Content:", source, " to User:", sink)
         od.result()
-
-    print(RED, "EVENT: ", event + 1, RESET)
     time_optimize = round((end_time_5 - start_time_5), 4)
     lst_time.append(time_optimize)
     print(CYAN, "OPTIMIZE TIME --- %s seconds ---" % time_optimize, RESET)

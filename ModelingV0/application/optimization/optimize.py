@@ -355,7 +355,6 @@ class Data:
                     self.connectivity_edges_dict[tag_file, tag_orig, tag_dest] = self.connectivity_edges[c][i][j]
 
     def load_links_to_dictionary(self):
-
         for i in range(len(self.key_index_all)):
             for j in range(len(self.key_index_all)):
                 tag_i = self.key_index_all[i]
@@ -1080,6 +1079,8 @@ class LogData:
 class PlotData:
     __data = Data()
     __paths = None
+    set_requests = list()
+    set_hosts = list()
     __all_requests = 0
     __admission_requests = 0
     __rate_admission_requests = 0
@@ -1091,30 +1092,42 @@ class PlotData:
     __load_links = None
     __reallocation_path = None
     __reallocation_host = None
-    __new_req = 1
+
+    __hops = None
+    __hops_id = None
+    __ll = list()
+    __load_links_dict = dict()
+
     def __init__(self, data):
         self.__data = data
-        self.__paths = pds.DataFrame(columns=['Event', 'New_Request','Request', 'Source', 'Sink', 'Path', 'Host'])
-        self.__all_server_use = pds.DataFrame(columns=['Event', 'New_Request', 'BS', 'Use'])
-        self.__scattering = pds.DataFrame(columns=['Event', 'New_Request','Enabled', 'All','Scattering'])
-        self.__load_links = pds.DataFrame(columns=['Event', 'New_Request', 'Link','Total_Load'])
-        self.__reallocation_path = pds.DataFrame(columns=['Event', 'New_Request','Request'])
-        self.__reallocation_host = pds.DataFrame(columns=['Event', 'New_Request','Request'])
+        self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
+        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
+        self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
+        self.__load_links = pds.DataFrame(columns=['Event', 'Link','Total_Load'])
+        self.__reallocation_path = pds.DataFrame(columns=['Event', 'Request'])
+        self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
+        self.__load_links_to_dictionary()
+
+    def set_request(self,path,host):
+        self.set_requests.append(path)
+        self.set_hosts.append(host)
+
+    def set_hops(self, hops, hops_id):
+        self.__hops = hops
+        self.__hops_id = hops_id
 
     def insert_req(self, paths, hosts, event):
-        self.__events_count = event
         for r in range(len(paths)):
             self.__paths = self.__paths.append(
-                {'Event': event, 'New_Request': self.__new_req ,'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
+                {'Event': event, 'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
                  'Host': hosts[r]}, ignore_index=True)
-        self.__new_req += 1
 
     def calc_rate_admission_requests(self, admission_requests, all_requests):
         self.__admission_requests = admission_requests
         self.__all_requests = all_requests
         self.__rate_admission_requests = admission_requests / all_requests
 
-    def calc_server_use(self, paths, event, req):
+    def calc_server_use(self, paths, event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
         for i in range(len(paths)):
             for j in range(len(self.__data.key_index_bs)):
@@ -1125,7 +1138,7 @@ class PlotData:
             rate = round(self.__server_use[i] / self.__data.resources_node[i],4)
 
             self.__all_server_use = self.__all_server_use.append(
-                {'Event': event,'New_Request': req, 'BS': tag_i, 'Use': rate}, ignore_index=True)
+                {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
 
     def __calc_all_links(self):
         self.__all_links = 0
@@ -1137,35 +1150,39 @@ class PlotData:
 
     def __calc_enabled_links(self):
         df = pds.DataFrame(columns= ['hop1','hop2'])
-        for i in range(len(self.__data.hops)):
-            df = df.append({'hop1':self.__data.hops[i][0],'hop2':self.__data.hops[i][1]},ignore_index=True)
+        for i in range(len(self.__hops)):
+            df = df.append({'hop1':self.__hops[i][0],'hop2':self.__hops[i][1]},ignore_index=True)
         df = df.drop_duplicates()
-        hops = df.values.tolist()
-        self.__enabled_links = len(hops)
+        h = df.values.tolist()
+        self.__enabled_links = len(h)
 
-    def calc_scattering(self,event, req):
+    def calc_scattering(self,event):
         if self.__all_links == 0:
             self.__calc_all_links()
         self.__calc_enabled_links()
         scattering = self.__enabled_links/self.__all_links
-        self.__scattering = self.__scattering.append({'Event': event,'New_Request': req, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
+        self.__scattering = self.__scattering.append({'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
+        self.clear_hops()
 
-    def calc_load_link(self,event, req):
+    def calc_load_link(self, event):
         for req in self.__data.requests:
-            for h in self.__data.hops_with_id:
+            for h in self.__hops_id:
                 if req[KEY] == h[0]:
                     thp = self.__data.throughput_min_file_dict[req[SOURCE]]
-                    self.__data.load_links_dict[h[1],h[2]] += thp
+                    self.__load_links_dict[h[1],h[2]] += thp
 
-        for k in self.__data.load_links_dict.keys():
-            if self.__data.load_links_dict[k] != 0:
-                self.__load_links = self.__load_links.append({'Event': event, 'New_Request': req, 'Link': k, 'Total_Load': self.__data.load_links_dict[k]}, ignore_index=True)
+        for k in self.__load_links_dict.keys():
+            if self.__load_links_dict[k] != 0:
+                self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total_Load': self.__load_links_dict[k]}, ignore_index=True)
+        self.clear_hops_with_id()
 
-    def calc_reallocation(self,event,req):
+    def calc_reallocation(self, event):
         for i in self.__data.reallocation_path:
-            self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'New_Request': req, 'Request': i[1]}, ignore_index=True)
+            self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'Request': i[1]}, ignore_index=True)
         for i in self.__data.reallocation_host:
-            self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'New_Request': req, 'Request': i[1]}, ignore_index=True)
+            self.__reallocation_host = self.__reallocation_host.append({'Event': event, 'Request': i[1]}, ignore_index=True)
+        self.__data.reallocation_path.clear()
+        self.__data.reallocation_host.clear()
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
@@ -1179,3 +1196,19 @@ class PlotData:
             self.__load_links.to_excel(writer,sheet_name='Load_Links')
             self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
             self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')
+
+    def __load_links_to_dictionary(self):
+        self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                     range(self.__data.num_nodes + self.__data.num_files)]
+        for i in range(len(self.__data.key_index_all)):
+            for j in range(len(self.__data.key_index_all)):
+                tag_i = self.__data.key_index_all[i]
+                tag_j = self.__data.key_index_all[j]
+                self.__load_links_dict[tag_i, tag_j] = self.__ll[i][j]
+
+    def clear_hops(self):
+        self.__hops.clear()
+
+    def clear_hops_with_id(self):
+        self.__hops_id.clear()
+        self.__data.clear_dict(self.__load_links_dict)

@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-import igraph as ig
+# import igraph as ig
 import utils.utils as u
 import simulation.request as rr
 from optimization.optimize import *
@@ -147,10 +147,12 @@ def bulk_poisson_req_zipf():
     admission = 0
     init = 0
     requests, bulks = create_requests()
+    req_total = 0
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
         for req in range(qtd_req-1):
+            req_total += 1
             data.clear_hops()
             data.clear_hops_with_id()
 
@@ -164,10 +166,10 @@ def bulk_poisson_req_zipf():
                 handler.reallocation(show_reallocation, event + 1)
                 pd.set_request(paths.copy(), hosts.copy())
                 pd.set_hops(data.hops.copy(),data.hops_with_id.copy())
+                admission += 1
             else:
                 data.drop_requests(source,sink)
-            if (paths is not None) and save_data:
-                admission = len(paths)
+
             init += 1
 
         if event != (num_events-1):
@@ -179,10 +181,11 @@ def bulk_poisson_req_zipf():
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
 
-        if (len(pd.set_requests) != 0) or (len(pd.set_hosts) != 0):
+        if ((len(pd.set_requests) != 0) or (len(pd.set_hosts) != 0)) and save_data:
             process_datas(pd, event + 1)
 
-    pd.calc_rate_admission_requests(admission, sum(bulks))
+    if save_data:
+        pd.calc_rate_admission_requests(admission, req_total)
 
     if save_data:
         start_time_save = time.time()
@@ -336,7 +339,7 @@ def show_vars():
 def picture(path):
     path_with_ext = path + ".png"
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-
+    '''
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -351,7 +354,7 @@ def picture(path):
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
-
+    '''
 
 def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs

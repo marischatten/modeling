@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import statistics as s
 from utils import utils as u
@@ -53,8 +55,11 @@ path = ''
 
 
 def main():
+    if os.name == 'nt':
+        path_config = r'..\config\config_generator.json'
+    else:
+        path_config = r'../config/config_generator.json'
 
-    path_config = r'../config/config_generator.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)

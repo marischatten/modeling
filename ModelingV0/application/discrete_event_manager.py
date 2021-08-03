@@ -10,19 +10,15 @@
 # pip install openpyxl
 
 import os
-import sys
-
 import tqdm
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 # import ortools.linear_solver.pywraplp as otlp
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
 # import igraph as ig
-import utils.utils as u
-import simulation.request as rr
+from utils.utils import *
+import simulation.request as r
 from optimization.optimize import *
 
 lst_time = list()
@@ -67,7 +63,8 @@ plot_data = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
 show_reallocation = False
-
+get_requests = True
+path_requests = ''
 path_dataset = ''
 
 save_data = False
@@ -78,6 +75,7 @@ path_graph = ''
 enable_ceil_nodes_capacity = False
 path_time = ''
 # random and distribution.
+fixed = False
 avg_qtd_bulk = 2
 num_events = 2
 num_alpha = 0.56
@@ -94,11 +92,11 @@ def application():
         path_config = r'../config/config_model.json'
 
     if path_config != '':
-        config = u.get_data(path_config)
+        config = get_data(path_config)
         load_config(config)
 
     start_time_1 = time.time()
-    dataset = u.get_data(path_dataset)
+    dataset = get_data(path_dataset)
     load_dataset(dataset)
     print(CYAN, "READ INSTANCE FILE TIME --- %s seconds ---" % round((time.time() - start_time_1), 4), RESET)
 
@@ -127,7 +125,7 @@ def discrete_events():
     if type == Type.SINGLE:
         single()
     if type == Type.ZIPF:
-        bulk_poisson_req_zipf()
+        poisson_zipf()
 
 
 def single():
@@ -139,19 +137,24 @@ def single():
         pd.save_data(path_output)
 
 
-def bulk_poisson_req_zipf():
+def poisson_zipf():
     pd = PlotData(data)
     handler = HandleData(data)
     paths = None
     hosts = None
     admission = 0
     init = 0
-    requests, bulks = create_requests()
     req_total = 0
+
+    if get_requests:
+        dataset = get_data(path_requests)
+        requests, bulks = load_requests(dataset)
+    else:
+        requests, bulks = r.Request.create_requests(avg_qtd_bulk, num_events, num_alpha, key_index_file, key_index_ue, num_files, plot_distribution, fixed)
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
         qtd_req = bulks[event]
-        for req in range(qtd_req-1):
+        for req in range(qtd_req):
             req_total += 1
             data.clear_hops()
             data.clear_hops_with_id()
@@ -165,11 +168,10 @@ def bulk_poisson_req_zipf():
             if paths is not None:
                 handler.reallocation(show_reallocation, event + 1)
                 pd.set_request(paths.copy(), hosts.copy())
-                pd.set_hops(data.hops.copy(),data.hops_with_id.copy())
+                pd.set_hops(data.hops.copy(), data.hops_with_id.copy())
                 admission += 1
             else:
                 data.drop_requests(source,sink)
-
             init += 1
 
         if event != (num_events-1):
@@ -195,45 +197,6 @@ def bulk_poisson_req_zipf():
         pass
 
 
-def create_requests():
-    requests = list()
-    bulks = rr.Request.generate_bulk_poisson(avg_qtd_bulk, num_events)
-    zipf = rr.Request.generate_sources_zip(num_alpha, sum(bulks), key_index_file)
-    bulks = remove_bulk_empty(bulks.copy())
-    count = 0
-    for r in range(sum(bulks)-1):
-        s = zipf[r]
-        t = rr.Request.generate_sink_random(key_index_ue)
-        pair = (s, t)
-        if (len(requests) != 0):
-            while is_replicated(requests, pair):
-                count += 1
-                if count == len(key_index_ue):
-                    print(REVERSE,
-                          "Impossible to generate this amount of unreplicated requests for this instance.\n Please, decrease the number of requests or change for larger instance.",
-                          RESET)
-                    sys.exit()
-                print("Removed Replicated Request.")
-                t = rr.Request.generate_sink_random(key_index_ue)
-                pair = (s, t)
-            count = 0
-            requests.append(pair)
-        else:
-            pair = (s, t)
-            requests.append(pair)
-
-    if plot_distribution:
-        plot_poisson(bulks)
-        plot_zipf(zipf)
-    return (requests, bulks)
-
-
-def is_replicated(requests, pair):
-    if pair in requests:
-        return True
-    return False
-
-
 def process_datas(pd, event):
     start_time_process = time.time()
     for r,h in zip(pd.set_requests,pd.set_hosts):
@@ -246,34 +209,6 @@ def process_datas(pd, event):
     pd.set_requests.clear()
     pd.set_hosts.clear()
     print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
-
-
-def remove_bulk_empty(bulks):
-    for b in range(len(bulks)):
-        if bulks[b] == 0:
-            bulks[b] = 1
-    return bulks
-
-
-def plot_poisson(distribution):
-    sns.displot(distribution)
-    plt.xlim([0, 25])
-    plt.xlabel('k')
-    plt.ylabel('P(X=k)')
-    plt.show()
-
-
-def plot_zipf(distribution):
-    plt.hist(distribution, bins=np.arange(1, num_files + 1), density=True)
-    # plt.hist(distribution[distribution < 10], 10, density=True)
-    # x = np.arange(1., 10.)
-    # y = x ** (-alpha) / special.zetac(alpha)
-    # plt.yscale('log')
-    plt.title('Zipf')
-    plt.xlabel('rank')
-    plt.ylabel('frequency')
-    # plt.plot(x, y / max(y), linewidth=2, color='r')
-    plt.show()
 
 
 def make_data():
@@ -356,6 +291,7 @@ def picture(path):
             bbox=(1000, 1000), )
     '''
 
+
 def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs
 
@@ -414,7 +350,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, avg_qtd_bulk, num_events, num_alpha, s_single, t_single
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, get_requests, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -434,7 +370,10 @@ def load_config(config: object):
     show_reallocation = config["show_reallocation"]
     enable_ceil_nodes_capacity = config["enable_ceil_nodes_capacity"]
     path_time = config["path_time"]
+    get_requests = config["get_requests"]
+    path_requests = config["path_requests"]
     # random and distribution.
+    fixed = config["fixed"]
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]
     num_alpha = config["num_alpha"]
@@ -446,9 +385,13 @@ def load_config(config: object):
         path_dataset = path_dataset.replace('\\', '/')
         path_output = path_output.replace('\\', '/')
         path_graph = path_graph.replace('\\', '/')
-        path_time = path_graph.replace('\\', '/')
-
+        path_time = path_time.replace('\\', '/')
+        path_requests = path_requests.replace('\\', '/')
     print(CYAN, "LOADED CONFIGURATION.", RESET)
+
+
+def load_requests(dataset):
+    return (dataset["requests"], dataset["bulks"])
 
 
 def write_optimization_time():

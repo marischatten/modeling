@@ -4,6 +4,7 @@ import numpy as np
 # import ortools as otlp  # somente LP
 from enum import Enum
 import pandas as pds
+from utils.utils import *
 
 NO_EDGE = 9999999999
 DELTA = 0.0001
@@ -24,14 +25,6 @@ ID_REQ = 0
 SOURCE = 1
 SINK = 2
 KEY = 3
-
-RED = "\033[1;31m"
-BLUE = "\033[1;34m"
-CYAN = "\033[1;36m"
-GREEN = "\033[0;32m"
-RESET = "\033[0;0m"
-BOLD = "\033[;1m"
-REVERSE = "\033[;7m"
 
 
 # This class changes the type of trials.
@@ -773,7 +766,9 @@ class OptimizeData:
 
     def execute(self, log):
         self.model.setParam("LogToConsole", log)
+        start_time_execution_optimize = time.time()
         self.model.optimize()
+        print(CYAN, "EXECUTION OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time_execution_optimize), 4), RESET)
 
     def result(self):
         if self.model.status == gp.GRB.OPTIMAL:

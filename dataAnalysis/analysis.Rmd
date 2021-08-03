@@ -27,7 +27,7 @@ Desvio Padrão dos Enlaces: `r `
 
 ```{r}
 library(dplyr)
-times <- read.table("../ModelingV0/output/data/instance_8.dat", header = TRUE)
+times <- read.table("../ModelingV0/output/data/instance_9.dat", header = TRUE)
 max <- max(times$times)
 times.optimize <- times$times[times$times != max]
 times.optimize 
@@ -39,10 +39,11 @@ times.lm <- lm(times.optimize~events,data=dt)
 times.next <- data.frame(n=c(1000))
 times.pred <- data.frame(predict(times.lm,newdata=times.next,int="p",level=0.95))
 (times.pred)
-plot(dt)
-abline(times.lm, col="red")
+plot(type='b',dt)
+abline(dt,col="blue")
+#abline(times.lm, col="red")
 
-all.req <-length(times.optimize)
+(all.req <-length(times.optimize))
 ```
 
 

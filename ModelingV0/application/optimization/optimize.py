@@ -21,7 +21,6 @@ DECREASE = 0
 
 MOBILITY_RATE = 10
 
-ID_REQ = 0
 SOURCE = 1
 SINK = 2
 KEY = 3
@@ -40,6 +39,7 @@ class Mobility(Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
+    max_events = 0
     requests = list()
     id_req = 0
     __id_event = 0
@@ -152,7 +152,7 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, thp=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None):
 
         self.mobility = mobility
         self.mobility_rate = mr
@@ -185,6 +185,7 @@ class Data:
         self.radius_sbs = radius_sbs
         self.distance_ue = dis_ue
         self.distance_bs = dis_bs
+        self.max_events = max_event
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
@@ -224,10 +225,15 @@ class Data:
         self.__s += new_source
         return self.__s
 
-    def drop_requests(self,source,sink):
+    def drop_requests(self, source, sink, key):
+        index = 0
         self.req_dict[sink[0], source[0]] = 0
-        self.__s = self.__s[:-1]
-        self.requests.pop()
+        self.__s.remove(key)
+        for r in self.requests:
+            if r[KEY] == key:
+                index = self.requests.index(r)
+                break
+        self.requests.pop(index)
 
     # PARAMETERS TO DICTIONARY
     def __size_file_to_dictionary(self):
@@ -377,6 +383,7 @@ class HandleData:
     __old_hosts = None
     old_paths = None
     __data = Data()
+    __counter_requests = list()
 
     def __init__(self, data):
         self.__data = data
@@ -565,9 +572,28 @@ class HandleData:
         sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
             sense = self.__update_ue_position()
-
         self.__update_rtt(sense)
         self.calc_vars(True)
+
+    def update_counter(self):
+        self.__update_counter_requests()
+        self.__verify_max_events()
+
+    def insert_counter_requests(self, source, sink, key):
+        self.__counter_requests.append([1, source, sink, key])
+
+    def __update_counter_requests(self):
+        for i in self.__counter_requests:
+            i[0] += 1
+
+    def __verify_max_events(self):
+        extract = list()
+        for i in self.__counter_requests:
+            if i[0] > self.__data.max_events:
+                extract.append(i)
+                self.__data.drop_requests(i[SOURCE], i[SINK], i[KEY])
+        diff = [x for x in self.__counter_requests if x not in extract]
+        self.__counter_requests = diff
 
     def __update_rtt(self, sense):
         for i, tag_i in enumerate(self.__data.key_index_all):
@@ -597,16 +623,15 @@ class HandleData:
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
             for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
-                if op != np:
+                if op[1] != np[1]:
                     if show_reallocation:
-                        print("SHIFT PATH [{0}]".format(self.paths.index(np)+1))
-                    self.__data.reallocation_path.append([event,self.paths.index(np)+1])
-
+                        print("SHIFT PATH [{0}]".format(np[1]))
+                    self.__data.reallocation_path.append([event, np[0]])
             for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
-                if oh != nh:
+                if oh[1] != nh[1]:
                     if show_reallocation:
-                        print("SHIFT HOST [{0}].".format(self.hosts.index(nh)+1))
-                    self.__data.reallocation_host.append([event,self.hosts.index(nh)+1])
+                        print("SHIFT HOST [{0}].".format(nh[1]))
+                    self.__data.reallocation_host.append([event, nh[0]])
 
         if self.paths is not None:
             self.__old_hosts = self.hosts.copy()
@@ -626,9 +651,7 @@ class OptimizeData:
 
     def __init__(self, data, sources, sinks):
         self.__data = data
-        self.s = sources
-        self.t = sinks
-        self.s = self.__data.insert_requests(sources, sinks)
+        self.__data.__s = self.__data.insert_requests(sources, sinks)
 
     def run_model(self, show_log, enable_ceil_nodes_capacity):
         # self.model.reset()
@@ -636,6 +659,7 @@ class OptimizeData:
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)
         self.execute(show_log)
+        return self.__data.__s[-1]
 
     def create_vars(self):
         self.__create_var_flow()
@@ -643,12 +667,12 @@ class OptimizeData:
 
     # x_ijk \in R+
     def __create_var_flow(self):
-        self.x = self.model.addVars(self.s, self.__data.key_index_all, self.__data.key_index_all,
+        self.x = self.model.addVars(self.__data.__s, self.__data.key_index_all, self.__data.key_index_all,
                                     vtype=gp.GRB.SEMICONT, name="flow")
 
     # y_ik \in R+
     def __create_var_host(self):
-        self.y = self.model.addVars(self.s, self.__data.key_index_bs,
+        self.y = self.model.addVars(self.__data.__s, self.__data.key_index_bs,
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
@@ -788,8 +812,8 @@ class OptimizeData:
         if self.__paths is None:
             return (None, None)
         if show_path:
-            for req in range(len(self.__paths)):
-                print(REVERSE, " {0} - PATH: {1} | HOST: {2}".format(req + 1, self.__paths[req], self.__hosts[req]),
+            for r,h in zip(self.__paths,self.__hosts):
+                print(REVERSE, " {0} >> PATH: {1} | HOST: {2}".format(r[0][0], r[1], h[1]),
                       RESET)
         return (self.__paths, self.__hosts)
 
@@ -798,7 +822,7 @@ class OptimizeData:
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
                 if var.X != 0 and var.VarName[:4] == "host":
-                    self.__hosts.append(str(var.VarName).split(',')[1][:-1])
+                    self.__hosts.append([str(var.VarName).split(',')[0][5:], str(var.VarName).split(',')[1][:-1]])
 
     def __solution_path(self):
         self.__paths.clear()
@@ -812,10 +836,11 @@ class OptimizeData:
             for req in self.__data.requests:
                 for h in range(len(hops)):
                     if hops[h][0] == req[KEY]:
+                        key = hops[h][:1]
                         aux.append(hops[h][1:])
                         self.__data.hops.append(hops[h][1:])
                         self.__data.hops_with_id.append(hops[h])
-                self.__make_path(aux, req[SOURCE], req[SINK])
+                self.__make_path(key,aux, req[SOURCE], req[SINK])
 
                 aux.clear()
 
@@ -829,10 +854,10 @@ class OptimizeData:
         next_hop.append(aux[2])
         return next_hop
 
-    def __make_path(self, hops, source, sink):
+    def __make_path(self, key, hops, source, sink):
         self.__next_hop(hops, source)
         self.__path.append(sink)
-        self.__paths.append(self.__path.copy())
+        self.__paths.append([key, self.__path.copy()])
         self.__path.clear()
 
     def __next_hop(self, hops, node):
@@ -1087,6 +1112,8 @@ class PlotData:
     __load_links = None
     __reallocation_path = None
     __reallocation_host = None
+    __poisson = None
+    __zipf = None
 
     __hops = None
     __hops_id = None
@@ -1101,7 +1128,16 @@ class PlotData:
         self.__load_links = pds.DataFrame(columns=['Event', 'Link','Total_Load'])
         self.__reallocation_path = pds.DataFrame(columns=['Event', 'Request'])
         self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
+        self.__poisson = pds.DataFrame(columns=['Qtd_Requests'])
+        self.__zipf = pds.DataFrame(columns=['Caches'])
+
         self.__load_links_to_dictionary()
+
+    def set_distribution(self, bulks, zipf):
+        for b in bulks:
+            self.__poisson = self.__poisson.append({'Qtd_Requests': b},ignore_index=True)
+        for z in zipf:
+            self.__zipf = self.__zipf.append({'Caches': z[0]}, ignore_index=True)
 
     def set_request(self,path,host):
         self.set_requests.append(path)
@@ -1112,22 +1148,22 @@ class PlotData:
         self.__hops_id = hops_id
 
     def insert_req(self, paths, hosts, event):
-        for r in range(len(paths)):
+        for r,h in zip(paths,hosts):
             self.__paths = self.__paths.append(
-                {'Event': event, 'Request': r + 1, 'Source': paths[r][:1], 'Sink': paths[r][-1:], 'Path': paths[r],
-                 'Host': hosts[r]}, ignore_index=True)
+                {'Event': event, 'Request': r[0], 'Source': r[1][:1], 'Sink': r[1][-1:], 'Path': r[1],
+                 'Host': h[1]}, ignore_index=True)
 
     def calc_rate_admission_requests(self, admission_requests, all_requests):
         self.__admission_requests = admission_requests
         self.__all_requests = all_requests
         self.__rate_admission_requests = admission_requests / all_requests
 
-    def calc_server_use(self, paths, event):
+    def calc_server_use(self, paths, hosts, event):
         self.__server_use = [0 for i in range(self.__data.num_bs)]
-        for i in range(len(paths)):
-            for j in range(len(self.__data.key_index_bs)):
-                if paths[i][HOST] == self.__data.key_index_bs[j]:
-                    self.__server_use[j] += self.__data.resources_file_dict[paths[i][CONTENT]]
+        for p,h in zip(paths,hosts):
+            for j,tag_j in enumerate(self.__data.key_index_bs):
+                if h[1][HOST] == tag_j:
+                    self.__server_use[j] += self.__data.resources_file_dict[p[1][CONTENT]]
 
         for i, tag_i in enumerate(self.__data.key_index_bs):
             rate = round(self.__server_use[i] / self.__data.resources_node[i],4)
@@ -1191,6 +1227,8 @@ class PlotData:
             self.__load_links.to_excel(writer,sheet_name='Load_Links')
             self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
             self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')
+            self.__poisson.to_excel(writer,sheet_name='Poisson')
+            self.__zipf.to_excel(writer, sheet_name='Zipf')
 
     def __load_links_to_dictionary(self):
         self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in

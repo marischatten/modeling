@@ -22,7 +22,7 @@ import simulation.request as r
 from optimization.optimize import *
 
 lst_time = list()
-
+max_events = 0
 mobility_rate = 10
 alpha = 0
 beta = 0
@@ -52,6 +52,7 @@ radius_mbs = 0
 radius_sbs = 0
 
 data = None
+key =None
 
 show_log = 0
 show_results = False
@@ -163,17 +164,20 @@ def poisson_zipf():
             sink = [requests[init][1]]
 
             paths, hosts = create_model(source, sink, event)
-            handler.paths = paths
-            handler.hosts = hosts
+
             if paths is not None:
+                handler.paths = paths
+                handler.hosts = hosts
                 handler.reallocation(show_reallocation, event + 1)
                 pd.set_request(paths.copy(), hosts.copy())
                 pd.set_hops(data.hops.copy(), data.hops_with_id.copy())
+                handler.insert_counter_requests(source, sink, key)
                 admission += 1
             else:
-                data.drop_requests(source,sink)
+                data.drop_requests(source, sink, key)
             init += 1
 
+        handler.update_counter()
         if event != (num_events-1):
             start_time_4 = time.time()
             handler.update_data()
@@ -188,6 +192,7 @@ def poisson_zipf():
 
     if save_data:
         pd.calc_rate_admission_requests(admission, req_total)
+        pd.set_distribution(bulks,requests)
 
     if save_data:
         start_time_save = time.time()
@@ -202,7 +207,8 @@ def process_datas(pd, event):
     for r,h in zip(pd.set_requests,pd.set_hosts):
         pd.insert_req(r, h, event)
     last_req = pd.set_requests[len(pd.set_requests)-1]
-    pd.calc_server_use(last_req, event)
+    last_host = pd.set_requests[len(pd.set_hosts)-1]
+    pd.calc_server_use(last_req, last_host, event)
     pd.calc_scattering(event)
     pd.calc_load_link(event)
     pd.calc_reallocation(event)
@@ -216,7 +222,7 @@ def make_data():
                 key_index_ue, e_bs_adj,
                 size_file,
                 throughput_min_file, resources_file, resources_node, rtt_min, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs
+                gama, distance_ue, distance_bs, max_events
                 )
 
 
@@ -229,11 +235,11 @@ def create_model(source, sink, event=0):
 
 
 def run_model(source, sink, event):
-    global lst_time
+    global lst_time, key
     start_time_5 = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
-    od.run_model(show_log, enable_ceil_nodes_capacity)
+    key = od.run_model(show_log, enable_ceil_nodes_capacity)
     end_time_5 = time.time()
     paths = None
     hosts = None
@@ -350,7 +356,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, get_requests, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, get_requests, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -377,6 +383,7 @@ def load_config(config: object):
     avg_qtd_bulk = config["avg_qtd_bulk"]
     num_events = config["num_events"]
     num_alpha = config["num_alpha"]
+    max_events = config["max_events"]
     # single.
     s_single = config["source"]
     t_single = config["sink"]

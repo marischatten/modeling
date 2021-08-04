@@ -1,7 +1,7 @@
 {
-  "path_requests": "..\\dataset\\requests6.json",
+  "path_requests": "..\\dataset\\requests_6.json",
   "avg_qtd_bulk": 20,
-  "num_events": 10,
+  "num_events": 30,
   "num_alpha": 0.56,
   "num_files": 50,
   "key_index_file": [
@@ -109,5 +109,5 @@
     "UE50"
   ],
   "plot_distribution": false,
-  "fixed": true
+  "fixed": false
 }

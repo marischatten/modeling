@@ -14,25 +14,27 @@ library(ggplot2)
 
 ```{r echo=FALSE, message=FALSE}
 # alpha 1
-server_use1 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg20_n10_a05.xlsx", sheet='Server_Use', col_names=TRUE))
-rate_admission1 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg20_n10_a05.xlsx", sheet='Rate_Admission', col_names=TRUE))
-scattering1 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg20_n10_a05.xlsx", sheet='Scattering', col_names=TRUE))
-load_links1 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg20_n10_a05.xlsx", sheet='Load_Links', col_names=TRUE))
-times1 <- read.table("../dataAnalysis/data/instance_6_alpha1.dat", header = TRUE)
+server_use1 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission1 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering1 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Scattering', col_names=TRUE))
+load_links1 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Load_Links', col_names=TRUE))
+poisson1 = data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Poisson', col_names=TRUE))
+zipf1 = data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Zipf', col_names=TRUE))
+times1 <- read.table("../dataAnalysis/data/instance_3.dat", header = TRUE)
 
 # alpha 0.5
-server_use05 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg5_n40_a05.xlsx", sheet='Server_Use', col_names=TRUE))
-rate_admission05 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg5_n40_a05.xlsx", sheet='Rate_Admission', col_names=TRUE))
-scattering05 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg5_n40_a05.xlsx", sheet='Scattering', col_names=TRUE))
-load_links05 <- data.frame(read_excel("../dataAnalysis/data/instance_6_avg5_n40_a05.xlsx", sheet='Load_Links', col_names=TRUE))
-times05 <- read.table("../dataAnalysis/data/instance_6_alpha05.dat", header = TRUE)
+server_use05 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission05 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering05 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Scattering', col_names=TRUE))
+load_links05 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Load_Links', col_names=TRUE))
+times05 <- read.table("../dataAnalysis/data/instance_3.dat", header = TRUE)
 
 # alpha 0
-server_use0 <- data.frame(read_excel("../dataAnalysis/data/instance_6_alpha0.xlsx", sheet='Server_Use', col_names=TRUE))
-rate_admission0 <- data.frame(read_excel("../dataAnalysis/data/instance_6_alpha0.xlsx", sheet='Rate_Admission', col_names=TRUE))
-scattering0 <- data.frame(read_excel("../dataAnalysis/data/instance_6_alpha0.xlsx", sheet='Scattering', col_names=TRUE))
-load_links0 <- data.frame(read_excel("../dataAnalysis/data/instance_6_alpha0.xlsx", sheet='Load_Links', col_names=TRUE))
-times0 <- read.table("../dataAnalysis/data/instance_6_alpha0.dat", header = TRUE)
+server_use0 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission0 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering0 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Scattering', col_names=TRUE))
+load_links0 <- data.frame(read_excel("../dataAnalysis/data/instance_teste.xlsx", sheet='Load_Links', col_names=TRUE))
+times0 <- read.table("../dataAnalysis/data/instance_3.dat", header = TRUE)
 
 
 
@@ -77,16 +79,20 @@ times.optimize0 <- times0$times[times0$times != max_time0]
 events0 <- c(1:length(times.optimize0))
 times_df0 <- data.frame(events0,times.optimize0)
 
+par(mflow= c(1,2))
 plot(type = "l",times_df1,col="blue",xlab = "Requests",ylab = "Time Execution",legend="TESTE")
 lines(times_df05,col="red")
-#lines(times_df0,col="green")
+lines(times_df0,col="green")
 legend(x = "bottomright", 
-       legend = c("alpha = 1", "alpha = 0.5"), 
-       col = c("blue","red"), 
+       legend = c("alpha = 1", "alpha = 0.5","alpha = 0"), 
+       col = c("blue","red","green"), 
        horiz = F ,
        lty = 1,
        lwd = 3, 
        bty = "n")
+
+hist(poisson1$Qtd_Requests)
+
 ```
 
    
@@ -143,10 +149,10 @@ row.names(server_use_bs_by_n0) <- bs
 
 plot(ecdf(server_use1$Use),col="blue",xlab = "Requests",ylab = "Rate Server Use")
 lines(ecdf(server_use05$Use),col="red")
-#lines(ecdf(server_use0$Use),col="green")
+lines(ecdf(server_use0$Use),col="green")
 legend(x = "bottomright", 
-       legend = c("alpha = 1", "alpha = 0.5"), 
-       col = c("blue","red"), 
+       legend = c("alpha = 1", "alpha = 0.5","alpha = 0"), 
+       col = c("blue","red","green"), 
        horiz = F ,
        lty = 1,
        lwd = 3, 
@@ -202,19 +208,24 @@ for (i in 1:n){
   load_links_sd0 = append(load_links_means0,sd0)
 }
 
+
 load_links_means1 <- na.omit(load_links_means1)
 load_links_means05 <- na.omit(load_links_means05)
 load_links_means0 <- na.omit(load_links_means0)
+
+
 plot(load_links_means1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue",ylim = c(min(load_links_means0),max(load_links_means1)))
 lines(load_links_means05,col="red")
-#lines(load_links_means0,col="green")
+lines(load_links_means0,col="green")
 legend(x = "topleft", 
-       legend = c("alpha = 1", "alpha = 0.5"), 
-       col = c("blue","red"), 
+       legend = c("alpha = 1", "alpha = 0.5","alpha = 0"), 
+       col = c("blue","red","green"), 
        horiz = F,
        lty = 1,
        lwd = 3, 
        bty = "n")
+
+
 ```
 
 

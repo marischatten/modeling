@@ -617,7 +617,7 @@ class HandleData:
         sense = -1
         for u in range(len(self.__data.key_index_ue)):
             for i in range(len(self.__data.key_index_bs)):
-                new_dis = np.random.normal(-self.__data.mobility_rate, self.__data.mobility_rate, 1)
+                new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate+1)
                 if new_dis > self.__data.distance_ue[u][i]:
                     sense = INCREASE
                 else:

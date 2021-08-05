@@ -56,9 +56,9 @@ path = ''
 
 def main():
     if os.name == 'nt':
-        path_config = r'..\config\config_generator.json'
+        path_config = r'../config/config_generator_instance.json'
     else:
-        path_config = r'../config/config_generator.json'
+        path_config = r'../config/config_generator_instance.json'
 
     if path_config != '':
         config = u.get_data(path_config)
@@ -80,6 +80,7 @@ def main():
     generate_rtt_min()
 
     generate_json(path)
+    print("Success generating instance!")
 
 
 def generate_gama():

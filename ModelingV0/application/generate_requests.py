@@ -26,8 +26,8 @@ def main():
     load_configs(data)
     requests, bulks = Request.create_requests(avg_qtd_bulk, num_events, num_alpha, key_index_file, key_index_ue,
                                               num_files, plot_distribution, fixed)
-
     write_requests(path_requests)
+    print("Success generating requests!")
 
 
 def load_configs(config: object):

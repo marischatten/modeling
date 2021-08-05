@@ -1,3 +1,5 @@
+from random import randrange
+
 import gurobipy as gp
 import time
 import numpy as np
@@ -55,6 +57,8 @@ class Data:
 
     mobility = Mobility
     mobility_rate = 0
+    location_ue = None
+
     # Input
     alpha = 0
     beta = 0
@@ -152,7 +156,7 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, thp=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None):
 
         self.mobility = mobility
         self.mobility_rate = mr
@@ -186,6 +190,7 @@ class Data:
         self.distance_ue = dis_ue
         self.distance_bs = dis_bs
         self.max_events = max_event
+        self.location_ue = location_ue
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
@@ -828,6 +833,7 @@ class OptimizeData:
         self.__paths.clear()
         aux = list()
         hops = list()
+        key = None
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
                 if var.X != 0 and var.VarName[:4] == "flow":
@@ -840,7 +846,7 @@ class OptimizeData:
                         aux.append(hops[h][1:])
                         self.__data.hops.append(hops[h][1:])
                         self.__data.hops_with_id.append(hops[h])
-                self.__make_path(key,aux, req[SOURCE], req[SINK])
+                self.__make_path(key, aux, req[SOURCE], req[SINK])
 
                 aux.clear()
 

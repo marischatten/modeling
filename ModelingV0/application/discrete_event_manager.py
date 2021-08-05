@@ -16,7 +16,7 @@ import tqdm
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-# import igraph as ig
+import igraph as ig
 from utils.utils import *
 import simulation.request as r
 from optimization.optimize import *
@@ -24,6 +24,10 @@ from optimization.optimize import *
 lst_time = list()
 max_events = 0
 mobility_rate = 10
+location_fixed = False
+path_location = ''
+locations = None
+
 alpha = 0
 beta = 0
 num_bs = 0
@@ -64,7 +68,7 @@ plot_data = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
 show_reallocation = False
-get_requests = True
+requests_fixed = True
 path_requests = ''
 path_dataset = ''
 
@@ -147,7 +151,11 @@ def poisson_zipf():
     init = 0
     req_total = 0
 
-    if get_requests:
+    if location_fixed:
+        global locations
+        locations = load_location_fixed()
+
+    if requests_fixed:
         dataset = get_data(path_requests)
         requests, bulks = load_requests(dataset)
     else:
@@ -180,7 +188,7 @@ def poisson_zipf():
         handler.update_counter()
         if event != (num_events-1):
             start_time_4 = time.time()
-            handler.update_data()
+            handler.update_data(location_fixed, event)
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
 
         if plot_graph_mobility:
@@ -217,12 +225,16 @@ def process_datas(pd, event):
     print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
 
 
+def load_location_fixed():
+    dataset = get_data(path_location)
+    return dataset["locations"]
+
 def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 size_file,
                 throughput_min_file, resources_file, resources_node, rtt_min, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs, max_events
+                gama, distance_ue, distance_bs, max_events, locations
                 )
 
 
@@ -280,7 +292,7 @@ def show_vars():
 def picture(path):
     path_with_ext = path + ".png"
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-    '''
+
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -295,7 +307,6 @@ def picture(path):
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
-    '''
 
 
 def load_dataset(dataset: object):
@@ -356,7 +367,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, get_requests, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -367,6 +378,8 @@ def load_config(config: object):
     plot_data = config["plot_data"]
     load_type_enum(config["type"])
     load_is_mobile_enum(config["mobility"])
+    location_fixed = config["location_fixed"]
+    path_location = config["path_location"]
     path_dataset = config["path_dataset"]
     save_data = config["save_data"]
     path_output = config["path_output"]
@@ -376,7 +389,7 @@ def load_config(config: object):
     show_reallocation = config["show_reallocation"]
     enable_ceil_nodes_capacity = config["enable_ceil_nodes_capacity"]
     path_time = config["path_time"]
-    get_requests = config["get_requests"]
+    requests_fixed = config["requests_fixed"]
     path_requests = config["path_requests"]
     # random and distribution.
     fixed = config["fixed"]
@@ -394,6 +407,8 @@ def load_config(config: object):
         path_graph = path_graph.replace('\\', '/')
         path_time = path_time.replace('\\', '/')
         path_requests = path_requests.replace('\\', '/')
+        path_location = path_location.replace('\\', '/')
+
     print(CYAN, "LOADED CONFIGURATION.", RESET)
 
 

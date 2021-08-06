@@ -574,10 +574,8 @@ class HandleData:
 
     # This follow method update data of the problem.
     def update_data(self):
-        sense = -1
         if self.__data.mobility == Mobility.IS_MOBILE:
-            sense = self.__update_ue_position()
-        self.__update_rtt(sense)
+            self.__update_ue_position()
         self.calc_vars(True)
 
     def update_counter(self):
@@ -600,30 +598,24 @@ class HandleData:
         diff = [x for x in self.__counter_requests if x not in extract]
         self.__counter_requests = diff
 
-    def __update_rtt(self, sense):
-        for i, tag_i in enumerate(self.__data.key_index_all):
-            for j, tag_j in enumerate(self.__data.key_index_all):
-                if self.__data.rtt_edge[i][j] != NO_EDGE:
-                    if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                        if sense == INCREASE:
-                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
-                                                                                           self.__data.rtt_edge[i][j])
-                        if sense == DECREASE:
-                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_j,
-                                                                                           self.__data.rtt_edge[i][j])
+    def __update_rtt(self, sense, u,tag_ue,  bs, tag_bs):
+        if self.__data.rtt_edge[u][bs] != NO_EDGE:
+            if sense == INCREASE:
+                self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_increase(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
+            if sense == DECREASE:
+                self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_decrease(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
         self.__data.rtt_edge_to_dictionary()
 
     def __update_ue_position(self):
-        sense = -1
-        for u in range(len(self.__data.key_index_ue)):
-            for i in range(len(self.__data.key_index_bs)):
-                new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate+1)
+        for u, tag_u in enumerate(self.__data.key_index_ue):
+            for i, tag_i in enumerate(self.__data.key_index_bs):
+                new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
                 if new_dis > self.__data.distance_ue[u][i]:
                     sense = INCREASE
                 else:
                     sense = DECREASE
                 self.__data.distance_ue[u][i] += new_dis
-        return sense
+                self.__update_rtt(sense, u, tag_u, i, tag_i)
 
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:

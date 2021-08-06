@@ -64,7 +64,6 @@ show_path = False
 show_var = False
 show_par = False
 plot_distribution = False
-plot_data = False
 type = Type.ZIPF
 mobility = Mobility.IS_MOBILE
 show_reallocation = False
@@ -188,7 +187,7 @@ def poisson_zipf():
         handler.update_counter()
         if event != (num_events-1):
             start_time_4 = time.time()
-            handler.update_data(location_fixed, event)
+            handler.update_data()
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
 
         if plot_graph_mobility:
@@ -206,8 +205,6 @@ def poisson_zipf():
         start_time_save = time.time()
         pd.save_data(path_output)
         print(CYAN, "SAVE DATA TIME --- %s seconds ---" % round((time.time() - start_time_save), 4), RESET)
-    if plot_data:
-        pass
 
 
 def process_datas(pd, event):
@@ -367,7 +364,7 @@ def load_is_mobile_enum(mob):
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, plot_data, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -375,7 +372,6 @@ def load_config(config: object):
 
     show_par = config["show_par"]
     plot_distribution = config["plot_distribution"]
-    plot_data = config["plot_data"]
     load_type_enum(config["type"])
     load_is_mobile_enum(config["mobility"])
     location_fixed = config["location_fixed"]

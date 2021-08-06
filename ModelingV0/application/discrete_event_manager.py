@@ -107,6 +107,8 @@ def application():
 
     start_time_2 = time.time()
     global data
+    if location_fixed:
+        load_location_fixed()
     data = make_data()
     calc_vars()
     print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time_2), 4), RESET)
@@ -151,10 +153,6 @@ def poisson_zipf():
     init = 0
     req_total = 0
 
-    if location_fixed:
-        global locations
-        locations = load_location_fixed()
-
     if requests_fixed:
         dataset = get_data(path_requests)
         requests, bulks = load_requests(dataset)
@@ -188,7 +186,7 @@ def poisson_zipf():
             handler.update_counter()
         if event != (num_events-1):
             start_time_4 = time.time()
-            handler.update_data()
+            handler.update_data(event,location_fixed)
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
 
         if plot_graph_mobility:
@@ -200,9 +198,7 @@ def poisson_zipf():
 
     if save_data:
         pd.calc_rate_admission_requests(admission, req_total)
-        pd.set_distribution(bulks,requests)
-
-    if save_data:
+        pd.set_distribution(bulks, requests)
         start_time_save = time.time()
         pd.save_data(path_output)
         print(CYAN, "SAVE DATA TIME --- %s seconds ---" % round((time.time() - start_time_save), 4), RESET)
@@ -224,8 +220,10 @@ def process_datas(pd, event):
 
 
 def load_location_fixed():
+    global locations
     dataset = get_data(path_location)
-    return dataset["locations"]
+    locations = dataset["locations"]
+
 
 def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,

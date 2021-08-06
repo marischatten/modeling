@@ -573,9 +573,9 @@ class HandleData:
         return self.__data.omega_user_node_dict[u, bs] == 1
 
     # This follow method update data of the problem.
-    def update_data(self):
+    def update_data(self, event, location_fixed):
         if self.__data.mobility == Mobility.IS_MOBILE:
-            self.__update_ue_position()
+            self.__update_ue_position(event, location_fixed)
         self.calc_vars(True)
 
     def update_counter(self):
@@ -606,10 +606,13 @@ class HandleData:
                 self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_decrease(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
         self.__data.rtt_edge_to_dictionary()
 
-    def __update_ue_position(self):
+    def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
             for i, tag_i in enumerate(self.__data.key_index_bs):
-                new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
+                if location_fixed:
+                    new_dis = self.__data.location_ue[event][u][i]
+                else:
+                    new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
                 if new_dis > self.__data.distance_ue[u][i]:
                     sense = INCREASE
                 else:

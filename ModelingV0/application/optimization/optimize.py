@@ -598,7 +598,7 @@ class HandleData:
         diff = [x for x in self.__counter_requests if x not in extract]
         self.__counter_requests = diff
 
-    def __update_rtt(self, sense, u,tag_ue,  bs, tag_bs):
+    def __update_rtt(self, sense, u, tag_ue,  bs, tag_bs):
         if self.__data.rtt_edge[u][bs] != NO_EDGE:
             if sense == INCREASE:
                 self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_increase(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
@@ -623,7 +623,7 @@ class HandleData:
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
             for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
-                if op[1] != np[1]:
+                if op[1][2:] != np[1][2:]:
                     if show_reallocation:
                         print("SHIFT PATH [{0}]".format(np[1]))
                     self.__data.reallocation_path.append([event, np[0]])

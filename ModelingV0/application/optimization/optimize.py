@@ -1,3 +1,4 @@
+import sys
 from random import randrange
 
 import gurobipy as gp
@@ -8,7 +9,7 @@ from enum import Enum
 import pandas as pds
 from utils.utils import *
 
-NO_EDGE = 9999999999
+NO_EDGE = 99999
 DELTA = 0.0001
 EPSILON = 0.9999
 
@@ -622,16 +623,20 @@ class HandleData:
 
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
-            for op, np in zip(self.old_paths, self.paths[:len(self.old_paths)]):
-                if op[1][2:] != np[1][2:]:
-                    if show_reallocation:
-                        print("SHIFT PATH [{0}]".format(np[1]))
-                    self.__data.reallocation_path.append([event, np[0]])
-            for oh, nh in zip(self.__old_hosts, self.hosts[:len(self.__old_hosts)]):
-                if oh[1] != nh[1]:
-                    if show_reallocation:
-                        print("SHIFT HOST [{0}].".format(nh[1]))
-                    self.__data.reallocation_host.append([event, nh[0]])
+            for op  in self.old_paths:
+                for np in self.paths[:len(self.old_paths)]:
+                    if op[1][:1] == np[1][:1]:
+                        if op[1][2:] != np[1][2:]:
+                            if show_reallocation:
+                                print("SHIFT PATH [{0}]".format(np[1]))
+                            self.__data.reallocation_path.append([event, np[0]])
+            for oh in self.__old_hosts:
+                for nh in self.hosts[:len(self.__old_hosts)]:
+                    if oh[0] == nh[0]:
+                        if oh[1] != nh[1]:
+                            if show_reallocation:
+                                print("SHIFT HOST [{0}].".format(nh[1]))
+                            self.__data.reallocation_host.append([event, nh[0]])
 
         if self.paths is not None:
             self.__old_hosts = self.hosts.copy()
@@ -831,8 +836,12 @@ class OptimizeData:
         key = None
         if self.model.status == gp.GRB.OPTIMAL:
             for var in self.model.getVars():
+                if var.X > NO_EDGE:
+                    print(REVERSE,"Unexpected error", RESET)
+                    sys.exit()
                 if var.X != 0 and var.VarName[:4] == "flow":
                     hops.append(self.__get_solution(str(var.VarName)))
+
 
             for req in self.__data.requests:
                 for h in range(len(hops)):
@@ -1208,13 +1217,25 @@ class PlotData:
                 self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total_Load': self.__load_links_dict[k]}, ignore_index=True)
         self.clear_hops_with_id()
 
-    def calc_reallocation(self, event):
-        for i in self.__data.reallocation_path:
-            self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'Request': i[1]}, ignore_index=True)
-        for i in self.__data.reallocation_host:
-            self.__reallocation_host = self.__reallocation_host.append({'Event': event, 'Request': i[1]}, ignore_index=True)
-        self.__data.reallocation_path.clear()
-        self.__data.reallocation_host.clear()
+    def calc_reallocation(self, event, event_null):
+        self.__calc_reallocation_path(event, event_null)
+        self.__calc_reallocation_host(event, event_null)
+
+    def __calc_reallocation_path(self, event, event_null):
+        if (event_null) or (len(self.__data.reallocation_path) == 0):
+            self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'Request': None}, ignore_index=True)
+        else:
+            for i in self.__data.reallocation_path:
+                self.__reallocation_path = self.__reallocation_path.append({'Event': event, 'Request': i[1]}, ignore_index=True)
+            self.__data.reallocation_path.clear()
+
+    def __calc_reallocation_host(self, event, event_null):
+        if (event_null) or (len(self.__data.reallocation_host) == 0):
+            self.__reallocation_host = self.__reallocation_host.append({'Event': event, 'Request': None}, ignore_index=True)
+        else:
+            for i in self.__data.reallocation_host:
+                self.__reallocation_host = self.__reallocation_host.append({'Event': event, 'Request': i[1]}, ignore_index=True)
+            self.__data.reallocation_host.clear()
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(

@@ -1168,18 +1168,25 @@ class PlotData:
         self.__all_requests = all_requests
         self.__rate_admission_requests = admission_requests / all_requests
 
-    def calc_server_use(self, paths, hosts, event):
-        self.__server_use = [0 for i in range(self.__data.num_bs)]
-        for p,h in zip(paths,hosts):
-            for j,tag_j in enumerate(self.__data.key_index_bs):
-                if h[1][HOST] == tag_j:
-                    self.__server_use[j] += self.__data.resources_file_dict[p[1][CONTENT]]
+    def calc_server_use(self, event, event_null, paths=None, hosts=None):
+        if event_null:
+            repeat = self.__all_server_use[self.__all_server_use['Event'] == (event - 1)]
+            bs = repeat['BS'].to_list()
+            use = repeat['Use'].to_list()
+            for r in range(len(repeat)):
+                self.__all_server_use = self.__all_server_use.append({'Event': event, 'BS': bs[r], 'Use': use[r]}, ignore_index=True)
+        else:
+            self.__server_use = [0 for i in range(self.__data.num_bs)]
+            for p, h in zip(paths, hosts):
+                for j, tag_j in enumerate(self.__data.key_index_bs):
+                    if h[1][HOST] == tag_j:
+                        self.__server_use[j] += self.__data.resources_file_dict[p[1][CONTENT]]
 
-        for i, tag_i in enumerate(self.__data.key_index_bs):
-            rate = round(self.__server_use[i] / self.__data.resources_node[i],4)
+            for i, tag_i in enumerate(self.__data.key_index_bs):
+                rate = round(self.__server_use[i] / self.__data.resources_node[i], 4)
 
-            self.__all_server_use = self.__all_server_use.append(
-                {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
+                self.__all_server_use = self.__all_server_use.append(
+                    {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
 
     def __calc_all_links(self):
         self.__all_links = 0
@@ -1197,24 +1204,36 @@ class PlotData:
         h = df.values.tolist()
         self.__enabled_links = len(h)
 
-    def calc_scattering(self,event):
-        if self.__all_links == 0:
-            self.__calc_all_links()
-        self.__calc_enabled_links()
-        scattering = self.__enabled_links/self.__all_links
-        self.__scattering = self.__scattering.append({'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering}, ignore_index=True)
+    def calc_scattering(self, event, event_null):
+        if not event_null:
+            if self.__all_links == 0:
+                self.__calc_all_links()
+            self.__calc_enabled_links()
+
+        scattering = self.__enabled_links / self.__all_links
+        self.__scattering = self.__scattering.append(
+            {'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering},
+            ignore_index=True)
         self.clear_hops()
 
-    def calc_load_link(self, event):
-        for req in self.__data.requests:
-            for h in self.__hops_id:
-                if req[KEY] == h[0]:
-                    thp = self.__data.throughput_min_file_dict[req[SOURCE]]
-                    self.__load_links_dict[h[1],h[2]] += thp
+    def calc_load_link(self, event, event_null):
+        if event_null:
+            repeat = self.__load_links[self.__load_links['Event'] == (event - 1)]
+            link = repeat['Link'].to_list()
+            load = repeat['Total_Load'].to_list()
+            for r in range(len(repeat)):
+                self.__load_links = self.__load_links.append({'Event': event, 'Link': link[r], 'Total_Load': load[r]}, ignore_index=True)
+        else:
+            for req in self.__data.requests:
+                for h in self.__hops_id:
+                    if req[KEY] == h[0]:
+                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
+                        self.__load_links_dict[h[1], h[2]] += thp
 
-        for k in self.__load_links_dict.keys():
-            if self.__load_links_dict[k] != 0:
-                self.__load_links = self.__load_links.append({'Event': event, 'Link': k, 'Total_Load': self.__load_links_dict[k]}, ignore_index=True)
+            for k in self.__load_links_dict.keys():
+                if self.__load_links_dict[k] != 0:
+                    self.__load_links = self.__load_links.append(
+                        {'Event': event, 'Link': k, 'Total_Load': self.__load_links_dict[k]}, ignore_index=True)
         self.clear_hops_with_id()
 
     def calc_reallocation(self, event, event_null):

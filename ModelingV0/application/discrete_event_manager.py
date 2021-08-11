@@ -214,7 +214,9 @@ def process_datas(pd, event):
             pd.insert_req(r, h, event)
         last_req = pd.set_requests[len(pd.set_requests)-1]
         last_host = pd.set_requests[len(pd.set_hosts)-1]
-        pd.calc_server_use(last_req, last_host, event)
+        pd.calc_server_use(event,event_null,last_req,last_host)
+    else:
+        pd.calc_server_use(event,event_null)
 
     pd.calc_scattering(event, event_null)
     pd.calc_load_link(event, event_null)

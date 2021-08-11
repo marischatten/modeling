@@ -559,7 +559,7 @@ class HandleData:
             return NO_EDGE
         if thp_c == NO_EDGE:
             return 1
-        return (thp_c / thp_min)
+        return (thp_min / thp_c)
 
     def __is_caching(self, file, bs):
         return self.__data.gama_file_node_dict[file, bs] == 1

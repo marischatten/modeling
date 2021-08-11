@@ -1109,7 +1109,7 @@ class LogData:
 class PlotData:
     __data = Data()
     __paths = None
-    set_requests = list()
+    set_paths = list()
     set_hosts = list()
     __all_requests = 0
     __admission_requests = 0
@@ -1150,7 +1150,7 @@ class PlotData:
             self.__zipf = self.__zipf.append({'Caches': z[0]}, ignore_index=True)
 
     def set_request(self,path,host):
-        self.set_requests.append(path)
+        self.set_paths.append(path)
         self.set_hosts.append(host)
 
     def set_hops(self, hops, hops_id):

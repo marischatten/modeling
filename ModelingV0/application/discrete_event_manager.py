@@ -184,6 +184,9 @@ def poisson_zipf():
             else:
                 data.drop_requests(source, sink, key)
             init += 1
+
+        process_datas(pd, event + 1)
+
         if deallocate_request:
             handler.update_counter()
         if event != (num_events-1):
@@ -195,7 +198,7 @@ def poisson_zipf():
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
 
-        process_datas(pd, event + 1)
+
 
     if save_data:
         pd.calc_rate_admission_requests(admission, req_total)
@@ -208,12 +211,12 @@ def poisson_zipf():
 def process_datas(pd, event):
     event_null = True
     start_time_process = time.time()
-    if ((len(pd.set_requests) != 0) or (len(pd.set_hosts) != 0)) and save_data:
+    if ((len(pd.set_paths) != 0) or (len(pd.set_hosts) != 0)) and save_data:
         event_null = False
-        for r, h in zip(pd.set_requests, pd.set_hosts):
+        for r, h in zip(pd.set_paths, pd.set_hosts):
             pd.insert_req(r, h, event)
-        last_req = pd.set_requests[len(pd.set_requests)-1]
-        last_host = pd.set_requests[len(pd.set_hosts)-1]
+        last_req = pd.set_paths[len(pd.set_paths)-1]
+        last_host = pd.set_paths[len(pd.set_hosts)-1]
         pd.calc_server_use(event,event_null,last_req,last_host)
     else:
         pd.calc_server_use(event,event_null)
@@ -221,7 +224,7 @@ def process_datas(pd, event):
     pd.calc_scattering(event, event_null)
     pd.calc_load_link(event, event_null)
     pd.calc_reallocation(event, event_null)
-    pd.set_requests.clear()
+    pd.set_paths.clear()
     pd.set_hosts.clear()
     print(CYAN, "PROCESS DATA TIME --- %s seconds ---" % round((time.time() - start_time_process), 4), RESET)
 

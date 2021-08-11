@@ -1,28 +1,39 @@
 {
 "show_log": 0,
-"show_results": false,
+"show_results": true,
 "show_path": false,
 "show_var": false,
 "show_par": false,
-"plot_distribution": false,
-"plot_data": false,
-"type": "zipf",
-"mobility": "is_mobile",
 "show_reallocation": false,
-"path_dataset": "..\\dataset\\instance_6.json",
-"save_data": true,
-"path_output": "..\\output\\data\\instance_6_alpha1_n_30_avg20.xlsx",
+"plot_distribution": false,
+
+"mobility": "is_mobile",
+"location_fixed": false,
+"path_location": "..\\dataset\\location\\location_7.json",
+
+"requests_fixed": false,
+"path_requests": "..\\dataset\\request\\requests_7.json",
+
 "plot_graph": false,
 "plot_graph_mobility": false,
-"path_graph": "..\\output\\graph\\instance_6_alpha1_n_30_avg20",
+"path_graph": "..\\output\\graph\\requests_7",
+
+"save_data": true,
+"path_output": "..\\output\\data\\requests_3.xlsx",
+
 "enable_ceil_nodes_capacity": true,
-"path_time": "..\\output\\data\\instance_6_alpha1_n_30_avg20.dat",
-"get_requests": true,
-"path_requests": "..\\dataset\\requests_6.json",
-"fixed": false,
+
+"deallocate_request": true,
 "max_events": 5,
-"avg_qtd_bulk":20,
-"num_events": 30,
+
+"path_time": "..\\output\\data\\instance_3.dat",
+
+"path_dataset": "..\\dataset\\instance_3.json",
+
+"type": "zipf",
+"fixed": false,
+"avg_qtd_bulk":5,
+"num_events": 10,
 "num_alpha": 0.56,
 
 "source": ["F2"],

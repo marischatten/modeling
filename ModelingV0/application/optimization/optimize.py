@@ -681,7 +681,7 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
+        self.model.setObjective((gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
                                                                                                         self.__data.resources_node_dict[
@@ -690,9 +690,9 @@ class OptimizeData:
                                                                                                             req[
                                                                                                                 SOURCE], i]) + DELTA)
                                                                   for i in self.__data.key_index_bs for req in
-                                                                  self.__data.requests)))
+                                                                  self.__data.requests))
                                 +
-                                ((1 - self.__data.alpha) * (gp.quicksum(
+                                ((gp.quicksum(
                                     self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
                                     * self.__data.psi_edge_dict[req[SOURCE], i, j]

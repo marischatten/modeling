@@ -447,7 +447,6 @@ class HandleData:
                             self.__data.rtt_edge[i][j] = NO_EDGE
                             self.__data.rtt_edge[j][i] = NO_EDGE
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                        if self.__is_coverage_bs_to_ue(tag_i, tag_j):
                             self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                            self.__data.rtt_min[i][j])
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
@@ -461,7 +460,7 @@ class HandleData:
 
     def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0
-        if self.__data.omega_user_node_dict[ue, bs] == 1:
+        if self.__is_coverage_bs_to_ue(ue, bs):
             rtt = rtt_previous * 1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)
         else:
             rtt = NO_EDGE
@@ -545,7 +544,7 @@ class HandleData:
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
                             self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_min)
                     if tag_i[:3] == 'SBS' and tag_j[:2] == 'UE':
-                        if self.__is_coverage_bs_to_ue2(tag_j, tag_i):
+                        if self.__is_coverage_bs_to_ue(tag_j, tag_i):
                             self.__data.weight_network[f][i][j] = self.__weight_network(thp_c, thp_min)
 
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
@@ -567,10 +566,7 @@ class HandleData:
     def __is_coverage_bs_to_bs(self, orig, dest):
         return self.__data.e_bs_adj_dict[orig, dest] == 1
 
-    def __is_coverage_bs_to_ue(self, orig, dest):
-        return self.__data.omega_user_node_dict[dest, orig] == 1
-
-    def __is_coverage_bs_to_ue2(self, u, bs):
+    def __is_coverage_bs_to_ue(self, u, bs):
         return self.__data.omega_user_node_dict[u, bs] == 1
 
     # This follow method update data of the problem.
@@ -1116,10 +1112,14 @@ class PlotData:
     __rate_admission_requests = 0
     __server_use = None
     __all_server_use = None
-    __all_links = 0
-    __enabled_links = 0
-    __scattering = None
-    __load_links = None
+    __all_links_optic = 0
+    __all_links_wireless = 0
+    __enabled_links_optic = 0
+    __enabled_links_wireless = 0
+    __scattering_optic = None
+    __scattering_wireless = None
+    __load_links_optic = None
+    __load_links_wireless = None
     __reallocation_path = None
     __reallocation_host = None
     __poisson = None
@@ -1128,20 +1128,24 @@ class PlotData:
     __hops = None
     __hops_id = None
     __ll = list()
-    __load_links_dict = dict()
+    __load_links_optic_dict = dict()
+    __load_links_wireless_dict = dict()
 
     def __init__(self, data):
         self.__data = data
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
-        self.__scattering = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
-        self.__load_links = pds.DataFrame(columns=['Event', 'Link','Total_Load'])
+        self.__scattering_optic = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
+        self.__scattering_wireless = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
+        self.__load_links_optic = pds.DataFrame(columns=['Event', 'Link','Total_Load'])
+        self.__load_links_wireless = pds.DataFrame(columns=['Event', 'Link', 'Total_Load'])
         self.__reallocation_path = pds.DataFrame(columns=['Event', 'Request'])
         self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
         self.__poisson = pds.DataFrame(columns=['Qtd_Requests'])
         self.__zipf = pds.DataFrame(columns=['Caches'])
 
-        self.__load_links_to_dictionary()
+        self.__load_links_optic_to_dictionary()
+        self.__load_links_wireless_to_dictionary()
 
     def set_distribution(self, bulks, zipf):
         for b in bulks:
@@ -1189,52 +1193,109 @@ class PlotData:
                     {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
 
     def __calc_all_links(self):
+        self.__calc_all_links_optic()
+        self.__calc_all_links_wireless()
+
+    def __calc_all_links_optic(self):
         self.__all_links = 0
-        self.__data.set_graph_adj_matrix()
-        for i in range(len(self.__data.graph_adj_matrix)):
-            for j in range(len(self.__data.graph_adj_matrix)):
-                if self.__data.graph_adj_matrix[i][j] != NO_EDGE:
-                    self.__all_links += 1
+        for i in range(len(self.__data.key_index_bs)):
+            self.__all_links_optic += sum(self.__data.e_bs_adj[i])
+
+    def __calc_all_links_wireless(self):
+        self.__all_links_wireless = 0
+        for i in range(len(self.__data.key_index_ue)):
+            self.__all_links_wireless += sum(self.__data.omega_user_node[i])
 
     def __calc_enabled_links(self):
-        df = pds.DataFrame(columns= ['hop1','hop2'])
+        self.__calc_enabled_links_optic()
+        self.__calc_enabled_links_wireless()
+
+    def __calc_enabled_links_optic(self):
+        df = pds.DataFrame(columns=['hop1', 'hop2'])
         for i in range(len(self.__hops)):
-            df = df.append({'hop1':self.__hops[i][0],'hop2':self.__hops[i][1]},ignore_index=True)
+            if ((self.__hops[i][0][:2] != 'UE') and (self.__hops[i][0][:1] != 'F')) and ((self.__hops[i][1][:2] != 'UE') and (self.__hops[i][1][:1] != 'F')):
+                df = df.append({'hop1': self.__hops[i][0], 'hop2': self.__hops[i][1]}, ignore_index=True)
         df = df.drop_duplicates()
         h = df.values.tolist()
-        self.__enabled_links = len(h)
+        self.__enabled_links_optic = len(h)
+
+    def __calc_enabled_links_wireless(self):
+        df = pds.DataFrame(columns=['hop1', 'hop2'])
+        for i in range(len(self.__hops)):
+            if ((self.__hops[i][0][:2] != 'BS') and (self.__hops[i][0][:1] != 'F')) and ((self.__hops[i][1][:2] != 'BS') and (self.__hops[i][1][:1] != 'F')):
+                df = df.append({'hop1': self.__hops[i][0], 'hop2': self.__hops[i][1]}, ignore_index=True)
+        df = df.drop_duplicates()
+        h = df.values.tolist()
+        self.__enabled_links_wireless = len(h)
 
     def calc_scattering(self, event, event_null):
         if not event_null:
-            if self.__all_links == 0:
+            if (self.__all_links_optic == 0) or (self.__all_links_wireless == 0):
                 self.__calc_all_links()
             self.__calc_enabled_links()
 
-        scattering = self.__enabled_links / self.__all_links
-        self.__scattering = self.__scattering.append(
-            {'Event': event, 'Enabled': self.__enabled_links, 'All': self.__all_links, 'Scattering': scattering},
+        scattering_optic = self.__enabled_links_optic / self.__all_links_optic
+        scattering_wireless = self.__enabled_links_wireless / self.__all_links_wireless
+
+        self.__scattering_optic = self.__scattering_optic.append(
+            {'Event': event, 'Enabled': self.__enabled_links_optic, 'All': self.__all_links_optic, 'Scattering': scattering_optic},
+            ignore_index=True)
+        self.__scattering_wireless = self.__scattering_wireless.append(
+            {'Event': event, 'Enabled': self.__enabled_links_wireless, 'All': self.__all_links_wireless, 'Scattering': scattering_wireless},
             ignore_index=True)
         self.clear_hops()
 
     def calc_load_link(self, event, event_null):
         if event_null:
-            repeat = self.__load_links[self.__load_links['Event'] == (event - 1)]
-            link = repeat['Link'].to_list()
-            load = repeat['Total_Load'].to_list()
-            for r in range(len(repeat)):
-                self.__load_links = self.__load_links.append({'Event': event, 'Link': link[r], 'Total_Load': load[r]}, ignore_index=True)
+            self.__set_load_event_null_optic(event)
+            self.__set_load_event_null_wireless(event)
         else:
-            for req in self.__data.requests:
-                for h in self.__hops_id:
-                    if req[KEY] == h[0]:
-                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
-                        self.__load_links_dict[h[1], h[2]] += thp
+            self.__calc_load_link_optic(event)
+            self.__calc_load_link_wireless(event)
 
-            for k in self.__load_links_dict.keys():
-                if self.__load_links_dict[k] != 0:
-                    self.__load_links = self.__load_links.append(
-                        {'Event': event, 'Link': k, 'Total_Load': self.__load_links_dict[k]}, ignore_index=True)
         self.clear_hops_with_id()
+
+    def __set_load_event_null_optic(self, event):
+        repeat_optic = self.__load_links_optic[self.__load_links_optic['Event'] == (event - 1)]
+        link = repeat_optic['Link'].to_list()
+        load = repeat_optic['Total_Load'].to_list()
+        for r in range(len(repeat_optic)):
+            self.__load_links_optic = self.__load_links_optic.append(
+                {'Event': event, 'Link': link[r], 'Total_Load': load[r]}, ignore_index=True)
+
+    def __set_load_event_null_wireless(self, event):
+        repeat_wireless = self.__load_links_wireless[self.__load_links_wireless['Event'] == (event - 1)]
+        link = repeat_wireless['Link'].to_list()
+        load = repeat_wireless['Total_Load'].to_list()
+        for r in range(len(repeat_wireless)):
+            self.__load_links_wireless = self.__load_links_wireless.append(
+                {'Event': event, 'Link': link[r], 'Total_Load': load[r]}, ignore_index=True)
+
+    def __calc_load_link_optic(self, event):
+        for req in self.__data.requests:
+            for h in self.__hops_id:
+                if req[KEY] == h[0]:
+                    if ((h[1][:2] != 'UE') and (h[1][:1] != 'F')) and ((h[2][:2] != 'UE') and (h[2][:1] != 'F')):
+                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
+                        self.__load_links_optic_dict[h[1], h[2]] += thp
+
+        for k in self.__load_links_optic_dict.keys():
+            if self.__load_links_optic_dict[k] != 0:
+                self.__load_links_optic = self.__load_links_optic.append(
+                    {'Event': event, 'Link': k, 'Total_Load': self.__load_links_optic_dict[k]}, ignore_index=True)
+
+    def __calc_load_link_wireless(self, event):
+        for req in self.__data.requests:
+            for h in self.__hops_id:
+                if req[KEY] == h[0]:
+                     if ((h[1][:2] != 'BS') and (h[1][:1] != 'F')) and ((h[2][:2] != 'BS') and (h[2][:1] != 'F')):
+                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
+                        self.__load_links_wireless_dict[h[1], h[2]] += thp
+
+        for k in self.__load_links_wireless_dict.keys():
+            if self.__load_links_wireless_dict[k] != 0:
+                self.__load_links_wireless = self.__load_links_wireless.append(
+                    {'Event': event, 'Link': k, 'Total_Load': self.__load_links_wireless_dict[k]}, ignore_index=True)
 
     def calc_reallocation(self, event, event_null):
         self.__calc_reallocation_path(event, event_null)
@@ -1264,25 +1325,37 @@ class PlotData:
             self.__paths.to_excel(writer, sheet_name='Requests')
             dt_rate_admission.to_excel(writer, sheet_name='Rate_Admission')
             self.__all_server_use.to_excel(writer, sheet_name='Server_Use')
-            self.__scattering.to_excel(writer, sheet_name='Scattering')
-            self.__load_links.to_excel(writer,sheet_name='Load_Links')
+            self.__scattering_optic.to_excel(writer, sheet_name='Scattering_Optic')
+            self.__scattering_wireless.to_excel(writer, sheet_name='Scattering_Wireless')
+            self.__load_links_optic.to_excel(writer,sheet_name='Load_Links_Optic')
+            self.__load_links_wireless.to_excel(writer, sheet_name='Load_Links_Wireless')
             self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
             self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')
             self.__poisson.to_excel(writer,sheet_name='Poisson')
             self.__zipf.to_excel(writer, sheet_name='Zipf')
 
-    def __load_links_to_dictionary(self):
+    def __load_links_optic_to_dictionary(self):
         self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
                      range(self.__data.num_nodes + self.__data.num_files)]
         for i in range(len(self.__data.key_index_all)):
             for j in range(len(self.__data.key_index_all)):
                 tag_i = self.__data.key_index_all[i]
                 tag_j = self.__data.key_index_all[j]
-                self.__load_links_dict[tag_i, tag_j] = self.__ll[i][j]
+                self.__load_links_optic_dict[tag_i, tag_j] = self.__ll[i][j]
+
+    def __load_links_wireless_to_dictionary(self):
+        self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+                     range(self.__data.num_nodes + self.__data.num_files)]
+        for i in range(len(self.__data.key_index_all)):
+            for j in range(len(self.__data.key_index_all)):
+                tag_i = self.__data.key_index_all[i]
+                tag_j = self.__data.key_index_all[j]
+                self.__load_links_wireless_dict[tag_i, tag_j] = self.__ll[i][j]
 
     def clear_hops(self):
         self.__hops.clear()
 
     def clear_hops_with_id(self):
         self.__hops_id.clear()
-        self.__data.clear_dict(self.__load_links_dict)
+        self.__data.clear_dict(self.__load_links_optic_dict)
+        self.__data.clear_dict(self.__load_links_wireless_dict)

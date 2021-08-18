@@ -386,7 +386,8 @@ class HandleData:
         self.__data = data
 
     def calc_vars(self, is_update=False):
-        self.__calc_omega_user_node()
+        if not is_update:
+            self.__calc_omega_user_node()
         self.__calc_current_throughput_edge()
         self.__calc_diff_throughput()
         self.__calc_psi_edge()
@@ -556,23 +557,55 @@ class HandleData:
         diff = [x for x in self.__counter_requests if x not in extract]
         self.__counter_requests = diff
 
+    def __update_omega_user_node(self, u, tag_i, i, new_dis, rtt_previous):
+        if tag_i[:3] == 'MBS':
+            # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
+            self.__data.omega_user_node[u][i] = 0
+            return rtt_previous
+        else:
+            if rtt_previous == NO_EDGE:
+                if new_dis <= self.__data.radius_sbs:
+                    self.__data.omega_user_node[u][i] = 1
+                    return 0.002
+                else:
+                    self.__data.omega_user_node[u][i] = 0
+                    return rtt_previous
+            else:
+                if new_dis <= self.__data.radius_sbs:
+                    self.__data.omega_user_node[u][i] = 1
+                    return rtt_previous
+                else:
+                    self.__data.omega_user_node[u][i] = 0
+                    return NO_EDGE
+
+
+
     def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
             for i, tag_i in enumerate(self.__data.key_index_bs):
                 if location_fixed:
-                    new_dis = self.__data.location_ue[event][u][i]
+                    rand_dis = self.__data.location_ue[event][u][i]
                 else:
-                    new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
-                #if self.__data.rtt_edge_dict[tag_u][tag_i] != NO_EDGE:
-                #    self.__data.distance_ue[u][i] = new_dis
-                #else:
-                if (new_dis + self.__data.distance_ue[u][i]) > self.__data.distance_ue[u][i]:
-                    self.__data.distance_ue[u][i] = (new_dis + self.__data.distance_ue[u][i])
-                    self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_u, self.__data.rtt_edge_dict[tag_i, tag_u])
-                elif (new_dis + self.__data.distance_ue[u][i]) < self.__data.distance_ue[u][i]:
-                    self.__data.distance_ue[u][i] = (new_dis + self.__data.distance_ue[u][i])
-                    self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, self.__data.rtt_edge_dict[tag_i, tag_u])
+                    rand_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
 
+                new_dis = (rand_dis + self.__data.distance_ue[u][i])
+
+                if new_dis > self.__data.distance_ue[u][i]:
+                    rtt_previous = self.__update_omega_user_node(u, tag_i, i, new_dis, self.__data.rtt_edge_dict[tag_i, tag_u])
+                    self.__data.omega_user_node_to_dictionary()
+                    self.__data.distance_ue[u][i] = new_dis
+                    if rtt_previous != NO_EDGE:
+                        self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_u, rtt_previous)
+                    else:
+                        self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
+                elif new_dis < self.__data.distance_ue[u][i]:
+                    rtt_previous = self.__update_omega_user_node(u, tag_i, i, new_dis,self.__data.rtt_edge_dict[tag_i, tag_u])
+                    self.__data.omega_user_node_to_dictionary()
+                    self.__data.distance_ue[u][i] = new_dis
+                    if rtt_previous != NO_EDGE:
+                        self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, rtt_previous)
+                    else:
+                        self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
             for op  in self.old_paths:

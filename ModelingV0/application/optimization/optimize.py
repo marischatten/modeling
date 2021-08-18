@@ -443,10 +443,10 @@ class HandleData:
                             tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
                             self.__data.rtt_edge_dict[tag_i,tag_j] = self.__data.rtt_min[i][j]
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__data.rtt_min[j][i]
+                            self.__data.rtt_edge_dict[tag_j,tag_i] = self.__data.rtt_min[j][i]
                         else:
                             self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
+                            self.__data.rtt_edge_dict[tag_j,tag_i] = NO_EDGE
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
                             self.__data.rtt_edge_dict[tag_i,tag_j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                            self.__data.rtt_min[i][j])
@@ -455,7 +455,7 @@ class HandleData:
                             self.__data.rtt_edge_dict[tag_i,tag_j] = 0
                 else:
                     self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
-                    self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
+                    self.__data.rtt_edge_dict[tag_j,tag_i] = NO_EDGE
 
     def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0

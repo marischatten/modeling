@@ -113,15 +113,15 @@ def application():
     calc_vars()
     print(CYAN, "LOADING DATA TIME --- %s seconds ---" % round((time.time() - start_time_2), 4), RESET)
 
+    if plot_graph:
+        data.set_graph_adj_matrix()
+        picture(path_graph)
+        
     start_time_3 = time.time()
     discrete_events()
     full_time = time.time() - start_time_3
     lst_time.append(full_time)
     print(CYAN, "FULL TIME --- %s seconds ---" % round(full_time, 4), RESET)
-
-    if plot_graph:
-        data.set_graph_adj_matrix()
-        picture(path_graph)
 
     write_optimization_time()
     # min_cost_flow = pywrapgraph.SimpleMinCostFlow()

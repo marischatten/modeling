@@ -46,7 +46,7 @@ throughput_min_file = list()
 
 resources_node = list()
 
-rtt_min = list()
+rtt_edge = list()
 
 distance_ue = list()
 distance_bs = list
@@ -116,7 +116,7 @@ def application():
     if plot_graph:
         data.set_graph_adj_matrix()
         picture(path_graph)
-        
+
     start_time_3 = time.time()
     discrete_events()
     full_time = time.time() - start_time_3
@@ -237,7 +237,7 @@ def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 size_file,
-                throughput_min_file, resources_file, resources_node, rtt_min, radius_mbs, radius_sbs,
+                throughput_min_file, resources_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs, max_events, locations
                 )
 
@@ -289,8 +289,8 @@ def show_parameters():
 
 def show_vars():
     id = LogData(data)
+    id.show_vars_dict()
     id.show_vars_matrix()
-    # id.show_vars_dict()
 
 
 def picture(path):
@@ -314,7 +314,7 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -336,7 +336,7 @@ def load_dataset(dataset: object):
 
     resources_node = dataset["resources_node"]
 
-    rtt_min = dataset["rtt_min"]
+    rtt_edge = dataset["rtt_edge"]
 
     if num_bs is not None and num_ue is not None and num_files is not None:
         gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]

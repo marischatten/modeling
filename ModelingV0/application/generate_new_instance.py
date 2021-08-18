@@ -1,4 +1,5 @@
 import os
+from random import randrange
 
 import numpy as np
 import statistics as s
@@ -18,7 +19,7 @@ num_mbs = 0
 num_sbs_per_mbs = 0
 num_ue = 0
 num_files = 0
-num_nodes = 0  # BS + UE
+num_nodes = 0  # BS + UE + C
 key_index_file = list()
 key_index_bs = list()
 key_index_ue = list()
@@ -33,7 +34,9 @@ throughput_min_file = list()
 resources_node = list()
 
 rtt_min = list()
+rtt_edge = list()
 
+distance_ue_dict = dict()
 distance_ue = list()
 distance_bs = list()
 
@@ -78,7 +81,7 @@ def main():
     generate_distance_ue()
     generate_e_bs_adj()
     generate_rtt_min()
-
+    generate_rtt()
     generate_json(path)
     print("Success generating instance!")
 
@@ -98,7 +101,6 @@ def generate_gama():
                     break
             gama[f][j] = 1
 
-
     print("HOSPEDAGEM DE CONTEÚDO.GAMA.")
     for f in range(len(key_index_file)):
         for i in range(len(key_index_bs)):
@@ -114,7 +116,9 @@ def generate_distance_ue():
 
     for u in range(num_ue):
         for i in range(num_mbs, num_bs):
-            dist = s.NormalDist(-radius_sbs, radius_sbs).samples(1, seed=None)[0]
+            # dist = s.NormalDist(-radius_sbs, radius_sbs).samples(1, seed=None)[0]
+            # dist = randrange(-radius_sbs, radius_sbs + 1)
+            dist = np.random.normal(-radius_sbs, radius_sbs, 1)
             if dist > max_ran:
                 dist = max_ran
             # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
@@ -252,6 +256,53 @@ def generate_rtt_min():
     print()
 
 
+def generate_rtt():
+    global rtt_edge
+    rtt_edge = [[NO_EDGE for i in range(num_nodes + num_files)] for j in
+                range(num_nodes + num_files)]
+
+    for i, tag_i in enumerate(key_index_all):
+        for j, tag_j in enumerate(key_index_all):
+            if i != j:
+                if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
+                        tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
+                        tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
+                    if coverage_bs_to_bs(tag_i, tag_j):
+                        rtt_edge[i][j] = rtt_min[i][j]
+                        rtt_edge[j][i] = rtt_min[j][i]
+                    else:
+                        rtt_edge[i][j] = NO_EDGE
+                        rtt_edge[j][i] = NO_EDGE
+                if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
+                    rtt_edge[i][j] = calc_rtt_bs_to_ue_increase(tag_i,tag_j,
+                                                                rtt_min[
+                                                                    i][j])
+                if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
+                    if caching_to_bs(tag_i, tag_j):
+                        rtt_edge[i][j] = 0
+            else:
+                rtt_edge[i][j] = NO_EDGE
+                rtt_edge[j][i] = NO_EDGE
+
+    print("RTT POR ENLACE.")
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if rtt_edge[i][j] == NO_EDGE:
+                print(' ထ ', end=" ")
+            else:
+                print(rtt_edge[i][j], end=" ")
+        print()
+    print()
+
+def calc_rtt_bs_to_ue_increase(bs, ue, rtt_previous):
+    rtt = 0
+    if coverage_bs_ue(bs, ue):
+        rtt = round(rtt_previous * (1 + (distance_ue_dict[ue, bs] / radius_sbs)), 4)
+    else:
+        rtt = NO_EDGE
+    return rtt
+
+
 def coverage_bs_to_bs(source, sink):
     e_bs_adj_dict = dict()
     for i in range(len(key_index_bs)):
@@ -263,7 +314,7 @@ def coverage_bs_to_bs(source, sink):
 
 
 def coverage_bs_ue(source, sink):
-    distance_ue_dict = dict()
+    global distance_ue_dict
     for u in range(len(key_index_ue)):
         for i in range(len(key_index_bs)):
             tag_ue = key_index_ue[u]
@@ -342,7 +393,7 @@ def generate_json(path):
 
             "resources_node": resources_node,
             "gama": gama,
-            "rtt_min": rtt_min,
+            "rtt_edge": rtt_edge,
             "distance_ue": distance_ue,
             "distance_bs": distance_bs,
             "e_bs_adj": e_bs_adj,

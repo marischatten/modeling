@@ -95,8 +95,6 @@ class Data:
     # bsr_i \in R
     resources_node = list()
 
-    rtt_min = 0
-
     # rtt_ij \in R
     rtt_edge = None
 
@@ -149,14 +147,14 @@ class Data:
     e_bs_adj_dict = dict()
     psi_edge_dict = dict()
     rtt_edge_dict = dict()
-    rtt_min_dict = dict()
+
     distance_ue_dict = dict()
 
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 sf=None, thp=None, rf=None,rt_i=None, rtt_min=None, radius_mbs=0, radius_sbs=0,
+                 sf=None, thp=None, rf=None,rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None):
 
         self.mobility = mobility
@@ -185,7 +183,7 @@ class Data:
 
         self.resources_node = rt_i
 
-        self.rtt_min = rtt_min
+        self.rtt_edge = rtt_edge
         self.radius_mbs = radius_mbs
         self.radius_sbs = radius_sbs
         self.distance_ue = dis_ue
@@ -206,7 +204,7 @@ class Data:
             self.__throughput_min_file_to_dictionary()
             self.__gama_file_node_to_dictionary()
             self.__e_bs_adj_to_dictionary()
-            self.rtt_min_to_dictionary()
+            self.rtt_edge_to_dictionary()
             self.distance_ue_to_dictionary()
             self.req_to_dictionary()
 
@@ -282,13 +280,6 @@ class Data:
                 tag_orig = self.key_index_all[i]
                 tag_dest = self.key_index_all[j]
                 self.rtt_edge_dict[tag_orig, tag_dest] = self.rtt_edge[i][j]
-
-    def rtt_min_to_dictionary(self):
-        for i in range(len(self.key_index_with_ue)):
-            for j in range(len(self.key_index_with_ue)):
-                tag_orig = self.key_index_with_ue[i]
-                tag_dest = self.key_index_with_ue[j]
-                self.rtt_min_dict[tag_orig, tag_dest] = self.rtt_min[i][j]
 
     def distance_ue_to_dictionary(self):
         for u in range(len(self.key_index_ue)):
@@ -396,8 +387,6 @@ class HandleData:
 
     def calc_vars(self, is_update=False):
         self.__calc_omega_user_node()
-        if not is_update:
-            self.__generate_rtt()
         self.__calc_current_throughput_edge()
         self.__calc_diff_throughput()
         self.__calc_psi_edge()
@@ -430,45 +419,18 @@ class HandleData:
 
         self.__data.omega_user_node_to_dictionary()
 
-    def __generate_rtt(self):
-        self.__data.rtt_edge = [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
-                                range(self.__data.num_nodes + self.__data.num_files)]
-        self.__data.rtt_edge_to_dictionary()
-
-        for i, tag_i in enumerate(self.__data.key_index_all):
-            for j, tag_j in enumerate(self.__data.key_index_all):
-                if i != j:
-                    if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
-                            tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
-                            tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
-                        if self.__is_coverage_bs_to_bs(tag_i, tag_j):
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__data.rtt_min[i][j]
-                            self.__data.rtt_edge_dict[tag_j,tag_i] = self.__data.rtt_min[j][i]
-                        else:
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
-                            self.__data.rtt_edge_dict[tag_j,tag_i] = NO_EDGE
-                    if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
-                                                                                           self.__data.rtt_min[i][j])
-                    if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
-                        if self.__is_caching(tag_i, tag_j):
-                            self.__data.rtt_edge_dict[tag_i,tag_j] = 0
-                else:
-                    self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
-                    self.__data.rtt_edge_dict[tag_j,tag_i] = NO_EDGE
-
     def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__is_coverage_bs_to_ue(ue, bs):
-            rtt = rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+            rtt = round(rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
         else:
             rtt = NO_EDGE
         return rtt
 
     def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
         rtt = 0
-        if self.__data.omega_user_node_dict[ue, bs] == 1:
-            rtt = rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
+        if self.__is_coverage_bs_to_ue(ue, bs):
+            rtt = round(rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
         else:
             rtt = NO_EDGE
         return rtt
@@ -908,23 +870,6 @@ class LogData:
             print(k, self.data.resources_node_dict[k])
         print()
 
-    def __log_rtt_min(self):
-        print("MINIMUM RTT.")
-        for i in range(len(self.data.key_index_all)):
-            for j in range(len(self.data.key_index_all)):
-                if self.data.rtt_min[i][j] == NO_EDGE:
-                    print('ထ', end=" ")
-                else:
-                    print(self.data.rtt_min[i][j], end=" ")
-            print()
-        print()
-
-    def __log_rtt_min_dict(self):
-        print("MINIMUM RTT.")
-        for k in self.data.rtt_min_dict.keys():
-            print(k, self.data.rtt_min_dict[k])
-        print()
-
     def __log_gama_file_node(self):
         print("FILE CACHING PER BASE STATION(GAMA).")
         for f in range(len(self.data.key_index_file)):
@@ -1058,16 +1003,13 @@ class LogData:
 
         self.__log_resources_node_dict()
 
-        self.__log_rtt_min()
-
-        # self.__log_rtt_min_dict()
         self.__log_rtt_edge_dict()
         self.__log_gama_file_node()
         self.__log_e_bs_adj_dict()
 
     def show_vars_matrix(self):
         print("VARS.\n")
-        self.__log_omega_user_node()
+        # self.__log_omega_user_node()
         self.__log_current_throughput_edge()
         self.__log_diff_throughput_edge()
         self.__log_psi_edge()
@@ -1077,11 +1019,11 @@ class LogData:
     def show_vars_dict(self):
         print("VARS.\n")
         self.__log_omega_user_node_dict()
-        self.__log_current_throughput_edge_dict()
-        self.__log_diff_throughput_edge_dict()
-        self.__log_psi_edge_dict()
-        self.__log_weight_network_dict()
-        self.__log_connectivity_edges_dict()
+        # self.__log_current_throughput_edge_dict()
+        # self.__log_diff_throughput_edge_dict()
+        # self.__log_psi_edge_dict()
+        # self.__log_weight_network_dict()
+        # self.__log_connectivity_edges_dict()
 
 
 # This class store all result and plot a graphics.

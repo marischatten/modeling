@@ -277,10 +277,10 @@ class Data:
                 self.e_bs_adj_dict[tag_orig, tag_dest] = self.e_bs_adj[i][j]
 
     def rtt_edge_to_dictionary(self):
-        for i in range(len(self.key_index_with_ue)):
-            for j in range(len(self.key_index_with_ue)):
-                tag_orig = self.key_index_with_ue[i]
-                tag_dest = self.key_index_with_ue[j]
+        for i in range(len(self.key_index_all)):
+            for j in range(len(self.key_index_all)):
+                tag_orig = self.key_index_all[i]
+                tag_dest = self.key_index_all[j]
                 self.rtt_edge_dict[tag_orig, tag_dest] = self.rtt_edge[i][j]
 
     def rtt_min_to_dictionary(self):
@@ -433,6 +433,7 @@ class HandleData:
     def __generate_rtt(self):
         self.__data.rtt_edge = [[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
                                 range(self.__data.num_nodes + self.__data.num_files)]
+        self.__data.rtt_edge_to_dictionary()
 
         for i, tag_i in enumerate(self.__data.key_index_all):
             for j, tag_j in enumerate(self.__data.key_index_all):
@@ -441,27 +442,25 @@ class HandleData:
                             tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
                             tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
                         if self.__is_coverage_bs_to_bs(tag_i, tag_j):
-                            self.__data.rtt_edge[i][j] = self.__data.rtt_min[i][j]
-                            self.__data.rtt_edge[j][i] = self.__data.rtt_min[j][i]
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__data.rtt_min[i][j]
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__data.rtt_min[j][i]
                         else:
-                            self.__data.rtt_edge[i][j] = NO_EDGE
-                            self.__data.rtt_edge[j][i] = NO_EDGE
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
                     if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
-                            self.__data.rtt_edge[i][j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_j,
                                                                                            self.__data.rtt_min[i][j])
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                         if self.__is_caching(tag_i, tag_j):
-                            self.__data.rtt_edge[i][j] = 0
+                            self.__data.rtt_edge_dict[tag_i,tag_j] = 0
                 else:
-                    self.__data.rtt_edge[i][j] = NO_EDGE
-                    self.__data.rtt_edge[j][i] = NO_EDGE
-
-        self.__data.rtt_edge_to_dictionary()
+                    self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
+                    self.__data.rtt_edge_dict[tag_i,tag_j] = NO_EDGE
 
     def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__is_coverage_bs_to_ue(ue, bs):
-            rtt = rtt_previous * 1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)
+            rtt = rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
         else:
             rtt = NO_EDGE
         return rtt
@@ -469,7 +468,7 @@ class HandleData:
     def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
         rtt = 0
         if self.__data.omega_user_node_dict[ue, bs] == 1:
-            rtt = rtt_previous / 1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)
+            rtt = rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs))
         else:
             rtt = NO_EDGE
         return rtt
@@ -484,15 +483,15 @@ class HandleData:
 
         for f, tag_f in enumerate(self.__data.key_index_file):
             for i, tag_i in enumerate(self.__data.key_index_all):
-                for j in range(len(self.__data.key_index_all)):
+                for j, tag_j in enumerate(self.__data.key_index_all):
                     size_f = self.__data.size_file[f]
-                    if self.__data.rtt_edge is not None:
-                        if self.__data.rtt_edge[i][j] == 0:
+                    if self.__data.rtt_edge_dict is not None:
+                        if self.__data.rtt_edge_dict[tag_i,tag_j] == 0:
                             if tag_f == tag_i:
                                 self.__data.throughput_current_edge[f][i][j] = NO_EDGE
                         else:
-                            self.__data.throughput_current_edge[f][i][j] = round(size_f // self.__data.rtt_edge[i][j],
-                                                                                 2)
+                            self.__data.throughput_current_edge[f][i][j] = round(size_f // self.__data.rtt_edge_dict[tag_i,tag_j],
+                                                                                 0)
 
         self.__data.throughput_current_to_dictionary()
 
@@ -595,14 +594,6 @@ class HandleData:
         diff = [x for x in self.__counter_requests if x not in extract]
         self.__counter_requests = diff
 
-    def __update_rtt(self, sense, u, tag_ue,  bs, tag_bs):
-        if self.__data.rtt_edge[u][bs] != NO_EDGE:
-            if sense == INCREASE:
-                self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_increase(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
-            if sense == DECREASE:
-                self.__data.rtt_edge[u][bs] = self.__calc_rtt_bs_to_ue_decrease(tag_bs, tag_ue, self.__data.rtt_edge[u][bs])
-        self.__data.rtt_edge_to_dictionary()
-
     def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
             for i, tag_i in enumerate(self.__data.key_index_bs):
@@ -610,12 +601,15 @@ class HandleData:
                     new_dis = self.__data.location_ue[event][u][i]
                 else:
                     new_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
-                if new_dis > self.__data.distance_ue[u][i]:
-                    sense = INCREASE
-                else:
-                    sense = DECREASE
-                self.__data.distance_ue[u][i] += new_dis
-                self.__update_rtt(sense, u, tag_u, i, tag_i)
+                #if self.__data.rtt_edge_dict[tag_u][tag_i] != NO_EDGE:
+                #    self.__data.distance_ue[u][i] = new_dis
+                #else:
+                if (new_dis + self.__data.distance_ue[u][i]) > self.__data.distance_ue[u][i]:
+                    self.__data.distance_ue[u][i] = (new_dis + self.__data.distance_ue[u][i])
+                    self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_u, self.__data.rtt_edge_dict[tag_i, tag_u])
+                elif (new_dis + self.__data.distance_ue[u][i]) < self.__data.distance_ue[u][i]:
+                    self.__data.distance_ue[u][i] = (new_dis + self.__data.distance_ue[u][i])
+                    self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, self.__data.rtt_edge_dict[tag_i, tag_u])
 
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
@@ -884,17 +878,6 @@ class LogData:
         self.data = data
 
     # PARAMETERS
-    def __log_rtt_edge(self):
-        print("EDGE RTT.")
-        for i in range(len(self.data.key_index_all)):
-            for j in range(len(self.data.key_index_all)):
-                if self.data.rtt_edge[i][j] == NO_EDGE:
-                    print('ထ', end=" ")
-                else:
-                    print(self.data.rtt_edge[i][j], end=" ")
-            print()
-        print()
-
     def __log_rtt_edge_dict(self):
         print("EDGE RTT.")
         for k in self.data.rtt_edge_dict.keys():
@@ -904,13 +887,13 @@ class LogData:
     def __log_size_file_dict(self):
         print("SIZE FILE.")
         for k in self.data.size_file_dict.keys():
-            print(k, self.data.size_file_dict[k], "MB")
+            print(k, self.data.size_file_dict[k], "Mb")
         print()
 
     def __log_throughput_min_dict(self):
         print("MINIMAL THROUGHPUT.")
         for k in self.data.throughput_min_file_dict.keys():
-            print(k, self.data.throughput_min_file_dict[k], "MB")
+            print(k, self.data.throughput_min_file_dict[k], "Mb")
         print()
 
     def __log_resources_file_dict(self):
@@ -1076,9 +1059,9 @@ class LogData:
         self.__log_resources_node_dict()
 
         self.__log_rtt_min()
-        self.__log_rtt_edge()
+
         # self.__log_rtt_min_dict()
-        # self.__log_rtt_edge_dict()
+        self.__log_rtt_edge_dict()
         self.__log_gama_file_node()
         self.__log_e_bs_adj_dict()
 

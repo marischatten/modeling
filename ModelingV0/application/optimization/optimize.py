@@ -1209,6 +1209,10 @@ class PlotData:
         else:
             self.__calc_load_link_optic(event)
             self.__calc_load_link_wireless(event)
+            if self.__enabled_links_optic == 0:
+                self.__set_load_event_null_optic(event)
+            if self.__enabled_links_wireless == 0:
+                self.__set_load_event_null_wireless(event)
 
         self.clear_hops_with_id()
 
@@ -1240,6 +1244,7 @@ class PlotData:
             if self.__load_links_optic_dict[k] != 0:
                 self.__load_links_optic = self.__load_links_optic.append(
                     {'Event': event, 'Link': k, 'Total_Load': self.__load_links_optic_dict[k]}, ignore_index=True)
+
 
     def __calc_load_link_wireless(self, event):
         for req in self.__data.requests:

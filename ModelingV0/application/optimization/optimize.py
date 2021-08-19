@@ -1180,7 +1180,7 @@ class PlotData:
     def __calc_enabled_links_wireless(self):
         df = pds.DataFrame(columns=['hop1', 'hop2'])
         for i in range(len(self.__hops)):
-            if ((self.__hops[i][0][:2] != 'BS') and (self.__hops[i][0][:1] != 'F')) and ((self.__hops[i][1][:2] != 'BS') and (self.__hops[i][1][:1] != 'F')):
+            if ((self.__hops[i][0][:1] != 'F')) and (self.__hops[i][1][:3] != 'SBS') and (self.__hops[i][1][:3] != 'MBS'):
                 df = df.append({'hop1': self.__hops[i][0], 'hop2': self.__hops[i][1]}, ignore_index=True)
         df = df.drop_duplicates()
         h = df.values.tolist()
@@ -1245,7 +1245,7 @@ class PlotData:
         for req in self.__data.requests:
             for h in self.__hops_id:
                 if req[KEY] == h[0]:
-                     if ((h[1][:2] != 'BS') and (h[1][:1] != 'F')) and ((h[2][:2] != 'BS') and (h[2][:1] != 'F')):
+                     if (h[1][:1] != 'F') and (h[2][:3] != 'SBS') and (h[2][:3] != 'MBS'):
                         thp = self.__data.throughput_min_file_dict[req[SOURCE]]
                         self.__load_links_wireless_dict[h[1], h[2]] += thp
 

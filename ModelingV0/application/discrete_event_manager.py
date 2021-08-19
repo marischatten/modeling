@@ -178,12 +178,14 @@ def poisson_zipf():
                 handler.hosts = hosts
                 handler.reallocation(show_reallocation, event + 1)
                 pd.set_request(paths.copy(), hosts.copy())
-                pd.set_hops(data.hops.copy(), data.hops_with_id.copy())
+
                 handler.insert_counter_requests(source, sink, key)
                 admission += 1
             else:
                 data.drop_requests(source, sink, key)
             init += 1
+
+            pd.set_hops(data.hops.copy(), data.hops_with_id.copy())
 
         process_datas(pd, event + 1)
 
@@ -220,7 +222,6 @@ def process_datas(pd, event):
         pd.calc_server_use(event,event_null,last_req,last_host)
     else:
         pd.calc_server_use(event,event_null)
-
     pd.calc_scattering(event, event_null)
     pd.calc_load_link(event, event_null)
     pd.calc_reallocation(event, event_null)

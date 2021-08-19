@@ -578,8 +578,6 @@ class HandleData:
                     self.__data.omega_user_node[u][i] = 0
                     return NO_EDGE
 
-
-
     def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
             for i, tag_i in enumerate(self.__data.key_index_bs):
@@ -606,6 +604,7 @@ class HandleData:
                         self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, rtt_previous)
                     else:
                         self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
+
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
             for op  in self.old_paths:

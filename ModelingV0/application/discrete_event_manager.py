@@ -152,6 +152,7 @@ def poisson_zipf():
     admission = 0
     init = 0
     req_total = 0
+    lst_time.append('times')
 
     if requests_fixed:
         dataset = get_data(path_requests)

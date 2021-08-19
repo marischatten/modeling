@@ -1,0 +1,17 @@
+
+
+{
+  "path_locations": "..\\dataset\\location\\location_1.json",
+  "num_events": 4,
+  "mobility_rate": 50,
+  "num_files": 3,
+  "key_index_bs": [
+    "SBS1",
+    "SBS2"
+  ],
+  "key_index_ue": [
+    "UE1",
+    "UE2",
+    "UE3"
+  ]
+}

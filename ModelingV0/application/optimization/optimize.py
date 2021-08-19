@@ -97,7 +97,7 @@ class Data:
 
     # rtt_ij \in R
     rtt_edge = None
-
+    rtt_min_sbs_ue = 0
     # D \in R
     radius_mbs = 0
     radius_sbs = 0
@@ -155,7 +155,7 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, thp=None, rf=None,rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_sbs_ue=0):
 
         self.mobility = mobility
         self.mobility_rate = mr
@@ -190,6 +190,7 @@ class Data:
         self.distance_bs = dis_bs
         self.max_events = max_event
         self.location_ue = location_ue
+        self.rtt_min_sbs_ue = rtt_min_sbs_ue
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
@@ -566,7 +567,7 @@ class HandleData:
             if rtt_previous == NO_EDGE:
                 if new_dis <= self.__data.radius_sbs:
                     self.__data.omega_user_node[u][i] = 1
-                    return 0.002
+                    return self.__data.rtt_min_sbs_ue
                 else:
                     self.__data.omega_user_node[u][i] = 0
                     return rtt_previous
@@ -1154,7 +1155,7 @@ class PlotData:
         self.__calc_all_links_wireless()
 
     def __calc_all_links_optic(self):
-        self.__all_links = 0
+        self.__all_links_optic = 0
         for i in range(len(self.__data.key_index_bs)):
             self.__all_links_optic += sum(self.__data.e_bs_adj[i])
 
@@ -1186,9 +1187,8 @@ class PlotData:
         self.__enabled_links_wireless = len(h)
 
     def calc_scattering(self, event, event_null):
+        self.__calc_all_links()
         if not event_null:
-            if (self.__all_links_optic == 0) or (self.__all_links_wireless == 0):
-                self.__calc_all_links()
             self.__calc_enabled_links()
 
         scattering_optic = self.__enabled_links_optic / self.__all_links_optic

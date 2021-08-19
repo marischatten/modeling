@@ -47,6 +47,7 @@ throughput_min_file = list()
 resources_node = list()
 
 rtt_edge = list()
+rtt_min_sbs_ue = 0
 
 distance_ue = list()
 distance_bs = list
@@ -239,7 +240,7 @@ def make_data():
                 key_index_ue, e_bs_adj,
                 size_file,
                 throughput_min_file, resources_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs, max_events, locations
+                gama, distance_ue, distance_bs, max_events, locations, rtt_min_sbs_ue
                 )
 
 
@@ -315,7 +316,7 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -338,6 +339,7 @@ def load_dataset(dataset: object):
     resources_node = dataset["resources_node"]
 
     rtt_edge = dataset["rtt_edge"]
+    rtt_min_sbs_ue = dataset["rtt_min_sbs_ue"]
 
     if num_bs is not None and num_ue is not None and num_files is not None:
         gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]

@@ -382,6 +382,7 @@ def generate_json(path):
     data = {"mobility_rate": mobility_rate,
             "alpha": alpha,
             "beta": beta,
+            "rtt_min_sbs_ue": rtt_min_sbs_ue,
             "num_bs": num_bs,
             "num_ue": num_ue,
             "num_files": num_files,

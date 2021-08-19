@@ -112,19 +112,24 @@ def generate_gama():
 def generate_distance_ue():
     global distance_ue
     distance_ue = [[0.0 for i in range(num_bs)] for u in range(num_ue)]
-    max_ran = ((2 * radius_mbs) * num_mbs) - INTERFERENCE
 
     for u in range(num_ue):
-        for i in range(num_mbs, num_bs):
-            # dist = s.NormalDist(-radius_sbs, radius_sbs).samples(1, seed=None)[0]
-            # dist = randrange(-radius_sbs, radius_sbs + 1)
-            dist = np.random.normal(-radius_sbs, radius_sbs, 1)
-            if dist > max_ran:
-                dist = max_ran
-            # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
-            distance_ue[u][i] = float(np.around(abs(dist), 2))
+        bs_coverage = list()
+        num_coverage = randrange(1, 4)# An UE can be covered by maximum 3 BS's.
+        for i in range(num_coverage):
+            bs_coverage.append(randrange(0,len(key_index_bs)))
+            while key_index_bs[bs_coverage[-1]][:3] == 'MBS':
+                bs_coverage[-1] = randrange(0, len(key_index_bs))
 
-    for u in range(num_ue):
+        for i in range(num_mbs,num_bs):
+            dist = randrange(radius_sbs+1, (2*radius_sbs))
+            distance_ue[u][i] = float(round(abs(dist), 2))
+
+        for i in bs_coverage:
+            print("TESTE",i,key_index_bs[i])
+            dist = randrange(1, radius_sbs)
+            distance_ue[u][i] = float(round(abs(dist), 2))
+
         for i in range(num_mbs):
             distance_ue[u][i] = float(radius_mbs + 1)
 
@@ -134,9 +139,6 @@ def generate_distance_ue():
             print(distance_ue[u][i], end=" ")
         print()
     print()
-
-    # basear no numero de macros e definir como distÂncia maxima os extremos da rede acesso com base nos raios das mbs
-    # definir distancias fixas para sbs e mbs
 
 
 def generate_e_bs_adj():

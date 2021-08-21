@@ -28,6 +28,7 @@ SOURCE = 1
 SINK = 2
 KEY = 3
 
+MAXIMUM_SBS_PER_UE = 3
 
 # This class changes the type of trials.
 class Type(Enum):
@@ -581,13 +582,12 @@ class HandleData:
 
     def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
-            for i, tag_i in enumerate(self.__data.key_index_bs):
-                if location_fixed:
-                    rand_dis = self.__data.location_ue[event][u][i]
-                else:
-                    rand_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
 
-                new_dis = (rand_dis + self.__data.distance_ue[u][i])
+            old_bs, old_rtt = self.get_old_values_ue(tag_u, u)
+
+            for i, tag_i in enumerate(self.__data.key_index_bs):
+
+                new_dis = self.new_distance_ue(event, i, location_fixed, u)
 
                 if new_dis > self.__data.distance_ue[u][i]:
                     rtt_previous = self.__update_omega_user_node(u, tag_i, i, new_dis, self.__data.rtt_edge_dict[tag_i, tag_u])
@@ -605,6 +605,50 @@ class HandleData:
                         self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, rtt_previous)
                     else:
                         self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
+
+            # Ensure that UE has at last one coverage of SBS.
+            self.minimum_coverage(old_bs, old_rtt, tag_u, u)
+
+        # Ensure that a UE doesn't have more than three coverage of SBS.
+        self.maximum_coverage()
+
+    def new_distance_ue(self, event, i, location_fixed, u):
+        if location_fixed:
+            rand_dis = self.__data.location_ue[event][u][i]
+        else:
+            rand_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
+        new_dis = (rand_dis + self.__data.distance_ue[u][i])
+        return new_dis
+
+    def get_old_values_ue(self, tag_u, u):
+        old_bs = [(i, tag_i) for i, tag_i in enumerate(self.__data.key_index_bs) if
+                  self.__data.omega_user_node[u][i] == 1]
+        old_rtt = self.__data.rtt_edge_dict[old_bs[0][1], tag_u]
+        return old_bs, old_rtt
+
+    def maximum_coverage(self):
+        bound = 0
+        for u in range(len(self.__data.key_index_ue)):
+            bound = 0
+            for i in range(len(self.__data.key_index_bs)):
+                if self.__data.omega_user_node[u][i] == 1:
+                    bound += 1
+
+            if bound > MAXIMUM_SBS_PER_UE:
+                diff = bound - MAXIMUM_SBS_PER_UE
+                while diff != 0:
+                    k = randrange(0, self.__data.num_bs)
+                    if self.__data.omega_user_node[u][k] == 1:
+                        self.__data.omega_user_node[u][k] = 0
+                        diff -= 1
+        self.__data.omega_user_node_to_dictionary()
+
+    def minimum_coverage(self, old_bs, old_rtt, tag_u, u):
+        if 1 not in self.__data.omega_user_node[u]:
+            self.__data.omega_user_node[u][old_bs[0][0]] = 1
+
+            self.__data.omega_user_node_to_dictionary()
+            self.__data.rtt_edge_dict[old_bs[0][1], tag_u] = old_rtt
 
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:

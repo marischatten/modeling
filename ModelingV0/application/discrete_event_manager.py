@@ -162,6 +162,11 @@ def poisson_zipf():
         requests, bulks = r.Request.create_requests(avg_qtd_bulk, num_events, num_alpha, key_index_file, key_index_ue, num_files, plot_distribution, fixed)
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
+
+        if plot_graph_mobility:
+            data.set_graph_adj_matrix()
+            picture(path_graph+"_{0}".format(event+1))
+            
         qtd_req = bulks[event]
         for req in range(qtd_req):
             req_total += 1
@@ -195,12 +200,6 @@ def poisson_zipf():
             start_time_4 = time.time()
             handler.update_data(event,location_fixed)
             print(CYAN, "UPDATE DATA TIME --- %s seconds ---" % round((time.time() - start_time_4), 4), RESET)
-
-        if plot_graph_mobility:
-            data.set_graph_adj_matrix()
-            picture(path_graph+"_{0}".format(event+1))
-
-
 
     if save_data:
         pd.calc_rate_admission_requests(admission, req_total)

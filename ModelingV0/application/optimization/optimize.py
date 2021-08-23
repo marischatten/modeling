@@ -710,7 +710,7 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective((gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
+        self.model.setObjective((self.__data.alpha * (gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
                                                                                                         self.__data.resources_node_dict[
@@ -719,9 +719,9 @@ class OptimizeData:
                                                                                                             req[
                                                                                                                 SOURCE], i]) + DELTA)
                                                                   for i in self.__data.key_index_bs for req in
-                                                                  self.__data.requests))
+                                                                  self.__data.requests)))
                                 +
-                                ((gp.quicksum(
+                                ((1 - self.__data.alpha) * (gp.quicksum(
                                     self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
                                     * self.__data.psi_edge_dict[req[SOURCE], i, j]
@@ -955,6 +955,11 @@ class LogData:
             print()
         print()
 
+    def __log_gama_file_node_dict(self):
+        print("FILE CACHING PER BASE STATION(GAMA).")
+        for k in self.data.gama_file_node_dict.keys():
+            print(k, self.data.gama_file_node_dict[k])
+
     def __log_e_bs_adj(self):
         print("COVERAGE BETWEEN BASE STATIONS(E).")
         for i in range(len(self.data.key_index_bs)):
@@ -1082,6 +1087,7 @@ class LogData:
 
         self.__log_rtt_edge_dict()
         self.__log_gama_file_node()
+        # self.__log_gama_file_node_dict()
         self.__log_e_bs_adj_dict()
 
     def show_vars_matrix(self):
@@ -1126,6 +1132,7 @@ class PlotData:
     __reallocation_host = None
     __poisson = None
     __zipf = None
+    __rtt = None
 
     __hops = None
     __hops_id = None
@@ -1145,6 +1152,7 @@ class PlotData:
         self.__reallocation_host = pds.DataFrame(columns=['Event', 'Request'])
         self.__poisson = pds.DataFrame(columns=['Qtd_Requests'])
         self.__zipf = pds.DataFrame(columns=['Caches'])
+        self.__rtt = pds.DataFrame(columns=['Event','Link','RTT','Throughput'])
 
         self.__load_links_optic_to_dictionary()
         self.__load_links_wireless_to_dictionary()
@@ -1289,7 +1297,6 @@ class PlotData:
                 self.__load_links_optic = self.__load_links_optic.append(
                     {'Event': event, 'Link': k, 'Total_Load': self.__load_links_optic_dict[k]}, ignore_index=True)
 
-
     def __calc_load_link_wireless(self, event):
         for req in self.__data.requests:
             for h in self.__hops_id:
@@ -1323,6 +1330,15 @@ class PlotData:
                 self.__reallocation_host = self.__reallocation_host.append({'Event': event, 'Request': i[1]}, ignore_index=True)
             self.__data.reallocation_host.clear()
 
+    def rtt_to_dataframe(self, event):
+        time_rtt = time.time()
+        for (key,value) in self.__data.rtt_edge_dict.items():
+            if value != NO_EDGE and value != 0:
+                if (key[1][:3] != 'SBS') and (key[1][:3] != 'MBS'):
+                    # WARNING correct throughput only for cache with same buffer size
+                    self.__rtt = self.__rtt.append({'Event': event, 'Link': key, 'RTT': value, 'Throughput': round(self.__data.size_file[0]/value,0)}, ignore_index=True)
+        print(CYAN, "RTT TIME --- %s seconds ---" % round(time_rtt - time.time(), 4), RESET)
+
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(
             {'Rate_Admission': [self.__rate_admission_requests], 'Admission_Requests': [self.__admission_requests],
@@ -1337,8 +1353,9 @@ class PlotData:
             self.__load_links_wireless.to_excel(writer, sheet_name='Load_Links_Wireless')
             self.__reallocation_path.to_excel(writer, sheet_name='Paths_Reallocation')
             self.__reallocation_host.to_excel(writer, sheet_name='Hosts_Reallocation')
-            self.__poisson.to_excel(writer,sheet_name='Poisson')
+            self.__poisson.to_excel(writer, sheet_name='Poisson')
             self.__zipf.to_excel(writer, sheet_name='Zipf')
+            self.__rtt.to_excel(writer, sheet_name='RTT')
 
     def __load_links_optic_to_dictionary(self):
         self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in

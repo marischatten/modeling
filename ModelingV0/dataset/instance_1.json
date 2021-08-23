@@ -1,6 +1,6 @@
 {
-    "mobility_rate": 10,
-    "alpha" : 0.5,
+    "mobility_rate": 2,
+    "alpha" : 1,
     "beta": 0.1,
     "rtt_min_sbs_ue": 0.002,
     "num_bs": 2,

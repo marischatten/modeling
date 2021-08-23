@@ -31,18 +31,18 @@ zipf1 = data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Z
 times1 <- read.table("../dataAnalysis/data/instance_4_1.dat", header = TRUE)
 
 # alpha 0.5
-server_use05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Server_Use', col_names=TRUE))
-rate_admission05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Rate_Admission', col_names=TRUE))
-scattering_optic05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Scattering_Optic', col_names=TRUE))
-scattering_wireless05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
-load_links_optic05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
-load_links_wireless05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
-path_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
-host_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+server_use05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering_optic05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
 
-poisson05 = data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Poisson', col_names=TRUE))
-zipf05 = data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Zipf', col_names=TRUE))
-times05 <- read.table("../dataAnalysis/data/instance_4_1.dat", header = TRUE)
+poisson05 = data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Poisson', col_names=TRUE))
+zipf05 = data.frame(read_excel("../dataAnalysis/data/instance_4_05.xlsx", sheet='Zipf', col_names=TRUE))
+times05 <- read.table("../dataAnalysis/data/instance_4_05.dat", header = TRUE)
 
 # alpha 0
 server_use0 <- data.frame(read_excel("../dataAnalysis/data/instance_4_1.xlsx", sheet='Server_Use', col_names=TRUE))
@@ -85,7 +85,7 @@ alfa igual a $1$ ativa somente migração de servidores, o alfa iguai a $0$ ativ
     BS                    | `r length(bs)`
     Cache                 | 100
     UE                    | 200
-    Resources             | MBS 50 SBS 25
+    Resources             | MBS 100 SBS 50
     Average               | MBS 300 SBS 70
     RTT inicial           | MBS/MBS 05 s MBS/SBS 10 SBS/UE 15
     Tempo da Requisição   | 10
@@ -230,13 +230,13 @@ legend(x = "bottomright",
 ```
 
 
-### Fraguimentação de enlaces por evento.
+### Fraguimentação de enlaces sem fio por evento.
 
 
 ```{r echo=FALSE, results=FALSE}
-plot(scattering1$Scattering,type="l",xlab = "Events",ylab = "Scattering",col="blue")
-lines(scattering05$Scattering,col="red")
-lines(scattering0$Scattering,col="green")
+plot(scattering_wireless1$Scattering,type="l",xlab = "Events",ylab = "Scattering",col="blue")
+lines(scattering_wireless05$Scattering,col="red")
+lines(scattering_wireless0$Scattering,col="green")
 legend(x = "topleft",
        legend = c("alpha = 1", "alpha = 0.5", "alpha = 0"),
        col = c("blue","red","green"),
@@ -246,9 +246,9 @@ legend(x = "topleft",
        bty = "n")
 title(main = "Fraguimentação entre enlaces")
 
-p_1_05 <- t.test(scattering1$Scattering,scattering05$Scattering, paired = FALSE)$p.value
-p_1_0 <- t.test(scattering1$Scattering,scattering0$Scattering, paired = FALSE)$p.value
-p_05_0 <- t.test(scattering05$Scattering,scattering0$Scattering, paired = FALSE)$p.value
+w_p_1_05 <- t.test(scattering_wireless1$Scattering,scattering_wireless05$Scattering, paired = FALSE)$p.value
+w_p_1_0 <- t.test(scattering_wireless1$Scattering,scattering_wireless0$Scattering, paired = FALSE)$p.value
+w_p_05_0 <- t.test(scattering_wireless05$Scattering,scattering_wireless0$Scattering, paired = FALSE)$p.value
 
 ```
 
@@ -257,97 +257,131 @@ p_05_0 <- t.test(scattering05$Scattering,scattering0$Scattering, paired = FALSE)
 *Um valor de p menor que 0.05 indica que a diferença é estatisticamente significativa.*
 
 
-A diferença entre alfa 1 e alfa 0.5 **não é** estatisticamente significativa. Valor de p: `r p_1_05`.
+A diferença entre alfa 1 e alfa 0.5 **não é** estatisticamente significativa. Valor de p: `r w_p_1_05`.
 
-A diferença entre alfa 1 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_1_05`.
+A diferença entre alfa 1 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r w_p_1_05`.
 
-A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_1_05`.
+A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r w_p_1_05`.
 
 
-### Carga média de enlaces por evento.
+### Fraguimentação de enlaces ópticos por evento.
+
+
+```{r echo=FALSE, results=FALSE}
+plot(scattering_wireless1$Scattering,type="l",xlab = "Events",ylab = "Scattering",col="blue")
+lines(scattering_wireless05$Scattering,col="red")
+lines(scattering_wireless0$Scattering,col="green")
+legend(x = "topleft",
+       legend = c("alpha = 1", "alpha = 0.5", "alpha = 0"),
+       col = c("blue","red","green"),
+       horiz = F ,
+       lty = 1,
+       lwd = 3,
+       bty = "n")
+title(main = "Fraguimentação entre enlaces")
+
+o_p_1_05 <- t.test(scattering_optic1$Scattering,scattering_optic05$Scattering, paired = FALSE)$p.value
+o_p_1_0 <- t.test(scattering_optic1$Scattering,scattering_optic0$Scattering, paired = FALSE)$p.value
+o_p_05_0 <- t.test(scattering_optic05$Scattering,scattering_optic0$Scattering, paired = FALSE)$p.value
+
+```
+
+### Significância entre amostras (Teste T não pareado).
+
+*Um valor de p menor que 0.05 indica que a diferença é estatisticamente significativa.*
+
+
+A diferença entre alfa 1 e alfa 0.5 **não é** estatisticamente significativa. Valor de p: `r o_p_1_05`.
+
+A diferença entre alfa 1 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r o_p_1_05`.
+
+A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r o_p_1_05`.
+
+
+### Carga média de enlaces sem fio por evento.
 ```{r echo=FALSE, results=TRUE}
-load_links_means1 <- c()
-load_links_means05 <- c()
-load_links_means0 <- c()
+w_load_links_means1 <- c()
+w_load_links_means05 <- c()
+w_load_links_means0 <- c()
 
-load_links_median1 <- c()
-load_links_median05 <- c()
-load_links_median0 <- c()
+w_load_links_median1 <- c()
+w_load_links_median05 <- c()
+w_load_links_median0 <- c()
 
-load_links_sd1 <- c()
-load_links_sd05 <- c()
-load_links_sd0 <- c()
+w_load_links_sd1 <- c()
+w_load_links_sd05 <- c()
+w_load_links_sd0 <- c()
 
 
 for (i in 1:n){
   
-  load_links_n1 <- load_links1 %>% filter(load_links1$Event == i)
-  load_links_n05 <- load_links05 %>% filter(load_links05$Event == i)
-  load_links_n0 <- load_links0 %>% filter(load_links0$Event == i)
+  w_load_links_n1 <- load_links_wireless1 %>% filter(load_links_wireless1$Event == i)
+  w_load_links_n05 <- load_links_wireless05 %>% filter(load_links_wireless05$Event == i)
+  w_load_links_n0 <- load_links_wireless0 %>% filter(load_links_wireless0$Event == i)
   #hist(load_links_n1$Total_Load)
 
-  mean1 <- mean(load_links_n1$Total_Load)
-  mean05 <- mean(load_links_n05$Total_Load)
-  mean0 <- mean(load_links_n0$Total_Load)
+  w_mean1 <- mean(w_load_links_n1$Total_Load)
+  w_mean05 <- mean(w_load_links_n05$Total_Load)
+  w_mean0 <- mean(w_load_links_n0$Total_Load)
   
-  median1 <-  median(load_links_n1$Total_Load)
-  median05 <- median(load_links_n05$Total_Load)
-  median0 <-  median(load_links_n0$Total_Load)
+  w_median1 <-  median(w_load_links_n1$Total_Load)
+  w_median05 <- median(w_load_links_n05$Total_Load)
+  w_median0 <-  median(w_load_links_n0$Total_Load)
   
-  sd1 <- sd(load_links_n1$Total_Load)
-  sd05 <- sd(load_links_n05$Total_Load)
-  sd0 <- sd(load_links_n0$Total_Load)
+  w_sd1 <- sd(w_load_links_n1$Total_Load)
+  w_sd05 <- sd(w_load_links_n05$Total_Load)
+  w_sd0 <- sd(w_load_links_n0$Total_Load)
   
-  load_links_means1 = append(load_links_means1,mean1)
-  load_links_means05 = append(load_links_means05,mean05)
-  load_links_means0 = append(load_links_means0,mean0)
+  w_load_links_means1 = append(w_load_links_means1,w_mean1)
+  w_load_links_means05 = append(w_load_links_means05,w_mean05)
+  w_load_links_means0 = append(w_load_links_means0,w_mean0)
   
-  load_links_median1 = append(load_links_median1,median1)
-  load_links_median05 = append(load_links_median05,median05)
-  load_links_median0 = append(load_links_median0,median0)
+  w_load_links_median1 = append(w_load_links_median1,w_median1)
+  w_load_links_median05 = append(w_load_links_median05,w_median05)
+  w_load_links_median0 = append(w_load_links_median0,w_median0)
   
-  load_links_sd1 = append(load_links_sd1,sd1)
-  load_links_sd05 = append(load_links_sd05,sd05)
-  load_links_sd0 = append(load_links_sd0,sd0)
+  w_load_links_sd1 = append(w_load_links_sd1,w_sd1)
+  w_load_links_sd05 = append(w_load_links_sd05,w_sd05)
+  w_load_links_sd0 = append(w_load_links_sd0,w_sd0)
 }
 
-load_links_means1 <- na.omit(load_links_means1)
-load_links_means05 <- na.omit(load_links_means05)
-load_links_means0 <- na.omit(load_links_means0)
+w_load_links_means1 <- na.omit(w_load_links_means1)
+w_load_links_means05 <- na.omit(w_load_links_means05)
+w_load_links_means0 <- na.omit(w_load_links_means0)
 
-load_links_median1 <- na.omit(load_links_median1)
-load_links_median05 <- na.omit(load_links_median05)
-load_links_median0 <- na.omit(load_links_median0)
+w_load_links_median1 <- na.omit(w_load_links_median1)
+w_load_links_median05 <- na.omit(w_load_links_median05)
+w_load_links_median0 <- na.omit(w_load_links_median0)
 
-load_links_sd1 <- na.omit(load_links_sd1)
-load_links_sd05 <- na.omit(load_links_sd05)
-load_links_sd0 <- na.omit(load_links_sd0)
+w_load_links_sd1 <- na.omit(w_load_links_sd1)
+w_load_links_sd05 <- na.omit(w_load_links_sd05)
+w_load_links_sd0 <- na.omit(w_load_links_sd0)
 
-sd_top1 <- load_links_means1+load_links_sd1
-sd_bottom1 <- load_links_means1-load_links_sd1
-sd_top05 <- load_links_means05+load_links_sd05
-sd_bottom05 <- load_links_means05-load_links_sd05
-sd_top0 <- load_links_means0+load_links_sd0
-sd_bottom0 <- load_links_means0-load_links_sd0
+w_sd_top1 <- w_load_links_means1+w_load_links_sd1
+w_sd_bottom1 <- w_load_links_means1-w_load_links_sd1
+w_sd_top05 <- w_load_links_means05+w_load_links_sd05
+w_sd_bottom05 <- w_load_links_means05-w_load_links_sd05
+w_sd_top0 <- w_load_links_means0+w_load_links_sd0
+w_sd_bottom0 <- w_load_links_means0-w_load_links_sd0
 
-summary(load_links_means1)
-summary(load_links_means05)
-summary(load_links_means0)
+summary(w_load_links_means1)
+summary(w_load_links_means05)
+summary(w_load_links_means0)
 
-summary(load_links_median1)
-summary(load_links_median05)
-summary(load_links_median0)
+summary(w_load_links_median1)
+summary(w_load_links_median05)
+summary(w_load_links_median0)
 
 
-plot(load_links_means1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue")
+plot(w_load_links_means1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue")
 #lines(sd_top1,col="#4682B4")
 #lines(sd_bottom1,col="#4682B4")
 #lines(sd_top05,col="#B22222")
 #lines(sd_bottom05,col="#B22222")
 #lines(sd_top0,col="#339966")
 #lines(sd_bottom0,col="#339966")
-lines(load_links_means05,col="red")
-lines(load_links_means0,col="green")
+lines(w_load_links_means05,col="red")
+lines(w_load_links_means0,col="green")
 legend(x = "bottomleft", 
        legend = c("alpha = 1", "alpha = 0.5","alpha = 0"), 
        col = c("blue","red","green"), 
@@ -357,15 +391,15 @@ legend(x = "bottomleft",
        bty = "n")
 title(main = "Carga média entre enlaces")
 
-plot(load_links_median1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue")
+plot(w_load_links_median1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue")
 #lines(sd_top1,col="#4682B4")
 #lines(sd_bottom1,col="#4682B4")
 #lines(sd_top05,col="#B22222")
 #lines(sd_bottom05,col="#B22222")
 #lines(sd_top0,col="#339966")
 #lines(sd_bottom0,col="#339966")
-lines(load_links_median05,col="red")
-lines(load_links_median0,col="green")
+lines(w_load_links_median05,col="red")
+lines(w_load_links_median0,col="green")
 legend(x = "bottomleft", 
        legend = c("alpha = 1", "alpha = 0.5","alpha = 0"), 
        col = c("blue","red","green"), 
@@ -375,39 +409,22 @@ legend(x = "bottomleft",
        bty = "n")
 title(main = "Carga mediana entre enlaces")
 
-p_mean_1_05 <- t.test(load_links_means1,load_links_means05, paired = FALSE)$p.value
-p_mean_1_0 <- t.test(load_links_means1,load_links_means0, paired = FALSE)$p.value
-p_mean_05_0 <- t.test(load_links_means05,load_links_means0, paired = FALSE)$p.value
+#w_p_mean_1_05 <- t.test(w_load_links_means1,w_load_links_means05, paired = FALSE)$p.value
+#w_p_mean_1_0 <- t.test(w_load_links_means1,w_load_links_means0, paired = FALSE)$p.value
+#w_p_mean_05_0 <- t.test(w_load_links_means05,w_load_links_means0, paired = FALSE)$p.value
 
-p_median_1_05 <- t.test(load_links_median1,load_links_median05, paired = FALSE)$p.value
-p_median_1_0 <- t.test(load_links_median1,load_links_median0, paired = FALSE)$p.value
-p_median_05_0 <-t.test(load_links_median05,load_links_median0, paired = FALSE)$p.value
+#w_p_median_1_05 <- t.test(w_load_links_median1,w_load_links_median05, paired = FALSE)$p.value
+#w_p_median_1_0 <- t.test(w_load_links_median1,w_load_links_median0, paired = FALSE)$p.value
+#w_p_median_05_0 <-t.test(w_load_links_median05,w_load_links_median0, paired = FALSE)$p.value
 
 
 ```
 
-### Significância entre amostras (Teste T não pareado).
-
-*Um valor de p menor que 0.05 indica que a diferença é estatisticamente significativa.*
-
-**Entre médias:**
 
 
-A diferença entre alfa 1 e alfa 0.5 **não é** estatisticamente significativa. Valor de p: `r p_mean_1_05`.
-
-A diferença entre alfa 1 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_mean_1_0`.
-
-A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_mean_05_0`.
 
 
-**Entre medianas:**
 
-
-A diferença entre alfa 1 e alfa 0.5 **não é** estatisticamente significativa. Valor de p: `r p_mean_1_05`.
-
-A diferença entre alfa 1 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_mean_1_0`.
-
-A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa. Valor de p: `r p_mean_05_0`.
 
 ### Número de Realocação de Enlaces por Requisição
 
@@ -529,8 +546,8 @@ A diferença entre alfa 0.5 e alfa 0 **não é** estatisticamente significativa.
 ```{r echo=FALSE, results=FALSE}
 
 p_host_path <- cor(host_Realloc1_count_event$freq, path_Realloc1_count_event$freq, method = "kendall")
-p_links_path <- cor(load_links_means1, path_Realloc1_count_event$freq, method = "kendall")
-p_links_host <- cor(load_links_means1, host_Realloc1_count_event$freq, method = "kendall")
+p_links_path <- cor(w_load_links_means1, path_Realloc1_count_event$freq, method = "kendall")
+p_links_host <- cor(w_load_links_means1, host_Realloc1_count_event$freq, method = "kendall")
 
 ```
 Correlação entre migração de servidores e caminhos. Valor de p: `r p_host_path`.

@@ -1,39 +1,39 @@
 {
 "show_log": 0,
-"show_results": true,
-"show_path": true,
-"show_var": true,
-"show_par": true,
-"show_reallocation": true,
-"plot_distribution": true,
+"show_results": false,
+"show_path": false,
+"show_var": false,
+"show_par": false,
+"show_reallocation": false,
+"plot_distribution": false,
 
 "mobility": "is_mobile",
 "location_fixed": true,
-"path_location": "..\\dataset\\location\\instance_1.json",
+"path_location": "..\\dataset\\location\\instance_4.json",
 
 "requests_fixed": true,
-"path_requests": "..\\dataset\\request\\instance_1.json",
+"path_requests": "..\\dataset\\request\\instance_4.json",
 
-"plot_graph": true,
-"plot_graph_mobility": true,
-"path_graph": "..\\output\\graph\\instance_1",
+"plot_graph": false,
+"plot_graph_mobility": false,
+"path_graph": "..\\output\\graph\\instance_4",
 
 "save_data": true,
-"path_output": "..\\output\\data\\instance_1.xlsx",
+"path_output": "..\\output\\data\\instance_4_05.xlsx",
 
 "enable_ceil_nodes_capacity": true,
 
 "deallocate_request": true,
-"max_events": 2,
+"max_events": 10,
 
-"path_time": "..\\output\\time_execution\\instance_1.dat",
+"path_time": "..\\output\\time_execution\\instance_4_05.dat",
 
-"path_dataset": "..\\dataset\\instance_1.json",
+"path_dataset": "..\\dataset\\instance_4.json",
 
 "type": "zipf",
 "fixed": true,
-"avg_qtd_bulk":1,
-"num_events": 4,
+"avg_qtd_bulk":5,
+"num_events": 100,
 "num_alpha": 0.56,
 
 "source": ["F2"],

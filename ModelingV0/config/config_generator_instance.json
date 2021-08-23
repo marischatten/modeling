@@ -3,10 +3,10 @@
     "alpha" :  0.5,
     "beta" :  0.2,
     "num_mbs" :  2,
-    "num_sbs_per_mbs" :  3,
+    "num_sbs_per_mbs" :  15,
 
-    "num_files" :  10,
-    "num_ue" :  10,
+    "num_files" :  100,
+    "num_ue" :  200,
 
     "requirements" :  [
         [1350,45,5]
@@ -16,9 +16,9 @@
     "resources_node_min" :  25,
     "radius_mbs" :  300,
     "radius_sbs" :  70,
-    "rtt_min_mbs_mbs" :  0.001,
-    "rtt_min_sbs_mbs" :  0.0015,
-    "rtt_min_sbs_ue" :  0.002,
+    "rtt_min_mbs_mbs" :  5,
+    "rtt_min_sbs_mbs" :  10,
+    "rtt_min_sbs_ue" :  15,
 
-    "path": "..\\dataset\\instance_2.json"
+    "path": "..\\dataset\\instance_4.json"
 }

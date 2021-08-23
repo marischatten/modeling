@@ -166,7 +166,9 @@ def poisson_zipf():
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
-            
+
+        pd.rtt_to_dataframe(event+1)
+
         qtd_req = bulks[event]
         for req in range(qtd_req):
             req_total += 1

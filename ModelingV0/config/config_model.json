@@ -19,14 +19,14 @@
 "path_graph": "..\\output\\graph\\instance_4",
 
 "save_data": true,
-"path_output": "..\\output\\data\\instance_4_05.xlsx",
+"path_output": "..\\output\\data\\instance_4_0.xlsx",
 
 "enable_ceil_nodes_capacity": true,
 
 "deallocate_request": true,
 "max_events": 10,
 
-"path_time": "..\\output\\time_execution\\instance_4_05.dat",
+"path_time": "..\\output\\time_execution\\instance_4_0.dat",
 
 "path_dataset": "..\\dataset\\instance_4.json",
 

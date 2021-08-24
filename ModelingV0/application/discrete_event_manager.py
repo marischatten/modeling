@@ -16,7 +16,7 @@ import tqdm
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-import igraph as ig
+#import igraph as ig
 from utils.utils import *
 import simulation.request as r
 from optimization.optimize import *
@@ -300,7 +300,7 @@ def show_vars():
 def picture(path):
     path_with_ext = path + ".png"
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
-
+    '''
     g = ig.Graph(directed=1)
     g.is_weighted()
     key_nodes = key_index_bs + key_index_ue + key_index_file
@@ -315,7 +315,7 @@ def picture(path):
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
-
+    '''
 
 def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, resources_file, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue

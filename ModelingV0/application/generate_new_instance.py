@@ -7,11 +7,10 @@ from utils import utils as u
 from optimization import optimize as opt
 
 NO_EDGE = 99999
-INTERFERENCE = 20
-DISTANCE_MBS_MBS = 550
+
 MAX_USE_NODE = 0.5
 NUM_CLOUD = 1
-MAX_GAMA = 5
+MAX_GAMA = 6 # WARNING
 TO_GB = 8000
 TO_MB = 8
 mobility_rate = 0
@@ -90,7 +89,7 @@ def generate_gama():
     gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]
     for f in range(len(key_index_file)):
         # retorna inteiros com uma distribuição uniforme discreta
-        max =  1 # MAX_GAMA
+        max =  MAX_GAMA
         while max != 0:
             i = np.random.randint(1, num_bs + NUM_CLOUD)
             while gama[f][i] == 1:
@@ -116,7 +115,7 @@ def generate_distance_ue():
     for u in range(num_ue):
 
         bs_coverage = list()
-        num_coverage = randrange(1, 3)# An UE can be covered by maximum 3 BS's.
+        num_coverage = randrange(1, 3)# An UE can be covered by maximum 2 BS's.
         for i in range(num_coverage):
             bs_coverage.append(randrange(0,len(key_index_bs)))
             while key_index_bs[bs_coverage[-1]][:3] == 'MBS':

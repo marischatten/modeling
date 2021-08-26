@@ -28,7 +28,7 @@ SOURCE = 1
 SINK = 2
 KEY = 3
 
-MAXIMUM_SBS_PER_UE = 3
+MAXIMUM_SBS_PER_UE = 2
 
 # This class changes the type of trials.
 class Type(Enum):
@@ -419,6 +419,8 @@ class HandleData:
             rtt = round(rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
         else:
             rtt = NO_EDGE
+        if rtt < self.__data.rtt_min_sbs_ue:
+            rtt = self.__data.rtt_min_sbs_ue
         return rtt
 
     def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
@@ -427,6 +429,8 @@ class HandleData:
             rtt = round(rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
         else:
             rtt = NO_EDGE
+        if rtt < self.__data.rtt_min_sbs_ue:
+            rtt = self.__data.rtt_min_sbs_ue
         return rtt
 
     def __calc_current_throughput_edge(self):
@@ -637,7 +641,6 @@ class HandleData:
     def minimum_coverage(self, old_bs, old_rtt, tag_u, u):
         if 1 not in self.__data.omega_user_node[u]:
             self.__data.omega_user_node[u][old_bs[0][0]] = 1
-
             self.__data.omega_user_node_to_dictionary()
             self.__data.rtt_edge_dict[old_bs[0][1], tag_u] = old_rtt
 
@@ -820,7 +823,7 @@ class OptimizeData:
         print(CYAN, "EXECUTION OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time_execution_optimize), 4), RESET)
         if self.model.status != gp.GRB.OPTIMAL:
             self.model.computeIIS()
-            self.model.write("..\\dataset\\model.mps")
+            #self.model.write("..\\dataset\\model.mps")
 
     def result(self):
         if self.model.status == gp.GRB.OPTIMAL:
@@ -1318,13 +1321,11 @@ class PlotData:
             self.__data.reallocation_host.clear()
 
     def rtt_to_dataframe(self, event):
-        time_rtt = time.time()
         for (key,value) in self.__data.rtt_edge_dict.items():
             if value != NO_EDGE and value != 0:
                 if (key[1][:3] != 'SBS') and (key[1][:3] != 'MBS'):
                     # WARNING correct throughput only for cache with same buffer size
                     self.__rtt = self.__rtt.append({'Event': event, 'Link': key, 'RTT': value, 'Throughput': round(self.__data.size_file[0]/value,0)}, ignore_index=True)
-        print(CYAN, "RTT TIME --- %s seconds ---" % round(time_rtt - time.time(), 4), RESET)
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(

@@ -8,6 +8,13 @@ command: ./installer.sh
 
 https://www.gurobi.com/downloads/gurobi-software/
 
+ou
+
+````shell
+command: wget https://packages.gurobi.com/9.1/gurobi9.1.2_linux64.tar.gz
+command: tar xvfz gurobi_server9.1.2_linux64.tar.gz
+````
+
 ### Install  Gurobi:
 
 https://www.gurobi.com/documentation/9.1/remoteservices/linux_installation.html

@@ -11,7 +11,7 @@
     "key_index_bs": ["SBS1", "SBS2"],
     "key_index_ue": ["UE1", "UE2", "UE3"],
 
-    "resources_file": [5, 5, 5],
+    "resources_file": [25, 25, 25],
     "size_file" :  [1350, 1350, 1350],
     "throughput_min_file": [45, 45, 45],
 

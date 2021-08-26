@@ -1,39 +1,39 @@
 {
 "show_log": 0,
-"show_results": false,
-"show_path": false,
+"show_results": true,
+"show_path": true,
 "show_var": false,
 "show_par": false,
 "show_reallocation": false,
 "plot_distribution": false,
 
 "mobility": "is_mobile",
-"location_fixed": true,
+"location_fixed": false,
 "path_location": "..\\dataset\\location\\instance_4.json",
 
-"requests_fixed": true,
-"path_requests": "..\\dataset\\request\\instance_4.json",
+"requests_fixed": false,
+"path_requests": "..\\dataset\\request\\request_4_zipf080.json",
 
-"plot_graph": false,
+"plot_graph": true,
 "plot_graph_mobility": false,
-"path_graph": "..\\output\\graph\\instance_4",
+"path_graph": "..\\output\\graph\\instance_5",
 
 "save_data": true,
-"path_output": "..\\output\\data\\instance_4_0.xlsx",
+"path_output": "..\\output\\data\\instance_5.xlsx",
 
 "enable_ceil_nodes_capacity": true,
 
 "deallocate_request": true,
 "max_events": 10,
 
-"path_time": "..\\output\\time_execution\\instance_4_0.dat",
+"path_time": "..\\output\\time_execution\\instance_5.dat",
 
-"path_dataset": "..\\dataset\\instance_4.json",
+"path_dataset": "..\\dataset\\instance_5.json",
 
 "type": "zipf",
 "fixed": true,
-"avg_qtd_bulk":5,
-"num_events": 100,
+"avg_qtd_bulk":1,
+"num_events": 5,
 "num_alpha": 0.56,
 
 "source": ["F2"],

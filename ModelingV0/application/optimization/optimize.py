@@ -13,6 +13,8 @@ NO_EDGE = 99999
 DELTA = 0.0001
 EPSILON = 0.9999
 
+NUM_CLOUD = 1
+
 CURRENT_NODE = 0
 NEXT_HOP = 1
 
@@ -21,8 +23,6 @@ HOST = 1
 
 INCREASE = 1
 DECREASE = 0
-
-MOBILITY_RATE = 10
 
 SOURCE = 1
 SINK = 2
@@ -89,8 +89,7 @@ class Data:
     size_file = list()
     # thp \in N
     throughput_min_file = list()
-    # cr_k \in N
-    resources_file = list()
+
     # b \in F
     beta_file = list()
     # bsr_i \in R
@@ -139,7 +138,6 @@ class Data:
 
     size_file_dict = dict()
     throughput_min_file_dict = dict()
-    resources_file_dict = dict()
 
     resources_node_dict = dict()
 
@@ -155,17 +153,17 @@ class Data:
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 sf=None, thp=None, rf=None,rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
+                 sf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_sbs_ue=0):
 
         self.mobility = mobility
         self.mobility_rate = mr
         self.alpha = alpha
         self.beta = beta
-        self.num_bs = num_bs
+        self.num_bs = num_bs + NUM_CLOUD
         self.num_ue = num_ue
         if num_bs != 0 and num_ue != 0:
-            self.num_nodes = num_bs + num_ue
+            self.num_nodes = num_bs + num_ue + NUM_CLOUD
         self.num_files = num_file
 
         if key_f is not None and key_i is not None and key_u is not None:
@@ -180,7 +178,6 @@ class Data:
 
         self.size_file = sf
         self.throughput_min_file = thp
-        self.resources_file = rf
 
         self.resources_node = rt_i
 
@@ -200,7 +197,6 @@ class Data:
             self.gama_file_node = gama_file_node
 
             self.load_links_to_dictionary()
-            self.__resources_file_to_dictionary()
             self.__size_file_to_dictionary()
             self.__resources_node_to_dictionary()
             self.__throughput_min_file_to_dictionary()
@@ -251,11 +247,6 @@ class Data:
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
             self.throughput_min_file_dict[tag] = self.throughput_min_file[f]
-
-    def __resources_file_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            tag = self.key_index_file[f]
-            self.resources_file_dict[tag] = self.resources_file[f]
 
     def __resources_node_to_dictionary(self):
         for i in range(len(self.key_index_bs)):
@@ -710,7 +701,7 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective(((gp.quicksum((self.__data.resources_file_dict[req[SOURCE]] *
+        self.model.setObjective(((gp.quicksum((self.__data.size_file_dict[req[SOURCE]] *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
                                                                                                         self.__data.resources_node_dict[
@@ -756,12 +747,12 @@ class OptimizeData:
                 self.model.addConstr(self.y[req[KEY], i] <= (
                             self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON)
                 self.model.addConstr(
-                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]))
+                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1')
 
     def __set_constraint_node_resources_capacity(self):
         for i in self.__data.key_index_bs:
             self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
-                self.__data.resources_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests))
+                self.__data.size_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests),'c2')
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -771,7 +762,7 @@ class OptimizeData:
                             self.__data.throughput_current_edge_dict[req[SOURCE], i, j] -
                             self.__data.throughput_min_file_dict[req[SOURCE]]))
                                          * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
-                                         >= 0)
+                                         >= 0, 'c3')
 
     def __set_constraint_flow_conservation(self):
         for req in self.__data.requests:
@@ -827,6 +818,9 @@ class OptimizeData:
         start_time_execution_optimize = time.time()
         self.model.optimize()
         print(CYAN, "EXECUTION OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time_execution_optimize), 4), RESET)
+        if self.model.status != gp.GRB.OPTIMAL:
+            self.model.computeIIS()
+            self.model.write("..\\dataset\\model.mps")
 
     def result(self):
         if self.model.status == gp.GRB.OPTIMAL:
@@ -933,12 +927,6 @@ class LogData:
         print("MINIMAL THROUGHPUT.")
         for k in self.data.throughput_min_file_dict.keys():
             print(k, self.data.throughput_min_file_dict[k], "Mb")
-        print()
-
-    def __log_resources_file_dict(self):
-        print("RESOURCES FILE.")
-        for k in self.data.resources_file_dict.keys():
-            print(k, self.data.resources_file_dict[k])
         print()
 
     def __log_resources_node_dict(self):
@@ -1081,7 +1069,6 @@ class LogData:
 
         self.__log_size_file_dict()
         self.__log_throughput_min_dict()
-        self.__log_resources_file_dict()
 
         self.__log_resources_node_dict()
 
@@ -1194,7 +1181,7 @@ class PlotData:
             for p, h in zip(paths, hosts):
                 for j, tag_j in enumerate(self.__data.key_index_bs):
                     if h[1][HOST] == tag_j:
-                        self.__server_use[j] += self.__data.resources_file_dict[p[1][CONTENT]]
+                        self.__server_use[j] += self.__data.size_file_dict[p[1][CONTENT]]
 
             for i, tag_i in enumerate(self.__data.key_index_bs):
                 rate = round(self.__server_use[i] / self.__data.resources_node[i], 4)

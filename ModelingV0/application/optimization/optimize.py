@@ -707,7 +707,8 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective(((gp.quicksum(((self.__data.size_file_dict[req[SOURCE]]) *
+        self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
+                                                self.__data.size_file_dict[req[SOURCE]]) *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
                                                                                                         self.__data.resources_node_dict[

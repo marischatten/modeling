@@ -33,6 +33,8 @@ beta = 0
 num_bs = 0
 num_ue = 0
 num_files = 0
+num_mbs = 0
+num_sbs = 0
 
 key_index_file = list()
 key_index_bs = list()
@@ -222,6 +224,7 @@ def process_datas(pd, event):
         pd.calc_server_use(event,event_null,last_req,last_host)
     else:
         pd.calc_server_use(event,event_null)
+    pd.calc_server_use_by_type(event,event_null)
     pd.calc_scattering(event, event_null)
     pd.calc_load_link(event, event_null)
     pd.calc_reallocation(event, event_null)
@@ -237,7 +240,7 @@ def load_location_fixed():
 
 
 def make_data():
-    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs,
+    return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs,num_sbs, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
                 size_file,
                 throughput_min_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
@@ -317,7 +320,7 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -326,6 +329,8 @@ def load_dataset(dataset: object):
     num_bs = int(dataset["num_bs"])
     num_ue = int(dataset["num_ue"])
     num_files = int(dataset["num_files"])
+    num_mbs = int(dataset["num_mbs"])
+    num_sbs = int(dataset["num_sbs"])
 
     key_index_file = dataset["key_index_file"]
     key_index_bs = dataset["key_index_bs"]

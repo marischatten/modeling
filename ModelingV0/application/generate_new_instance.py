@@ -164,6 +164,9 @@ def generate_e_bs_adj():
         control += count
         count = 0
 
+    for i in range(num_bs + NUM_CLOUD):
+        e_bs_adj[i][0] = 0
+
     print("ADJACÊNCIA ENTRE BS.")
     for i in range(len(key_index_bs)):
         for j in range(len(key_index_bs)):
@@ -182,9 +185,9 @@ def generate_resources_node():
             resources_node[i] = storage_node_min
 
     resources_node[0] = sum(size_file)
-    print("CAPACIDADE DA BS. GB.")
+    print("CAPACIDADE DA BS. MB.")
     for i in range(num_bs + NUM_CLOUD):
-        print(round(resources_node[i]/TO_GB,0), end=" ")
+        print(round(resources_node[i]/TO_MB,0), end=" ")
     print()
 
 
@@ -199,16 +202,15 @@ def generate_requirements():
         size_file[f] = requirements[index][0]
         throughput_min_file[f] = requirements[index][1]
 
-    print("TAMANHO DO CONTEÚDO.GB.")
+    print("TAMANHO DO CONTEÚDO.MB.")
     for f in range(num_files):
-        print(round(size_file[f]/TO_GB,0), end=" ")
+        print(round(size_file[f]/TO_MB,0), end=" ")
     print()
 
     print("THROUGHPUT MÍNIMA DO CONTEÚDO.Mbps")
     for f in range(num_files):
         print(throughput_min_file[f], end=" ")
     print()
-
 
 
 def generate_rtt_min():
@@ -232,8 +234,9 @@ def generate_rtt_min():
                     if caching_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = 0
                 if tag_i[:3] == 'MBS' and tag_j[:4] == 'MBS0':
-                    rtt_min[i][j] = rtt_min_cloud_mbs
+                    rtt_min[i][j] = NO_EDGE
                     rtt_min[j][i] = rtt_min_cloud_mbs
+
 
     print("RTT MÍNIMO POR ENLACE.")
     for i in range(num_nodes):
@@ -374,6 +377,9 @@ def generate_json(path):
             "num_bs": num_bs,
             "num_ue": num_ue,
             "num_files": num_files,
+            "num_mbs": num_mbs,
+            "num_sbs": num_sbs_per_mbs * num_mbs,
+
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,

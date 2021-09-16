@@ -1,5 +1,6 @@
 import sys
 from random import randrange
+import math
 
 import gurobipy as gp
 import time
@@ -69,6 +70,8 @@ class Data:
     num_ue = 0
     num_nodes = 0
     num_files = 0
+    num_mbs = 0
+    num_sbs = 0
 
     # f \in F
     key_index_file = list()
@@ -150,7 +153,7 @@ class Data:
     distance_ue_dict = dict()
 
     def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
-                 alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0,
+                 alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, num_mbs = 0, num_sbs=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
@@ -165,6 +168,8 @@ class Data:
         if num_bs != 0 and num_ue != 0:
             self.num_nodes = num_bs + num_ue + NUM_CLOUD
         self.num_files = num_file
+        self.num_mbs = num_mbs
+        self.num_sbs = num_sbs
 
         if key_f is not None and key_i is not None and key_u is not None:
             self.key_index_file = key_f
@@ -704,7 +709,7 @@ class OptimizeData:
                                     vtype=gp.GRB.SEMIINT, name="host")
 
     def __set_function_objective(self):
-        self.model.setObjective(((gp.quicksum((self.__data.size_file_dict[req[SOURCE]] *
+        self.model.setObjective(((gp.quicksum(((self.__data.size_file_dict[req[SOURCE]]) *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
                                                                                                         self.__data.resources_node_dict[
@@ -716,7 +721,8 @@ class OptimizeData:
                                                                   self.__data.requests)))
                                 +
                                 ((gp.quicksum(
-                                    self.__data.weight_network_dict[req[SOURCE], i, j] * self.x[req[KEY], i, j]
+                                    self.__data.weight_network_dict[req[SOURCE], i, j]
+                                    * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
                                     * self.__data.psi_edge_dict[req[SOURCE], i, j]
                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
@@ -821,8 +827,8 @@ class OptimizeData:
         start_time_execution_optimize = time.time()
         self.model.optimize()
         print(CYAN, "EXECUTION OPTIMIZE TIME --- %s seconds ---" % round((time.time() - start_time_execution_optimize), 4), RESET)
-        if self.model.status != gp.GRB.OPTIMAL:
-            self.model.computeIIS()
+        # if self.model.status != gp.GRB.OPTIMAL:
+            # self.model.computeIIS()
             #self.model.write("..\\dataset\\model.mps")
 
     def result(self):
@@ -867,7 +873,6 @@ class OptimizeData:
                     sys.exit()
                 if var.X != 0 and var.VarName[:4] == "flow":
                     hops.append(self.__get_solution(str(var.VarName)))
-
 
             for req in self.__data.requests:
                 for h in range(len(hops)):
@@ -1108,8 +1113,9 @@ class PlotData:
     __all_requests = 0
     __admission_requests = 0
     __rate_admission_requests = 0
-    __server_use = None
+    __server_use = dict()
     __all_server_use = None
+    __server_use_by_type = None
     __all_links_optic = 0
     __all_links_wireless = 0
     __enabled_links_optic = 0
@@ -1134,6 +1140,7 @@ class PlotData:
         self.__data = data
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
         self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
+        self.__server_use_by_type = pds.DataFrame(columns=['Event', 'Cloud','Total_Cloud','Rate_Cloud', 'MBS','Total_MBS','Rate_MBS', 'SBS','Total_SBS','Rate_SBS'])
         self.__scattering_optic = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
         self.__scattering_wireless = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
         self.__load_links_optic = pds.DataFrame(columns=['Event', 'Link','Total_Load'])
@@ -1172,6 +1179,43 @@ class PlotData:
         self.__all_requests = all_requests
         self.__rate_admission_requests = admission_requests / all_requests
 
+    def calc_server_use_by_type(self, event, event_null):
+        cloud_lst = list()
+        mbs_lst = list()
+        sbs_lst = list()
+        if event_null:
+            repeat = self.__server_use_by_type[self.__server_use_by_type['Event'] == (event - 1)]
+            cloud = repeat['Cloud'].to_list()
+            total_cloud = repeat['Total_Cloud'].to_list()
+            rate_cloud = repeat['Rate_Cloud'].to_list()
+            mbs = repeat['MBS'].to_list()
+            total_mbs = repeat['Total_MBS'].to_list()
+            rate_mbs = repeat['Rate_MBS'].to_list()
+            sbs = repeat['SBS'].to_list()
+            total_sbs = repeat['Total_SBS'].to_list()
+            rate_sbs = repeat['Rate_SBS'].to_list()
+
+            for r in range(len(repeat)):
+                self.__server_use_by_type = self.__server_use_by_type.append(
+                    {'Event': event, 'Cloud': cloud[r], 'Total_Cloud': total_cloud[r], 'Rate_Cloud': rate_cloud[r], 'MBS': mbs[r],
+                     'Total_MBS': total_mbs[r], 'Rate_MBS': rate_mbs[r], 'SBS': sbs[r],
+                     'Total_SBS': total_sbs[r], 'Rate_SBS': rate_sbs[r]}, ignore_index=True)
+        else:
+            for k in self.__server_use.keys():
+                if self.__server_use[k] != 0:
+                    if k[:4] == 'MBS0':
+                        cloud_lst.append(k)
+                    if k[:3] == 'MBS' and k[:4] != 'MBS0':
+                        mbs_lst.append(k)
+                    if k[:3] == 'SBS':
+                        sbs_lst.append(k)
+
+            cloud_count = len(cloud_lst)
+            mbs_count = len(mbs_lst)
+            sbs_count = len(sbs_lst)
+            self.__server_use_by_type = self.__server_use_by_type.append(
+                    {'Event': event, 'Cloud': cloud_count,'Total_Cloud': 1,'Rate_Cloud': cloud_count/1, 'MBS': mbs_count,'Total_MBS': self.__data.num_mbs,'Rate_MBS': mbs_count/self.__data.num_mbs, 'SBS': sbs_count,'Total_SBS': self.__data.num_sbs,'Rate_SBS': sbs_count/self.__data.num_sbs}, ignore_index=True)
+
     def calc_server_use(self, event, event_null, paths=None, hosts=None):
         if event_null:
             repeat = self.__all_server_use[self.__all_server_use['Event'] == (event - 1)]
@@ -1180,17 +1224,31 @@ class PlotData:
             for r in range(len(repeat)):
                 self.__all_server_use = self.__all_server_use.append({'Event': event, 'BS': bs[r], 'Use': use[r]}, ignore_index=True)
         else:
-            self.__server_use = [0 for i in range(self.__data.num_bs)]
-            for p, h in zip(paths, hosts):
-                for j, tag_j in enumerate(self.__data.key_index_bs):
-                    if h[1][HOST] == tag_j:
-                        self.__server_use[j] += self.__data.size_file_dict[p[1][CONTENT]]
+            for i in range(len(self.__data.key_index_bs)):
+                tag_bs = self.__data.key_index_bs[i]
+                self.__server_use[tag_bs] = 0
 
-            for i, tag_i in enumerate(self.__data.key_index_bs):
-                rate = round(self.__server_use[i] / self.__data.resources_node[i], 4)
+            server_use_gama_dict = dict()
+            for f in range(len(self.__data.key_index_file)):
+                for i in range(len(self.__data.key_index_bs)):
+                    tag_file = self.__data.key_index_file[f]
+                    tag_bs = self.__data.key_index_bs[i]
+                    server_use_gama_dict[tag_file, tag_bs] = 0
+
+            for p, h in zip(paths, hosts):
+                server_use_gama_dict[p[1][CONTENT],h[1][HOST]] = 1
+
+            for k in server_use_gama_dict.keys():
+                if server_use_gama_dict[k] == 1:
+                    self.__server_use[k[1]] += self.__data.size_file_dict[k[0]]
+
+            for i in self.__data.key_index_bs:
+                rate = round(self.__server_use[i] / self.__data.resources_node_dict[i], 4)
 
                 self.__all_server_use = self.__all_server_use.append(
-                    {'Event': event, 'BS': tag_i, 'Use': rate}, ignore_index=True)
+                    {'Event': event, 'BS': i, 'Use': rate}, ignore_index=True)
+
+            self.__data.clear_dict(server_use_gama_dict)
 
     def __calc_all_links(self):
         self.__calc_all_links_optic()
@@ -1335,6 +1393,7 @@ class PlotData:
             self.__paths.to_excel(writer, sheet_name='Requests')
             dt_rate_admission.to_excel(writer, sheet_name='Rate_Admission')
             self.__all_server_use.to_excel(writer, sheet_name='Server_Use')
+            self.__server_use_by_type.to_excel(writer, sheet_name='Server_Use_By_Type')
             self.__scattering_optic.to_excel(writer, sheet_name='Scattering_Optic')
             self.__scattering_wireless.to_excel(writer, sheet_name='Scattering_Wireless')
             self.__load_links_optic.to_excel(writer,sheet_name='Load_Links_Optic')

@@ -792,7 +792,7 @@ class OptimizeData:
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
             self.model.addConstr(
-                (self.__data.throughput_min_file_dict[req[SOURCE]]) == (
+                (1) == (
                         gp.quicksum(
                             self.x[req[KEY], req[SOURCE], i]
                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
@@ -808,7 +808,7 @@ class OptimizeData:
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
             self.model.addConstr(
-                (- self.__data.throughput_min_file_dict[req[SOURCE]]) == (
+                (- 1) == (
                         gp.quicksum(
                             self.x[req[KEY], req[SINK], i]
                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]

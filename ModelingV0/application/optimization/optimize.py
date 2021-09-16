@@ -651,15 +651,13 @@ class HandleData:
 
     def reallocation(self, show_reallocation, event):
         if self.__old_hosts is not None and self.old_paths is not None:
-            for op  in self.old_paths:
-                for np in self.paths[:-1]:
+            for op, oh in zip(self.old_paths, self.__old_hosts):
+                for np, nh in zip(self.paths[:-1], self.hosts[:-1]):
                     if op[0][:1] == np[0][:1]:
-                        if op[1][2:] != np[1][2:]:
+                        if (op[1][2:] != np[1][2:]) and (oh[1] == nh[1]):
                             if show_reallocation:
                                 print("SHIFT PATH {0}".format(np[0]))
                             self.__data.reallocation_path.append([event, np[0]])
-            for oh in self.__old_hosts:
-                for nh in self.hosts[:-1]:
                     if oh[0] == nh[0]:
                         if oh[1] != nh[1]:
                             if show_reallocation:

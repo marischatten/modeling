@@ -695,16 +695,22 @@ class OptimizeData:
     def create_vars(self):
         self.__create_var_flow()
         self.__create_var_host()
+        self.__create_var_fit()
 
     # x_ijk \in R+
     def __create_var_flow(self):
         self.x = self.model.addVars(self.__data.__s, self.__data.key_index_all, self.__data.key_index_all,
-                                    vtype=gp.GRB.SEMICONT, name="flow")
+                                    vtype=gp.GRB.BINARY, name="flow")
 
     # y_ik \in R+
     def __create_var_host(self):
         self.y = self.model.addVars(self.__data.__s, self.__data.key_index_bs,
-                                    vtype=gp.GRB.SEMIINT, name="host")
+                                    vtype=gp.GRB.BINARY, name="host")
+
+    # This variable this is a logical fit.
+    def __create_var_fit(self):
+        self.z = self.model.addVars(self.__data.key_index_file, self.__data.key_index_bs,
+                                    vtype=gp.GRB.BINARY, name="fit")
 
     def __set_function_objective(self):
         self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
@@ -733,6 +739,9 @@ class OptimizeData:
         # This constraint set y value.
         self.__set_constraint_y_value()
 
+        # This constraint this is a logical fit.
+        self.__set_constraints_fit()
+
         # This constraint limit the use  of node resources.
         if enable_ceil_nodes_capacity:
             self.__set_constraint_node_resources_capacity()
@@ -753,14 +762,20 @@ class OptimizeData:
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(self.y[req[KEY], i] <= (
-                            self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON)
+                            self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON,'c1_0')
                 self.model.addConstr(
-                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1')
+                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1_1')
+
+    def __set_constraints_fit(self):
+        for req in self.__data.requests:
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.z[req[SOURCE], i] <= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
+                self.model.addConstr(self.z[req[SOURCE], i] >= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
 
     def __set_constraint_node_resources_capacity(self):
         for i in self.__data.key_index_bs:
             self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
-                self.__data.size_file_dict[req[SOURCE]] * self.y[req[KEY], i] for req in self.__data.requests),'c2')
+                self.__data.size_file_dict[c] * self.z[c, i] for c in self.__data.key_index_file),'c3')
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -770,7 +785,7 @@ class OptimizeData:
                             self.__data.throughput_current_edge_dict[req[SOURCE], i, j] -
                             self.__data.throughput_min_file_dict[req[SOURCE]]))
                                          * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
-                                         >= 0, 'c3')
+                                         >= 0, 'c4')
 
     def __set_constraint_flow_conservation(self):
         for req in self.__data.requests:
@@ -787,7 +802,7 @@ class OptimizeData:
                     * self.__data.connectivity_edges_dict[req[SOURCE], j, i]
                     for j in
                     self.__data.key_index_all)
-                                     == 0, 'c4')
+                                     == 0, 'c5')
 
     def __set_constraint_flow_conservation_source(self):
         for req in self.__data.requests:
@@ -803,7 +818,7 @@ class OptimizeData:
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
                     for i in self.__data.key_index_bs
                 ))
-                , 'c5')
+                , 'c6')
 
     def __set_constraint_flow_conservation_sink(self):
         for req in self.__data.requests:
@@ -819,7 +834,7 @@ class OptimizeData:
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
                     for i in self.__data.key_index_bs
                 ))
-                , 'c6')
+                , 'c7')
 
     def execute(self, log):
         self.model.setParam("LogToConsole", log)

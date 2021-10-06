@@ -90,6 +90,7 @@ class Data:
 
     # cs_k \in N
     size_file = list()
+    buffer_file = list()
     # thp \in N
     throughput_min_file = list()
 
@@ -140,6 +141,7 @@ class Data:
     throughput_diff_edge_dict = dict()
 
     size_file_dict = dict()
+    buffer_file_dict = dict()
     throughput_min_file_dict = dict()
 
     resources_node_dict = dict()
@@ -156,7 +158,7 @@ class Data:
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, num_mbs = 0, num_sbs=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
-                 sf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
+                 sf=None, bf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
                  gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_sbs_ue=0):
 
         self.mobility = mobility
@@ -182,6 +184,7 @@ class Data:
         self.e_bs_adj = e_bs_adj
 
         self.size_file = sf
+        self.buffer_file = bf
         self.throughput_min_file = thp
 
         self.resources_node = rt_i
@@ -203,6 +206,7 @@ class Data:
 
             self.load_links_to_dictionary()
             self.__size_file_to_dictionary()
+            self.__buffer_file_to_dictionary()
             self.__resources_node_to_dictionary()
             self.__throughput_min_file_to_dictionary()
             self.__gama_file_node_to_dictionary()
@@ -247,6 +251,11 @@ class Data:
         for f in range(len(self.key_index_file)):
             tag = self.key_index_file[f]
             self.size_file_dict[tag] = self.size_file[f]
+
+    def __buffer_file_to_dictionary(self):
+        for f in range(len(self.key_index_file)):
+            tag = self.key_index_file[f]
+            self.buffer_file_dict[tag] = self.buffer_file[f]
 
     def __throughput_min_file_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -449,7 +458,7 @@ class HandleData:
         for f, tag_f in enumerate(self.__data.key_index_file):
             for i, tag_i in enumerate(self.__data.key_index_all):
                 for j, tag_j in enumerate(self.__data.key_index_all):
-                    size_f = self.__data.size_file[f]
+                    size_f = self.__data.buffer_file[f]
                     if self.__data.rtt_edge_dict is not None:
                         if self.__data.rtt_edge_dict[tag_i,tag_j] == 0:
                             if tag_f == tag_i:
@@ -712,8 +721,8 @@ class OptimizeData:
         self.z = self.model.addVars(self.__data.key_index_file, self.__data.key_index_bs,
                                     vtype=gp.GRB.BINARY, name="fit")
 
-    def __set_function_objective(self):
-        self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
+    def __set_function_objective0(self):
+        self.model.setObjective(((gp.quicksum(((#self.__data.resources_node_dict[i] -
                                                 self.__data.size_file_dict[req[SOURCE]]) *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
@@ -942,7 +951,13 @@ class LogData:
     def __log_size_file_dict(self):
         print("SIZE FILE.")
         for k in self.data.size_file_dict.keys():
-            print(k, self.data.size_file_dict[k], "Mb")
+            print(k, self.data.size_file_dict[k], "MB")
+        print()
+
+    def __log_buffer_file_dict(self):
+        print("BUFFER FILE.")
+        for k in self.data.buffer_file_dict.keys():
+            print(k, self.data.buffer_file_dict[k], "Mb")
         print()
 
     def __log_throughput_min_dict(self):
@@ -1090,6 +1105,7 @@ class LogData:
         print("PARAMETERS.\n")
 
         self.__log_size_file_dict()
+        self.__log_buffer_file_dict()
         self.__log_throughput_min_dict()
 
         self.__log_resources_node_dict()
@@ -1397,7 +1413,7 @@ class PlotData:
             if value != NO_EDGE and value != 0:
                 if (key[1][:3] != 'SBS') and (key[1][:3] != 'MBS'):
                     # WARNING correct throughput only for cache with same buffer size
-                    self.__rtt = self.__rtt.append({'Event': event, 'Link': key, 'RTT': value, 'Throughput': round(self.__data.size_file[0]/value,0)}, ignore_index=True)
+                    self.__rtt = self.__rtt.append({'Event': event, 'Link': key, 'RTT': value, 'Throughput': round(self.__data.buffer_file[0]/value,0)}, ignore_index=True)
 
     def save_data(self, path):
         dt_rate_admission = pds.DataFrame(

@@ -43,6 +43,7 @@ key_index_ue = list()
 e_bs_adj = list()
 
 size_file = list()
+buffer_file = list()
 throughput_min_file = list()
 
 resources_node = list()
@@ -242,7 +243,7 @@ def load_location_fixed():
 def make_data():
     return Data(mobility, mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs,num_sbs, key_index_file, key_index_bs,
                 key_index_ue, e_bs_adj,
-                size_file,
+                size_file,buffer_file,
                 throughput_min_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
                 gama, distance_ue, distance_bs, max_events, locations, rtt_min_sbs_ue
                 )
@@ -320,7 +321,7 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, buffer_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_sbs_ue
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -339,6 +340,7 @@ def load_dataset(dataset: object):
     e_bs_adj = dataset["e_bs_adj"]
 
     size_file = dataset["size_file"]
+    buffer_file = dataset["buffer_file"]
     throughput_min_file = dataset["throughput_min_file"]
 
     resources_node = dataset["resources_node"]

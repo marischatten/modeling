@@ -11,7 +11,7 @@ MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
 NUM_CLOUD = 1
 MAX_GAMA = 1 # WARNING
-TO_GB = 8000
+TO_GB = 1000
 TO_MB = 8
 mobility_rate = 0
 alpha = 0
@@ -29,7 +29,9 @@ key_index_bs_ue = list()
 key_index_all = list()
 e_bs_adj = list()
 
+
 size_file = list()
+buffer_file = list()
 throughput_min_file = list()
 
 resources_node = list()
@@ -192,19 +194,25 @@ def generate_resources_node():
 
 
 def generate_requirements():
-    global size_file, throughput_min_file
+    global size_file, buffer_file, throughput_min_file
     size_file = [0 for f in range(num_files)]
-
+    buffer_file = [0 for f in range(num_files)]
     throughput_min_file = [0 for f in range(num_files)]
 
     for f in range(num_files):
         index = np.random.randint(0, len(requirements))
         size_file[f] = requirements[index][0]
-        throughput_min_file[f] = requirements[index][1]
+        buffer_file[f] = requirements[index][1]
+        throughput_min_file[f] = requirements[index][2]
 
     print("TAMANHO DO CONTEÚDO.MB.")
     for f in range(num_files):
-        print(round(size_file[f]/TO_MB,0), end=" ")
+        print(round(size_file[f] / TO_MB, 0), end=" ")
+    print()
+
+    print("TAMANHO DO BUFFER.GB.")
+    for f in range(num_files):
+        print(round(buffer_file[f] * TO_GB, 0), end=" ")
     print()
 
     print("THROUGHPUT MÍNIMA DO CONTEÚDO.Mbps")
@@ -385,6 +393,7 @@ def generate_json(path):
             "key_index_ue": key_index_ue,
 
             "size_file": size_file,
+            "buffer_file": buffer_file,
             "throughput_min_file": throughput_min_file,
 
             "resources_node": resources_node,

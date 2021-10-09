@@ -37,11 +37,6 @@ class Type(Enum):
     ZIPF = 2
 
 
-class Mobility(Enum):
-    IS_MOBILE = 1
-    NON_MOBILE = 0
-
-
 # This class manages and handles the data of an instance of the problem.
 class Data:
     max_events = 0
@@ -58,7 +53,7 @@ class Data:
     reallocation_path = list()
     reallocation_host = list()
 
-    mobility = Mobility
+    mobility = False
     mobility_rate = 0
     location_ue = None
 
@@ -154,7 +149,7 @@ class Data:
 
     distance_ue_dict = dict()
 
-    def __init__(self, mobility: object = Mobility.NON_MOBILE, mr=0,
+    def __init__(self, mobility=None, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, num_mbs = 0, num_sbs=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
@@ -530,7 +525,7 @@ class HandleData:
         if thp_c == 0:
             return NO_EDGE
         if thp_c == NO_EDGE:
-            return 1
+            return 0
         return (thp_min / thp_c)
 
     def __is_caching(self, file, bs):
@@ -544,7 +539,7 @@ class HandleData:
 
     # This follow method update data of the problem.
     def update_data(self, event, location_fixed):
-        if self.__data.mobility == Mobility.IS_MOBILE:
+        if self.__data.mobility:
             self.__update_ue_position(event, location_fixed)
         self.calc_vars(True)
 
@@ -721,8 +716,8 @@ class OptimizeData:
         self.z = self.model.addVars(self.__data.key_index_file, self.__data.key_index_bs,
                                     vtype=gp.GRB.BINARY, name="fit")
 
-    def __set_function_objective0(self):
-        self.model.setObjective(((gp.quicksum(((#self.__data.resources_node_dict[i] -
+    def __set_function_objective(self):
+        self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
                                                 self.__data.size_file_dict[req[SOURCE]]) *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
                                                                    self.y[req[KEY], i])) / ((
@@ -733,7 +728,7 @@ class OptimizeData:
                                                                                                                 SOURCE], i]) + DELTA)
                                                                   for i in self.__data.key_index_bs for req in
                                                                   self.__data.requests)))
-                                +
+                                + 
                                 ((gp.quicksum(
                                     self.__data.weight_network_dict[req[SOURCE], i, j]
                                     * self.x[req[KEY], i, j]
@@ -794,7 +789,7 @@ class OptimizeData:
                             self.__data.throughput_current_edge_dict[req[SOURCE], i, j] -
                             self.__data.throughput_min_file_dict[req[SOURCE]]))
                                          * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
-                                         >= 0, 'c4')
+                                         >= 0)
 
     def __set_constraint_flow_conservation(self):
         for req in self.__data.requests:
@@ -1130,7 +1125,7 @@ class LogData:
         # self.__log_current_throughput_edge_dict()
         # self.__log_diff_throughput_edge_dict()
         # self.__log_psi_edge_dict()
-        # self.__log_weight_network_dict()
+        self.__log_weight_network_dict()
         # self.__log_connectivity_edges_dict()
 
 
@@ -1166,6 +1161,8 @@ class PlotData:
     __load_links_optic_dict = dict()
     __load_links_wireless_dict = dict()
 
+    __delay = None
+
     def __init__(self, data):
         self.__data = data
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
@@ -1180,6 +1177,7 @@ class PlotData:
         self.__poisson = pds.DataFrame(columns=['Qtd_Requests'])
         self.__zipf = pds.DataFrame(columns=['Caches'])
         self.__rtt = pds.DataFrame(columns=['Event','Link','RTT','Throughput'])
+        self.__delay = pds.DataFrame(columns=['Event','Request','Delay'])
 
         self.__load_links_optic_to_dictionary()
         self.__load_links_wireless_to_dictionary()
@@ -1279,6 +1277,19 @@ class PlotData:
                     {'Event': event, 'BS': i, 'Use': rate}, ignore_index=True)
 
             self.__data.clear_dict(server_use_gama_dict)
+
+    def calc_delay_by_request(self,event,event_null, paths=None):
+        if event_null:
+            pass
+        else:
+            for r in paths:
+                self.__delay = self.__delay.append({'Event': event, 'Request': r[0], 'Delay': self.__sum_rtt(r[1])}, ignore_index=True)
+
+    def __sum_rtt(self, path):
+        rtt = 0
+        for i, j in zip(path[1:], path[2:]):
+            rtt += self.__data.rtt_edge_dict[i, j]
+        return rtt
 
     def __calc_all_links(self):
         self.__calc_all_links_optic()
@@ -1433,6 +1444,7 @@ class PlotData:
             self.__poisson.to_excel(writer, sheet_name='Poisson')
             self.__zipf.to_excel(writer, sheet_name='Zipf')
             self.__rtt.to_excel(writer, sheet_name='RTT')
+            self.__delay.to_excel(writer, sheet_name='Delay')
 
     def __load_links_optic_to_dictionary(self):
         self.__ll = [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in

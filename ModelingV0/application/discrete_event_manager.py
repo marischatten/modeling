@@ -68,7 +68,7 @@ show_var = False
 show_par = False
 plot_distribution = False
 type = Type.ZIPF
-mobility = Mobility.IS_MOBILE
+mobility = False
 show_reallocation = False
 requests_fixed = True
 path_requests = ''
@@ -223,8 +223,11 @@ def process_datas(pd, event):
         last_req = pd.set_paths[len(pd.set_paths)-1]
         last_host = pd.set_paths[len(pd.set_hosts)-1]
         pd.calc_server_use(event,event_null,last_req,last_host)
+        pd.calc_delay_by_request(event, event_null,last_req)
     else:
         pd.calc_server_use(event,event_null)
+        pd.calc_delay_by_request(event,event_null)
+
     pd.calc_server_use_by_type(event,event_null)
     pd.calc_scattering(event, event_null)
     pd.calc_load_link(event, event_null)
@@ -371,15 +374,6 @@ def load_type_enum(t):
     if str(t).upper() == 'ZIPF':
         type = type.ZIPF
 
-
-def load_is_mobile_enum(mob):
-    global mobility
-    if mob.upper() == 'IS_MOBILE':
-        mobility = mobility.IS_MOBILE
-    if mob.upper() == 'NON_MOBILE':
-        mobility = mobility.NON_MOBILE
-
-
 def load_config(config: object):
     global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request
     show_log = config["show_log"]
@@ -390,7 +384,7 @@ def load_config(config: object):
     show_par = config["show_par"]
     plot_distribution = config["plot_distribution"]
     load_type_enum(config["type"])
-    load_is_mobile_enum(config["mobility"])
+    mobility = config["mobility"]
     location_fixed = config["location_fixed"]
     path_location = config["path_location"]
     path_dataset = config["path_dataset"]

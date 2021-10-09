@@ -728,7 +728,7 @@ class OptimizeData:
                                                                                                                 SOURCE], i]) + DELTA)
                                                                   for i in self.__data.key_index_bs for req in
                                                                   self.__data.requests)))
-                                + 
+                                +
                                 ((gp.quicksum(
                                     self.__data.weight_network_dict[req[SOURCE], i, j]
                                     * self.x[req[KEY], i, j]
@@ -785,11 +785,11 @@ class OptimizeData:
         for req in self.__data.requests:
             for i in self.__data.key_index_all:
                 for j in self.__data.key_index_all:
-                    self.model.addConstr(((self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]) * (
-                            self.__data.throughput_current_edge_dict[req[SOURCE], i, j] -
-                            self.__data.throughput_min_file_dict[req[SOURCE]]))
-                                         * self.__data.connectivity_edges_dict[req[SOURCE], i, j]
-                                         >= 0)
+                    self.model.addConstr((self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]) *
+                                         self.__data.throughput_min_file_dict[req[SOURCE]]
+                                         <= (self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]]) *
+                                         self.__data.throughput_current_edge_dict[req[SOURCE], i, j] *
+                                         self.__data.connectivity_edges_dict[req[SOURCE], i, j])
 
     def __set_constraint_flow_conservation(self):
         for req in self.__data.requests:

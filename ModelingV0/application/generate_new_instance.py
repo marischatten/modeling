@@ -10,7 +10,7 @@ NO_EDGE = 99999
 MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
 NUM_CLOUD = 1
-MAX_GAMA = 1 # WARNING
+MAX_GAMA = 6 # WARNING
 TO_GB = 1000
 TO_MB = 8
 mobility_rate = 0
@@ -381,6 +381,9 @@ def generate_json(path):
     data = {"mobility_rate": mobility_rate,
             "alpha": alpha,
             "beta": beta,
+            "rtt_min_cloud_mbs": rtt_min_cloud_mbs,
+            "rtt_min_mbs_mbs": rtt_min_mbs_mbs,
+            "rtt_min_sbs_mbs": rtt_min_sbs_mbs,
             "rtt_min_sbs_ue": rtt_min_sbs_ue,
             "num_bs": num_bs,
             "num_ue": num_ue,
@@ -409,7 +412,7 @@ def generate_json(path):
 
 
 def load_config(config: object):
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, storage_node_min, storage_node_max, key_index_all, path
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, storage_node_min, storage_node_max, key_index_all, path
 
     mobility_rate = config["mobility_rate"]
     alpha = config["alpha"]

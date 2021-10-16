@@ -31,6 +31,7 @@ KEY = 3
 
 MAXIMUM_SBS_PER_UE = 2
 
+
 # This class changes the type of trials.
 class Type(Enum):
     SINGLE = 1
@@ -39,6 +40,8 @@ class Type(Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
+    __BREAK = 100
+
     max_events = 0
     requests = list()
     id_req = 0
@@ -96,7 +99,11 @@ class Data:
 
     # rtt_ij \in R
     rtt_edge = None
+    rtt_min_cloud_mbs = 0
+    rtt_min_mbs_mbs = 0
+    rtt_min_sbs_mbs = 0
     rtt_min_sbs_ue = 0
+
     # D \in R
     radius_mbs = 0
     radius_sbs = 0
@@ -149,12 +156,17 @@ class Data:
 
     distance_ue_dict = dict()
 
+    exponential_scale_rtt = dict()
+    total_load_links = dict()
+
+    total_req = 0
+
     def __init__(self, mobility=None, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, num_mbs = 0, num_sbs=0,
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, bf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_sbs_ue=0):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0):
 
         self.mobility = mobility
         self.mobility_rate = mr
@@ -191,6 +203,9 @@ class Data:
         self.distance_bs = dis_bs
         self.max_events = max_event
         self.location_ue = location_ue
+        self.rtt_min_cloud_mbs = rtt_min_cloud_mbs
+        self.rtt_min_mbs_mbs = rtt_min_mbs_mbs
+        self.rtt_min_sbs_mbs = rtt_min_sbs_mbs
         self.rtt_min_sbs_ue = rtt_min_sbs_ue
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
@@ -209,6 +224,20 @@ class Data:
             self.rtt_edge_to_dictionary()
             self.distance_ue_to_dictionary()
             self.req_to_dictionary()
+            self.__create_exponential_scale_rtt()
+
+    def __create_exponential_scale_rtt(self):
+        init = 1
+        scale = list()
+        breaks = list(range(0, self.total_req, self.__BREAK))
+
+        for i in range(len(breaks)):
+            scale.append(init)
+            init = init * 2
+
+        for i in range(len(breaks)):
+            tag = breaks[i]
+            self.exponential_scale_rtt[tag] = scale[i]
 
     def clear_hops(self):
         self.hops.clear()
@@ -541,7 +570,30 @@ class HandleData:
     def update_data(self, event, location_fixed):
         if self.__data.mobility:
             self.__update_ue_position(event, location_fixed)
+        self.__update_rtt_optic_links()
         self.calc_vars(True)
+
+    def __update_rtt_optic_links(self):
+        for i, tag_i in enumerate(self.__data.key_index_all):
+            for j, tag_j in enumerate(self.__data.key_index_all):
+                if self.__data.rtt_edge_dict[tag_i, tag_j] != NO_EDGE:
+                    if tag_i[:4] == "MBS0" and tag_j[:3] == "MBS":
+                        self.__calc_rtt_by_load(tag_i,tag_j,self.__data.rtt_min_cloud_mbs)
+                    if tag_i[:3] == "MBS" and tag_j[:3] == "MBS":
+                        self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_mbs_mbs)
+                    if (tag_i[:3] == "MBS" and tag_j[:3] == "SBS") or (tag_i[:3] == "SBS" and tag_j[:3] == "MBS"):
+                        self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_sbs_mbs)
+
+    def __calc_rtt_by_load(self, tag_i,tag_j,rtt_min):
+        self.__data.rtt_edge_dict[tag_i, tag_j] = rtt_min * self.__calc_exponential_scale_rtt(self.__data.total_load_links[tag_i, tag_j])
+
+    def __calc_exponential_scale_rtt(self, load):
+        scale = 1
+        for k in self.__data.exponential_scale_rtt.keys():
+            if load < k:
+                scale = self.__data.exponential_scale_rtt[k]
+                break
+        return scale
 
     def update_counter(self):
         self.__update_counter_requests()
@@ -738,6 +790,7 @@ class OptimizeData:
                                     self.__data.key_index_all for i in self.__data.key_index_all for req in
                                     self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
+
 
     def __create_constraints(self, enable_ceil_nodes_capacity):
         # This constraint set y value.
@@ -1112,7 +1165,7 @@ class LogData:
 
     def show_vars_matrix(self):
         print("VARS.\n")
-        # self.__log_omega_user_node()
+        self.__log_omega_user_node()
         self.__log_current_throughput_edge()
         self.__log_diff_throughput_edge()
         self.__log_psi_edge()
@@ -1122,11 +1175,11 @@ class LogData:
     def show_vars_dict(self):
         print("VARS.\n")
         self.__log_omega_user_node_dict()
-        # self.__log_current_throughput_edge_dict()
-        # self.__log_diff_throughput_edge_dict()
-        # self.__log_psi_edge_dict()
+        self.__log_current_throughput_edge_dict()
+        self.__log_diff_throughput_edge_dict()
+        self.__log_psi_edge_dict()
         self.__log_weight_network_dict()
-        # self.__log_connectivity_edges_dict()
+        self.__log_connectivity_edges_dict()
 
 
 # This class store all result and plot a graphics.
@@ -1378,21 +1431,27 @@ class PlotData:
             for h in self.__hops_id:
                 if req[KEY] == h[0]:
                     if ((h[1][:2] != 'UE') and (h[1][:1] != 'F')) and ((h[2][:2] != 'UE') and (h[2][:1] != 'F')):
-                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
-                        self.__load_links_optic_dict[h[1], h[2]] += thp
+                        buffer = self.__data.buffer_file_dict[req[SOURCE]]
+                        self.__load_links_optic_dict[h[1], h[2]] += buffer
 
         for k in self.__load_links_optic_dict.keys():
             if self.__load_links_optic_dict[k] != 0:
                 self.__load_links_optic = self.__load_links_optic.append(
                     {'Event': event, 'Link': k, 'Total_Load': self.__load_links_optic_dict[k]}, ignore_index=True)
 
+        # Warning: execute when the configuration save data is enabled.
+        self.__set_load_to_calc_rtt()
+
+    def __set_load_to_calc_rtt(self):
+        self.__data.total_load_links = self.__load_links_optic_dict.copy()
+
     def __calc_load_link_wireless(self, event):
         for req in self.__data.requests:
             for h in self.__hops_id:
                 if req[KEY] == h[0]:
                      if (h[1][:1] != 'F') and (h[2][:3] != 'SBS') and (h[2][:3] != 'MBS'):
-                        thp = self.__data.throughput_min_file_dict[req[SOURCE]]
-                        self.__load_links_wireless_dict[h[1], h[2]] += thp
+                        buffer = self.__data.buffer_file_dict[req[SOURCE]]
+                        self.__load_links_wireless_dict[h[1], h[2]] += buffer
 
         for k in self.__load_links_wireless_dict.keys():
             if self.__load_links_wireless_dict[k] != 0:

@@ -1,25 +1,25 @@
 {
-    "mobility_rate" : 2,
+    "mobility_rate" : 40,
     "alpha" :  0.5,
     "beta" :  0.2,
-    "num_mbs" :  1,
-    "num_sbs_per_mbs" :  2,
+    "num_mbs" :  2,
+    "num_sbs_per_mbs" :  15,
 
-    "num_files" :  4,
-    "num_ue" :  3,
+    "num_files" :  100,
+    "num_ue" :  200,
 
     "requirements" :  [
-        [32000, 45]
+        [4000, 48, 100]
     ],
 
-    "storage_node_max" :  32000,
-    "storage_node_min" :  32000,
+    "storage_node_max" :  20000,
+    "storage_node_min" :  4000,
     "radius_mbs" :  300,
     "radius_sbs" :  70,
     "rtt_min_cloud_mbs": 0.001,
     "rtt_min_mbs_mbs" :  0.001,
-    "rtt_min_sbs_mbs" :  0.0015,
-    "rtt_min_sbs_ue" :  0.002,
+    "rtt_min_sbs_mbs" :  0.001,
+    "rtt_min_sbs_ue" :  0.001,
 
-    "path": "..\\dataset\\instance_5.json"
+    "path": "..\\dataset\\instance_x.json"
 }

@@ -159,8 +159,6 @@ class Data:
     exponential_scale_rtt = dict()
     total_load_links = dict()
 
-    total_req = 0
-
     def __init__(self, mobility=None, mr=0,
                  alpha=0, beta=0, num_bs=0, num_ue=0, num_file=0, num_mbs = 0, num_sbs=0,
                  key_f=None, key_i=None, key_u=None,
@@ -224,12 +222,11 @@ class Data:
             self.rtt_edge_to_dictionary()
             self.distance_ue_to_dictionary()
             self.req_to_dictionary()
-            self.__create_exponential_scale_rtt()
 
-    def __create_exponential_scale_rtt(self):
+    def create_exponential_scale_rtt(self, total_req):
         init = 1
         scale = list()
-        breaks = list(range(0, self.total_req, self.__BREAK))
+        breaks = list(range(0, total_req * self.__BREAK, self.__BREAK))
 
         for i in range(len(breaks)):
             scale.append(init)
@@ -1481,7 +1478,7 @@ class PlotData:
     def rtt_to_dataframe(self, event):
         for (key,value) in self.__data.rtt_edge_dict.items():
             if value != NO_EDGE and value != 0:
-                if (key[1][:3] != 'SBS') and (key[1][:3] != 'MBS'):
+                #if (key[1][:3] != 'SBS') and (key[1][:3] != 'MBS'):
                     # WARNING correct throughput only for cache with same buffer size
                     self.__rtt = self.__rtt.append({'Event': event, 'Link': key, 'RTT': value, 'Throughput': round(self.__data.buffer_file[0]/value,0)}, ignore_index=True)
 

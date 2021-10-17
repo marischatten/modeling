@@ -166,7 +166,7 @@ def poisson_zipf():
     else:
         requests, bulks = r.Request.create_requests(avg_qtd_bulk, num_events, num_alpha, key_index_file, key_index_ue, num_files, plot_distribution, fixed)
 
-    data.total_req = sum(bulks)
+    data.create_exponential_scale_rtt(sum(bulks))
 
     for event in tqdm.tqdm(range(num_events)):  # EVENTS IN TIMELINE
 
@@ -230,8 +230,8 @@ def process_datas(pd, event):
         pd.calc_server_use(event,event_null,last_req,last_host)
         pd.calc_delay_by_request(event, event_null,last_req)
     else:
-        pd.calc_server_use(event,event_null)
-        pd.calc_delay_by_request(event,event_null)
+        pd.calc_server_use(event, event_null)
+        pd.calc_delay_by_request(event, event_null)
 
     pd.calc_server_use_by_type(event,event_null)
     pd.calc_scattering(event, event_null)

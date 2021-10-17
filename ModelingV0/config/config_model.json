@@ -14,7 +14,7 @@
 "requests_fixed": true,
 "path_requests": "..\\dataset\\request\\instance_x.json",
 
-"plot_graph": false,
+"plot_graph": true,
 "plot_graph_mobility": false,
 "path_graph": "..\\output\\graph\\instance_x",
 
@@ -36,6 +36,6 @@
 "num_events": 100,
 "num_alpha": 0.80,
 
-"source": ["F1"],
-"sink": ["UE17"]
+"source": ["F3"],
+"sink": ["UE40"]
 }

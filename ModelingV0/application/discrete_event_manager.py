@@ -383,7 +383,7 @@ def load_type_enum(t):
         type = type.ZIPF
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, mobility, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]

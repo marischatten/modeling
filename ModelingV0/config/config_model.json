@@ -9,31 +9,31 @@
 
 "mobility": true,
 "location_fixed": true,
-"path_location": "..\\dataset\\location\\dataset/request/instance_zipf08_lambda5fixo_20events.json.json",
+"path_location": "..\\dataset\\location\\instance_x_standard.json",
 
 "requests_fixed": true,
-"path_requests": "..\\dataset\\request\\dataset/request/instance_zipf08_lambda5fixo_20events.json.json",
+"path_requests": "..\\dataset\\request\\instance_zipf04_lambda5fixo.json",
 
-"plot_graph": true,
+"plot_graph": false,
 "plot_graph_mobility": false,
-"path_graph": "..\\output\\graph\\dataset/request/instance_zipf08_lambda5fixo_20events.json",
+"path_graph": "..\\output\\graph\\instance_x",
 
 "save_data": true,
-"path_output": "..\\output\\data\\dataset/request/instance_zipf08_lambda5fixo_20events.json.xlsx",
+"path_output": "..\\output\\data\\zipf\\instance_zipf04_lambda5fixo.xlsx",
 
 "enable_ceil_nodes_capacity": true,
 
-"deallocate_request": false,
+"deallocate_request": true,
 "max_events": 10,
 
-"path_time": "..\\output\\time_execution\\dataset/request/instance_zipf08_lambda5fixo_20events.json.dat",
+"path_time": "..\\output\\time_execution\\zipf\\instance_zipf04_lambda5fixo.dat",
 
 "path_dataset": "..\\dataset\\instance_x.json",
 
 "type": "zipf",
 "fixed": true,
 "avg_qtd_bulk":5,
-"num_events": 20,
+"num_events": 100,
 "num_alpha": 0.80,
 
 "source": ["F3"],

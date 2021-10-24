@@ -1212,6 +1212,7 @@ class PlotData:
     __load_links_wireless_dict = dict()
 
     __delay = None
+    __cache_vs_cloud = None
 
     def __init__(self, data):
         self.__data = data
@@ -1228,7 +1229,7 @@ class PlotData:
         self.__zipf = pds.DataFrame(columns=['Caches'])
         self.__rtt = pds.DataFrame(columns=['Event','Link','RTT','Throughput'])
         self.__delay = pds.DataFrame(columns=['Event','Request','Delay'])
-
+        self.__cache_vs_cloud = pds.DataFrame(columns=['Event', 'Cache', 'Cloud','Cache_Total', 'Cloud_Total','Total'])
         self.__load_links_optic_to_dictionary()
         self.__load_links_wireless_to_dictionary()
 
@@ -1314,7 +1315,7 @@ class PlotData:
                     server_use_gama_dict[tag_file, tag_bs] = 0
 
             for p, h in zip(paths, hosts):
-                server_use_gama_dict[p[1][CONTENT],h[1][HOST]] = 1
+                server_use_gama_dict[p[1][CONTENT],h[1]] = 1
 
             for k in server_use_gama_dict.keys():
                 if server_use_gama_dict[k] == 1:
@@ -1340,6 +1341,20 @@ class PlotData:
         for i, j in zip(path[1:], path[2:]):
             rtt += self.__data.rtt_edge_dict[i, j]
         return rtt
+
+    def calc_cache_vs_cloud(self,event,event_null, hosts=None):
+        if event_null:
+            pass
+        else:
+            total = len(hosts)
+            count_cloud = 0
+            count_bs = 0
+            for h in hosts:
+                if h[1][:4] == "MBS0":
+                    count_cloud +=1
+                else:
+                    count_bs +=1
+            self.__cache_vs_cloud = self.__cache_vs_cloud.append({'Event': event, 'Cache':round(count_bs/total,4), 'Cloud': round(count_cloud/total,4), 'Cache_Total':count_bs, 'Cloud_Total':count_cloud,'Total':total}, ignore_index=True)
 
     def __calc_all_links(self):
         self.__calc_all_links_optic()
@@ -1490,6 +1505,7 @@ class PlotData:
             self.__paths.to_excel(writer, sheet_name='Requests')
             dt_rate_admission.to_excel(writer, sheet_name='Rate_Admission')
             self.__all_server_use.to_excel(writer, sheet_name='Server_Use')
+            self.__cache_vs_cloud.to_excel(writer, sheet_name='CacheVsCloud')
             self.__server_use_by_type.to_excel(writer, sheet_name='Server_Use_By_Type')
             self.__scattering_optic.to_excel(writer, sheet_name='Scattering_Optic')
             self.__scattering_wireless.to_excel(writer, sheet_name='Scattering_Wireless')

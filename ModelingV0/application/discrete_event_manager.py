@@ -226,12 +226,14 @@ def process_datas(pd, event):
         for r, h in zip(pd.set_paths, pd.set_hosts):
             pd.insert_req(r, h, event)
         last_req = pd.set_paths[len(pd.set_paths)-1]
-        last_host = pd.set_paths[len(pd.set_hosts)-1]
+        last_host = pd.set_hosts[len(pd.set_hosts)-1]
         pd.calc_server_use(event,event_null,last_req,last_host)
         pd.calc_delay_by_request(event, event_null,last_req)
+        pd.calc_cache_vs_cloud(event,event_null,last_host)
     else:
         pd.calc_server_use(event, event_null)
         pd.calc_delay_by_request(event, event_null)
+        pd.calc_cache_vs_cloud(event, event_null)
 
     pd.calc_server_use_by_type(event,event_null)
     pd.calc_scattering(event, event_null)

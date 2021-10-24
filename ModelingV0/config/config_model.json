@@ -28,7 +28,7 @@
 
 "path_time": "..\\output\\time_execution\\zipf\\instance_zipf04_lambda5fixo.dat",
 
-"path_dataset": "..\\dataset\\instance_x.json",
+"path_dataset": "..\\dataset\\instance_x_standard.json",
 
 "type": "zipf",
 "fixed": true,

@@ -5,11 +5,13 @@
     "num_mbs" :  2,
     "num_sbs_per_mbs" :  15,
 
-    "num_files" :  10,
-    "num_ue" :  10,
+    "num_files" :  100,
+    "num_ue" :  200,
 
     "requirements" :  [
-        [4000, 48, 100]
+        [2000, 48, 100],
+        [4000, 48, 100],
+        [8000, 48, 100]
     ],
 
     "storage_node_max" :  20000,
@@ -21,5 +23,5 @@
     "rtt_min_sbs_mbs" :  0.001,
     "rtt_min_sbs_ue" :  0.001,
 
-    "path": "..\\dataset\\instance_blabla.json"
+    "path": "..\\dataset\\instance_x_teste2.json"
 }

@@ -6,6 +6,7 @@ import statistics as s
 from utils import utils as u
 from optimization import optimize as opt
 
+STORAGE_PERCENT = 0.4
 NO_EDGE = 99999
 MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
@@ -115,7 +116,6 @@ def generate_distance_ue():
     distance_ue = [[0.0 for i in range(num_bs + NUM_CLOUD)] for u in range(num_ue)]
 
     for u in range(num_ue):
-
         bs_coverage = list()
         num_coverage = randrange(1, MAX_COVERAGE_PER_UE + 1)
         for i in range(num_coverage):
@@ -187,9 +187,10 @@ def generate_resources_node():
             resources_node[i] = storage_node_min
 
     resources_node[0] = sum(size_file)
+    print("SOMARIO DA CAPACIDADE.", sum(resources_node[1:]))
     print("CAPACIDADE DA BS. MB.")
     for i in range(num_bs + NUM_CLOUD):
-        print(round(resources_node[i]/TO_MB,0), end=" ")
+        print(round(resources_node[i],0), end=" ")
     print()
 
 
@@ -207,12 +208,12 @@ def generate_requirements():
 
     print("TAMANHO DO CONTEÚDO.MB.")
     for f in range(num_files):
-        print(round(size_file[f] / TO_MB, 0), end=" ")
+        print(round(size_file[f], 0), end=" ")
     print()
 
-    print("TAMANHO DO BUFFER.GB.")
+    print("TAMANHO DO BUFFER.Mb.")
     for f in range(num_files):
-        print(round(buffer_file[f] * TO_GB, 0), end=" ")
+        print(round(buffer_file[f], 0), end=" ")
     print()
 
     print("THROUGHPUT MÍNIMA DO CONTEÚDO.Mbps")

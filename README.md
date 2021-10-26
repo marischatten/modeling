@@ -28,6 +28,7 @@ command: cd /home/linux
 command: sudo nano .bashrc
 ````
 Insert in file:
+
 export GUROBI_HOME="/home/linux/gurobi912/linux64"
 export PATH="${GUROBI_HOME}/bin:${PATH}"
 export LD_LIBRARY_PATH = "${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"

@@ -5,11 +5,12 @@ sudo apt-get install python3.9
 sudo apt-get install python3-pip
 sudo pip3 install -r requirements.txt
 sudo apt-get install -y python-typing
-pip install tqdm --upgrade
-pip install seaborn --upgrade
-pip install python-igraph --upgrade
-pip install cairocffi --upgrade
-pip install openpyxl --upgrade
+sudo pip install tqdm --upgrade
+sudo pip install seaborn --upgrade
+sudo pip install python-igraph --upgrade
+sudo pip install cairocffi --upgrade
+sudo pip install openpyxl --upgrade
 sudo python3.9 -m pip install --upgrade Pillow
+sudo pip install gurobipy
 echo "Dependencies Installed."
 

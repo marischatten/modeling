@@ -1331,7 +1331,11 @@ class PlotData:
 
     def calc_delay_by_request(self,event,event_null, paths=None):
         if event_null:
-            pass
+            repeat = self.__delay[self.__delay['Event'] == (event - 1)]
+            req = repeat['Request'].to_list()
+            delay = repeat['Delay'].to_list()
+            for r in range(len(repeat)):
+                self.__delay = self.__delay.append({'Event': event, 'Request': req[r], 'Delay': delay[r]}, ignore_index=True)
         else:
             for r in paths:
                 self.__delay = self.__delay.append({'Event': event, 'Request': r[0], 'Delay': self.__sum_rtt(r[1])}, ignore_index=True)
@@ -1344,7 +1348,14 @@ class PlotData:
 
     def calc_cache_vs_cloud(self,event,event_null, hosts=None):
         if event_null:
-            pass
+            repeat = self.__cache_vs_cloud[self.__cache_vs_cloud['Event'] == (event - 1)]
+            cache = repeat['Cache'].to_list()
+            cloud = repeat['Cloud'].to_list()
+            cache_total = repeat['Cache_Total'].to_list()
+            cloud_total = repeat['Cloud_Total'].to_list()
+            total = repeat['Total'].to_list()
+
+            self.__cache_vs_cloud = self.__cache_vs_cloud.append({'Event': event, 'Cache':cache[0], 'Cloud': cloud[0], 'Cache_Total':cache_total[0], 'Cloud_Total':cloud_total[0],'Total':total[0]}, ignore_index=True)
         else:
             total = len(hosts)
             count_cloud = 0
@@ -1409,6 +1420,7 @@ class PlotData:
         self.clear_hops()
 
     def calc_load_link(self, event, event_null):
+        # Warning: no save first event.
         if event_null:
             self.__set_load_event_null_optic(event)
             self.__set_load_event_null_wireless(event)
@@ -1416,6 +1428,7 @@ class PlotData:
             self.__calc_load_link_optic(event)
             self.__calc_load_link_wireless(event)
             if self.__enabled_links_optic == 0:
+
                 self.__set_load_event_null_optic(event)
             if self.__enabled_links_wireless == 0:
                 self.__set_load_event_null_wireless(event)

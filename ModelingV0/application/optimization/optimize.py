@@ -1217,7 +1217,7 @@ class PlotData:
     def __init__(self, data):
         self.__data = data
         self.__paths = pds.DataFrame(columns=['Event', 'Request', 'Source', 'Sink', 'Path', 'Host'])
-        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use'])
+        self.__all_server_use = pds.DataFrame(columns=['Event', 'BS', 'Use','Total_Use','Total_Storage'])
         self.__server_use_by_type = pds.DataFrame(columns=['Event', 'Cloud','Total_Cloud','Rate_Cloud', 'MBS','Total_MBS','Rate_MBS', 'SBS','Total_SBS','Rate_SBS'])
         self.__scattering_optic = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
         self.__scattering_wireless = pds.DataFrame(columns=['Event', 'Enabled', 'All', 'Scattering'])
@@ -1300,8 +1300,10 @@ class PlotData:
             repeat = self.__all_server_use[self.__all_server_use['Event'] == (event - 1)]
             bs = repeat['BS'].to_list()
             use = repeat['Use'].to_list()
+            total_use = repeat['Total_Use'].to_list()
+            total_storage = repeat['Total_Storage'].to_list()
             for r in range(len(repeat)):
-                self.__all_server_use = self.__all_server_use.append({'Event': event, 'BS': bs[r], 'Use': use[r]}, ignore_index=True)
+                self.__all_server_use = self.__all_server_use.append({'Event': event, 'BS': bs[r], 'Use': use[r],'Total_Use':total_use[r],'Total_Storage':total_storage[r]}, ignore_index=True)
         else:
             for i in range(len(self.__data.key_index_bs)):
                 tag_bs = self.__data.key_index_bs[i]
@@ -1325,7 +1327,7 @@ class PlotData:
                 rate = round(self.__server_use[i] / self.__data.resources_node_dict[i], 4)
 
                 self.__all_server_use = self.__all_server_use.append(
-                    {'Event': event, 'BS': i, 'Use': rate}, ignore_index=True)
+                    {'Event': event, 'BS': i, 'Use': rate,'Total_Use': self.__server_use[i],'Total_Storage': self.__data.resources_node_dict[i]}, ignore_index=True)
 
             self.__data.clear_dict(server_use_gama_dict)
 

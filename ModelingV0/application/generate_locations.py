@@ -1,9 +1,11 @@
 import os
 from random import randrange
+import random
 
 import numpy as np
 import utils.utils as u
 
+SD = 2
 
 path_locations = ''
 num_events = 0
@@ -33,7 +35,10 @@ def create_locations():
     for e in range(num_events):
         for u in range(len(key_index_ue)):
             for i in range(len(key_index_bs)):
-                dis = randrange(-mobility_rate, mobility_rate+1)
+                #dis_nat = round(random.normalvariate(mobility_rate,SD),0)
+                #dis_real = [-dis_nat,dis_nat]
+                dis_real = [-mobility_rate,mobility_rate]
+                dis = dis_real[randrange(0, 2)]
                 locations[e][u][i] = int(dis)
 
 

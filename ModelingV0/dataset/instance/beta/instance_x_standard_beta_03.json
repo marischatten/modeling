@@ -1,5 +1,5 @@
 {
-  "mobility_rate": 40,
+  "mobility_rate": 10,
   "alpha": 0.5,
   "beta": 0.3,
   "rtt_min_cloud_mbs": 0.001,

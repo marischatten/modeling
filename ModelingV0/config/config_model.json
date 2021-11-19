@@ -1,7 +1,7 @@
 {
 "show_log": 0,
 "show_results": false,
-"show_path": false,
+"show_path": true,
 "show_var": false,
 "show_par": false,
 "show_reallocation": false,
@@ -9,14 +9,14 @@
 
 "mobility": true,
 "location_fixed": false,
-"path_location": "..\\dataset\\location\\instance_x_standard.json",
+"path_location": "..\\dataset\\location\\instance_10.json",
 
 "requests_fixed": false,
-"path_requests": "..\\dataset\\request\\zipf\\instance_zipf04_lambda5fixo.json",
+"path_requests": "..\\dataset\\request\\zipf\\instance_10.json",
 
-"plot_graph": false,
-"plot_graph_mobility": false,
-"path_graph": "..\\output\\graph\\instance_x",
+"plot_graph": true,
+"plot_graph_mobility": true,
+"path_graph": "..\\output\\graph\\instance_10",
 
 "save_data": true,
 "path_output": "..\\output\\data\\instance_10.xlsx",
@@ -28,12 +28,12 @@
 
 "path_time": "..\\output\\time_execution\\instance_10.dat",
 
-"path_dataset": "..\\dataset\\instance\\instance_x_standard.json",
+"path_dataset": "..\\dataset\\instance\\instance_10.json",
 
 "type": "zipf",
 "fixed": true,
 "avg_qtd_bulk":2,
-"num_events": 10,
+"num_events": 20,
 "num_alpha": 0.80,
 
 "source": ["F3"],

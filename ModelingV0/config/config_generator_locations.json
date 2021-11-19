@@ -1,8 +1,8 @@
 {
-  "path_locations": "..\\dataset\\location\\instance_x_standard_20events.json",
-  "num_events": 20,
-  "mobility_rate":40,
-  "num_files": 32,
+  "path_locations": "..\\dataset\\location\\mobility\\instance_mobility10_fixo.json",
+  "num_events": 100,
+  "mobility_rate":10,
+  "num_files": 100,
   "key_index_ue": ["UE1", "UE2", "UE3", "UE4", "UE5", "UE6", "UE7", "UE8", "UE9", "UE10", "UE11", "UE12", "UE13", "UE14", "UE15", "UE16", "UE17", "UE18", "UE19", "UE20", "UE21", "UE22", "UE23", "UE24", "UE25", "UE26", "UE27", "UE28", "UE29", "UE30", "UE31", "UE32", "UE33", "UE34", "UE35", "UE36", "UE37", "UE38", "UE39", "UE40", "UE41", "UE42", "UE43", "UE44", "UE45", "UE46", "UE47", "UE48", "UE49", "UE50", "UE51", "UE52", "UE53", "UE54", "UE55", "UE56", "UE57", "UE58", "UE59", "UE60", "UE61", "UE62", "UE63", "UE64", "UE65", "UE66", "UE67", "UE68", "UE69", "UE70", "UE71", "UE72", "UE73", "UE74", "UE75", "UE76", "UE77", "UE78", "UE79", "UE80", "UE81", "UE82", "UE83", "UE84", "UE85", "UE86", "UE87", "UE88", "UE89", "UE90", "UE91", "UE92", "UE93", "UE94", "UE95", "UE96", "UE97", "UE98", "UE99", "UE100", "UE101", "UE102", "UE103", "UE104", "UE105", "UE106", "UE107", "UE108", "UE109", "UE110", "UE111", "UE112", "UE113", "UE114", "UE115", "UE116", "UE117", "UE118", "UE119", "UE120", "UE121", "UE122", "UE123", "UE124", "UE125", "UE126", "UE127", "UE128", "UE129", "UE130", "UE131", "UE132", "UE133", "UE134", "UE135", "UE136", "UE137", "UE138", "UE139", "UE140", "UE141", "UE142", "UE143", "UE144", "UE145", "UE146", "UE147", "UE148", "UE149", "UE150", "UE151", "UE152", "UE153", "UE154", "UE155", "UE156", "UE157", "UE158", "UE159", "UE160", "UE161", "UE162", "UE163", "UE164", "UE165", "UE166", "UE167", "UE168", "UE169", "UE170", "UE171", "UE172", "UE173", "UE174", "UE175", "UE176", "UE177", "UE178", "UE179", "UE180", "UE181", "UE182", "UE183", "UE184", "UE185", "UE186", "UE187", "UE188", "UE189", "UE190", "UE191", "UE192", "UE193", "UE194", "UE195", "UE196", "UE197", "UE198", "UE199", "UE200"],
   "key_index_bs": ["MBS0", "MBS1", "MBS2", "SBS1", "SBS2", "SBS3", "SBS4", "SBS5", "SBS6", "SBS7", "SBS8", "SBS9", "SBS10", "SBS11", "SBS12", "SBS13", "SBS14", "SBS15", "SBS16", "SBS17", "SBS18", "SBS19", "SBS20", "SBS21", "SBS22", "SBS23", "SBS24", "SBS25", "SBS26", "SBS27", "SBS28", "SBS29", "SBS30"]
 }

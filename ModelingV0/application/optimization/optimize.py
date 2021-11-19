@@ -448,20 +448,10 @@ class HandleData:
 
         self.__data.omega_user_node_to_dictionary()
 
-    def __calc_rtt_bs_to_ue_increase(self, bs, ue, rtt_previous):
+    def __calc_rtt_bs_to_ue_increase(self, tag_bs, tag_ue, bs, ue):
         rtt = 0
-        if self.__is_coverage_bs_to_ue(ue, bs):
-            rtt = round(rtt_previous * (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
-        else:
-            rtt = NO_EDGE
-        if rtt < self.__data.rtt_min_sbs_ue:
-            rtt = self.__data.rtt_min_sbs_ue
-        return rtt
-
-    def __calc_rtt_bs_to_ue_decrease(self, bs, ue, rtt_previous):
-        rtt = 0
-        if self.__is_coverage_bs_to_ue(ue, bs):
-            rtt = round(rtt_previous / (1 + (self.__data.distance_ue_dict[ue, bs] / self.__data.radius_sbs)), 4)
+        if self.__is_coverage_bs_to_ue(tag_ue, tag_bs):
+            rtt = round(self.__data.rtt_min_sbs_ue * (1 + (self.__data.distance_ue[ue][bs] / self.__data.radius_sbs)),6)
         else:
             rtt = NO_EDGE
         if rtt < self.__data.rtt_min_sbs_ue:
@@ -616,22 +606,17 @@ class HandleData:
         if tag_i[:3] == 'MBS':
             # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
             self.__data.omega_user_node[u][i] = 0
-            return rtt_previous
         else:
             if rtt_previous == NO_EDGE:
                 if new_dis <= self.__data.radius_sbs:
                     self.__data.omega_user_node[u][i] = 1
-                    return self.__data.rtt_min_sbs_ue
                 else:
                     self.__data.omega_user_node[u][i] = 0
-                    return rtt_previous
             else:
                 if new_dis <= self.__data.radius_sbs:
                     self.__data.omega_user_node[u][i] = 1
-                    return rtt_previous
                 else:
                     self.__data.omega_user_node[u][i] = 0
-                    return NO_EDGE
 
     def __update_ue_position(self, event, location_fixed):
         for u, tag_u in enumerate(self.__data.key_index_ue):
@@ -639,25 +624,14 @@ class HandleData:
             old_bs, old_rtt = self.get_old_values_ue(tag_u, u)
 
             for i, tag_i in enumerate(self.__data.key_index_bs):
+                if tag_i[:3] == 'SBS':
+                    new_dis = self.new_distance_ue(event, i, location_fixed, u)
 
-                new_dis = self.new_distance_ue(event, i, location_fixed, u)
+                    self.__update_omega_user_node(u, tag_i, i, new_dis, self.__data.rtt_edge_dict[tag_i, tag_u])
+                    self.__data.omega_user_node_to_dictionary()
 
-                if new_dis > self.__data.distance_ue[u][i]:
-                    rtt_previous = self.__update_omega_user_node(u, tag_i, i, new_dis, self.__data.rtt_edge_dict[tag_i, tag_u])
-                    self.__data.omega_user_node_to_dictionary()
                     self.__data.distance_ue[u][i] = new_dis
-                    if rtt_previous != NO_EDGE:
-                        self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_u, rtt_previous)
-                    else:
-                        self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
-                elif new_dis < self.__data.distance_ue[u][i]:
-                    rtt_previous = self.__update_omega_user_node(u, tag_i, i, new_dis,self.__data.rtt_edge_dict[tag_i, tag_u])
-                    self.__data.omega_user_node_to_dictionary()
-                    self.__data.distance_ue[u][i] = new_dis
-                    if rtt_previous != NO_EDGE:
-                        self.__data.rtt_edge_dict[tag_i,tag_u] = self.__calc_rtt_bs_to_ue_decrease(tag_i, tag_u, rtt_previous)
-                    else:
-                        self.__data.rtt_edge_dict[tag_i, tag_u] = NO_EDGE
+                    self.__data.rtt_edge_dict[tag_i, tag_u] = self.__calc_rtt_bs_to_ue_increase(tag_i, tag_u, i, u)
 
             # Ensure that UE has at last one coverage of SBS.
             self.minimum_coverage(old_bs, old_rtt, tag_u, u)
@@ -669,7 +643,8 @@ class HandleData:
         if location_fixed:
             rand_dis = self.__data.location_ue[event][u][i]
         else:
-            rand_dis = randrange(-self.__data.mobility_rate, self.__data.mobility_rate + 1)
+            dis_real = [-self.__data.mobility_rate, self.__data.mobility_rate]
+            rand_dis = dis_real[randrange(0, 2)]
         new_dis = (rand_dis + self.__data.distance_ue[u][i])
         return new_dis
 

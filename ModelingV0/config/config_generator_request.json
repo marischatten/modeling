@@ -1,6 +1,6 @@
 {
-  "path_requests": "..\\dataset\\request\\instance_x_lambda15.json",
-  "avg_qtd_bulk": 15,
+  "path_requests": "..\\dataset\\request\\instance_x_standard.json",
+  "avg_qtd_bulk": 5,
   "num_events": 100,
   "num_alpha": 0.8,
   "num_files": 100,

@@ -1,23 +1,28 @@
+import os
+from random import randrange
+
 import numpy as np
 import statistics as s
 from utils import utils as u
 from optimization import optimize as opt
 
+STORAGE_PERCENT = 0.4
 NO_EDGE = 99999
-INTERFERENCE = 20
-DISTANCE_MBS_MBS = 550
+MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
-
+NUM_CLOUD = 1
+MAX_GAMA = 32 # WARNING
+TO_GB = 1000
+TO_MB = 8
 mobility_rate = 0
 alpha = 0
 beta = 0
-
 num_bs = 0
 num_mbs = 0
 num_sbs_per_mbs = 0
 num_ue = 0
 num_files = 0
-num_nodes = 0  # BS + UE
+num_nodes = 0  # BS + UE + C
 key_index_file = list()
 key_index_bs = list()
 key_index_ue = list()
@@ -25,15 +30,17 @@ key_index_bs_ue = list()
 key_index_all = list()
 e_bs_adj = list()
 
-resources_file = list()
+
 size_file = list()
-phi = list()
+buffer_file = list()
 throughput_min_file = list()
 
 resources_node = list()
 
 rtt_min = list()
+rtt_edge = list()
 
+distance_ue_dict = dict()
 distance_ue = list()
 distance_bs = list()
 
@@ -41,16 +48,14 @@ gama = list()
 radius_mbs = 0
 radius_sbs = 0
 
-resources_node_max = 0
-resources_node_min = 0
+storage_node_max = 0
+storage_node_min = 0
+storage_cloud = 0
 
-size_file_max = 0
-size_file_min = 0
-resources_file_max = 0
-resources_file_min = 0
-throughput_min_file_min = 0
-throughput_min_file_max = 0
+# Size - Throughput - Resources
+requirements = 0
 
+rtt_min_cloud_mbs = 0
 rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
 rtt_min_sbs_ue = 0
@@ -59,8 +64,11 @@ path = ''
 
 
 def main():
+    if os.name == 'nt':
+        path_config = r'../config/config_generator_instance.json'
+    else:
+        path_config = r'../config/config_generator_instance.json'
 
-    path_config = r'../config/config_generator.json'
     if path_config != '':
         config = u.get_data(path_config)
         load_config(config)
@@ -68,34 +76,15 @@ def main():
     global key_index_all
     generate_nodes(num_files, num_mbs, num_sbs_per_mbs, num_ue)
     key_index_all = key_index_bs + key_index_ue + key_index_file
-    generate_resources_file()
-    generate_size_file()
-    generate_throughput_min()
-
+    generate_requirements()
     generate_distance_ue()
     generate_e_bs_adj()
-
     generate_resources_node()
     generate_gama()
-    generate_phi()
-
-    generate_distance_ue()
-    generate_e_bs_adj()
     generate_rtt_min()
-
+    generate_rtt()
     generate_json(path)
-
-
-def generate_throughput_min():
-    global throughput_min_file
-    throughput_min_file = [0 for f in range(num_files)]
-    for f in range(num_files):
-        throughput_min_file[f] = np.random.randint(throughput_min_file_min, throughput_min_file_max)
-
-    print("THROUGHPUT MÍNIMA DO CONTEÚDO.")
-    for f in range(num_files):
-        print(throughput_min_file[f], end=" ")
-    print()
+    print("Success generating instance!")
 
 
 def generate_gama():
@@ -103,8 +92,16 @@ def generate_gama():
     gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]
     for f in range(len(key_index_file)):
         # retorna inteiros com uma distribuição uniforme discreta
-        i = np.random.randint(0, num_bs - 1)
-        gama[f][i] = 1
+        max =  MAX_GAMA
+        while max != 0:
+            i = np.random.randint(NUM_CLOUD, num_bs+1)
+            while gama[f][i] == 1:
+                i = np.random.randint(NUM_CLOUD, num_bs+1)
+            gama[f][i] = 1
+            max -= 1
+
+    for f in range(len(key_index_file)):
+        gama[f][0] = 1
 
     print("HOSPEDAGEM DE CONTEÚDO.GAMA.")
     for f in range(len(key_index_file)):
@@ -116,19 +113,28 @@ def generate_gama():
 
 def generate_distance_ue():
     global distance_ue
-    distance_ue = [[0.0 for i in range(num_bs)] for u in range(num_ue)]
-    max_ran = ((2 * radius_mbs) * num_mbs) - INTERFERENCE
+    distance_ue = [[0.0 for i in range(num_bs + NUM_CLOUD)] for u in range(num_ue)]
 
     for u in range(num_ue):
-        for i in range(num_mbs, num_bs):
-            dist = s.NormalDist(-radius_sbs, radius_sbs).samples(1, seed=None)[0]
-            if dist > max_ran:
-                dist = max_ran
-            # distance_ue[u][i] = float(np.around(abs(np.random.normal(1, max_ran, 1)), 2))
-            distance_ue[u][i] = float(np.around(abs(dist), 2))
+        bs_coverage = list()
+        num_coverage = randrange(1, MAX_COVERAGE_PER_UE + 1)
+        for i in range(num_coverage):
+            bs_coverage.append(randrange(0,len(key_index_bs)))
+            while key_index_bs[bs_coverage[-1]][:3] == 'MBS':
+                bs_coverage[-1] = randrange(0, len(key_index_bs))
 
-    for u in range(num_ue):
-        for i in range(num_mbs):
+        # without coverage.
+        for i in range(num_mbs + NUM_CLOUD, num_bs + NUM_CLOUD):
+            dist = randrange(radius_sbs+1, (2*radius_sbs))
+            distance_ue[u][i] = float(round(abs(dist), 2))
+
+        # with coverage
+        for i in bs_coverage:
+            dist = randrange(1, radius_sbs)
+            distance_ue[u][i] = float(round(abs(dist), 2))
+
+        # ue to mbs and cloud
+        for i in range(num_mbs + NUM_CLOUD):
             distance_ue[u][i] = float(radius_mbs + 1)
 
     print("DISTÂNCIA ENTRE UE E SBS.")
@@ -138,23 +144,20 @@ def generate_distance_ue():
         print()
     print()
 
-    # basear no numero de macros e definir como distÂncia maxima os extremos da rede acesso com base nos raios das mbs
-    # definir distancias fixas para sbs e mbs
-
 
 def generate_e_bs_adj():
     global e_bs_adj
-    e_bs_adj = [[0 for i in range(num_bs)] for u in range(num_bs)]
+    e_bs_adj = [[0 for i in range(num_bs + NUM_CLOUD)] for u in range(num_bs + NUM_CLOUD)]
     count = 0
-    control = num_mbs
+    control = num_mbs + NUM_CLOUD
 
-    for i in range(num_mbs):
-        for j in range(num_mbs):
+    for i in range(num_mbs+NUM_CLOUD):
+        for j in range(num_mbs+NUM_CLOUD):
             if i != j:
                 e_bs_adj[i][j] = 1
 
-    for i in range(num_mbs):
-        for j in range(control, num_bs):
+    for i in range(NUM_CLOUD, num_mbs+NUM_CLOUD):
+        for j in range(control, num_bs + NUM_CLOUD):
             if i != j:
                 if count < num_sbs_per_mbs:
                     e_bs_adj[i][j] = 1
@@ -162,6 +165,9 @@ def generate_e_bs_adj():
                     count += 1
         control += count
         count = 0
+
+    for i in range(num_bs + NUM_CLOUD):
+        e_bs_adj[i][0] = 0
 
     print("ADJACÊNCIA ENTRE BS.")
     for i in range(len(key_index_bs)):
@@ -173,69 +179,46 @@ def generate_e_bs_adj():
 
 def generate_resources_node():
     global resources_node
-    resources_node = [0 for f in range(num_bs)]
+    resources_node = [0 for f in range(num_bs + NUM_CLOUD)]
     for i, tag_i in enumerate(key_index_bs):
         if tag_i[:3] == 'MBS':
-            resources_node[i] = resources_node_max
+            resources_node[i] = storage_node_max
         if tag_i[:3] == 'SBS':
-            resources_node[i] = resources_node_min
+            resources_node[i] = storage_node_min
 
-    print("CAPACIDADE DA BS.")
-    for i in range(num_bs):
-        print(resources_node[i], end=" ")
+    resources_node[0] = sum(size_file)
+    print("SOMARIO DA CAPACIDADE.", sum(resources_node[1:]))
+    print("CAPACIDADE DA BS. MB.")
+    for i in range(num_bs + NUM_CLOUD):
+        print(round(resources_node[i],0), end=" ")
     print()
 
 
-def generate_phi():
-    # alocar até 30% da capacidade de acordo com o gama
-    global phi
-    use = 0
-    phi = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]
-
-    for f in range(num_files):
-        for i in range(num_bs):
-            sum_files = 0
-            if gama[f][i] == 1:
-                rep = int(np.random.randint(1, 2))
-
-                for file in range(num_files):
-                    if 0 != phi[file][i]:
-                        sum_files += (resources_file[file] * phi[file][i])
-
-                use = ((sum_files + (resources_file[f] * rep)) / resources_node[i])
-
-                if use <= MAX_USE_NODE:
-                    phi[f][i] += rep
-
-    print("CONTEÚDO EM ENVIO.PHI.")
-    for f in range(len(key_index_file)):
-        for i in range(len(key_index_bs)):
-            print(phi[f][i], end=" ")
-        print()
-    print()
-
-
-def generate_resources_file():
-    global resources_file
-    resources_file = [0 for f in range(num_files)]
-    for f in range(num_files):
-        resources_file[f] = np.random.randint(resources_file_min, resources_file_max)
-
-    print("RECURSOS DO CONTEÚDO.")
-    for f in range(num_files):
-        print(resources_file[f], end=" ")
-    print()
-
-
-def generate_size_file():
-    global size_file
+def generate_requirements():
+    global size_file, buffer_file, throughput_min_file
     size_file = [0 for f in range(num_files)]
-    for f in range(num_files):
-        size_file[f] = np.random.randint(size_file_min, size_file_max)
+    buffer_file = [0 for f in range(num_files)]
+    throughput_min_file = [0 for f in range(num_files)]
 
-    print("TAMANHO DO CONTEÚDO.")
     for f in range(num_files):
-        print(size_file[f], end=" ")
+        index = np.random.randint(0, len(requirements))
+        size_file[f] = requirements[index][0]
+        buffer_file[f] = requirements[index][1]
+        throughput_min_file[f] = requirements[index][2]
+
+    print("TAMANHO DO CONTEÚDO.MB.")
+    for f in range(num_files):
+        print(round(size_file[f], 0), end=" ")
+    print()
+
+    print("TAMANHO DO BUFFER.Mb.")
+    for f in range(num_files):
+        print(round(buffer_file[f], 0), end=" ")
+    print()
+
+    print("THROUGHPUT MÍNIMA DO CONTEÚDO.Mbps")
+    for f in range(num_files):
+        print(throughput_min_file[f], end=" ")
     print()
 
 
@@ -249,29 +232,20 @@ def generate_rtt_min():
                     if coverage_bs_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_mbs_mbs
                         rtt_min[j][i] = rtt_min_mbs_mbs
-                    else:
-                        rtt_min[i][j] = NO_EDGE
-                        rtt_min[j][i] = NO_EDGE
                 if (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS'):
                     if coverage_bs_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_sbs_mbs
                         rtt_min[j][i] = rtt_min_sbs_mbs
-                    else:
-                        rtt_min[i][j] = NO_EDGE
-                        rtt_min[j][i] = NO_EDGE
                 if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
                     if coverage_bs_ue(tag_i, tag_j):
                         rtt_min[i][j] = rtt_min_sbs_ue
-                    else:
-                        rtt_min[i][j] = NO_EDGE
                 if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                     if caching_to_bs(tag_i, tag_j):
                         rtt_min[i][j] = 0
-                    else:
-                        rtt_min[i][j] = NO_EDGE
-            else:
-                rtt_min[i][j] = NO_EDGE
-                rtt_min[j][i] = NO_EDGE
+                if tag_i[:3] == 'MBS' and tag_j[:4] == 'MBS0':
+                    rtt_min[i][j] = NO_EDGE
+                    rtt_min[j][i] = rtt_min_cloud_mbs
+
 
     print("RTT MÍNIMO POR ENLACE.")
     for i in range(num_nodes):
@@ -282,6 +256,48 @@ def generate_rtt_min():
                 print(rtt_min[i][j], end=" ")
         print()
     print()
+
+
+def generate_rtt():
+    global rtt_edge
+    rtt_edge = [[NO_EDGE for i in range(num_nodes + num_files)] for j in
+                range(num_nodes + num_files)]
+
+    for i, tag_i in enumerate(key_index_all):
+        for j, tag_j in enumerate(key_index_all):
+            if i != j:
+                if (tag_i[:3] == 'MBS' and tag_j[:3] == 'MBS') or (tag_i[:3] == 'SBS' and tag_j[:3] == 'MBS') or (
+                        tag_i[:3] == 'MBS' and tag_j[:3] == 'SBS') or (
+                        tag_i[:3] == 'SBS' and tag_j[:3] == 'SBS'):
+                    if coverage_bs_to_bs(tag_i, tag_j):
+                        rtt_edge[i][j] = rtt_min[i][j]
+                        rtt_edge[j][i] = rtt_min[j][i]
+                if (tag_i[:3] == 'SBS' and tag_j[:2] == 'UE'):
+                    rtt_edge[i][j] = calc_rtt_bs_to_ue_increase(tag_i,tag_j,
+                                                                rtt_min[
+                                                                    i][j])
+                if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
+                    if caching_to_bs(tag_i, tag_j):
+                        rtt_edge[i][j] = 0
+
+    print("RTT POR ENLACE.")
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if rtt_edge[i][j] == NO_EDGE:
+                print(' ထ ', end=" ")
+            else:
+                print(rtt_edge[i][j], end=" ")
+        print()
+    print()
+
+
+def calc_rtt_bs_to_ue_increase(bs, ue, rtt_previous):
+    rtt = 0
+    if coverage_bs_ue(bs, ue):
+        rtt = round(rtt_previous * (1 + (distance_ue_dict[ue, bs] / radius_sbs)), 4)
+    else:
+        rtt = NO_EDGE
+    return rtt
 
 
 def coverage_bs_to_bs(source, sink):
@@ -295,7 +311,7 @@ def coverage_bs_to_bs(source, sink):
 
 
 def coverage_bs_ue(source, sink):
-    distance_ue_dict = dict()
+    global distance_ue_dict
     for u in range(len(key_index_ue)):
         for i in range(len(key_index_bs)):
             tag_ue = key_index_ue[u]
@@ -338,8 +354,13 @@ def generate_users(num_users):
 
 
 def generate_bs(num_mbs, num_sbs):
+    generate_cloud_server()
     generate_mbs(num_mbs)
     generate_sbs(num_mbs, num_sbs)
+
+
+def generate_cloud_server():
+    key_index_bs.append("MBS0")
 
 
 def generate_mbs(num_mbs):
@@ -361,19 +382,27 @@ def generate_json(path):
     data = {"mobility_rate": mobility_rate,
             "alpha": alpha,
             "beta": beta,
+            "rtt_min_cloud_mbs": rtt_min_cloud_mbs,
+            "rtt_min_mbs_mbs": rtt_min_mbs_mbs,
+            "rtt_min_sbs_mbs": rtt_min_sbs_mbs,
+            "rtt_min_sbs_ue": rtt_min_sbs_ue,
             "num_bs": num_bs,
             "num_ue": num_ue,
             "num_files": num_files,
+            "num_mbs": num_mbs,
+            "num_sbs": num_sbs_per_mbs * num_mbs,
+
             "key_index_file": key_index_file,
             "key_index_bs": key_index_bs,
             "key_index_ue": key_index_ue,
-            "resources_file": resources_file,
+
             "size_file": size_file,
+            "buffer_file": buffer_file,
             "throughput_min_file": throughput_min_file,
+
             "resources_node": resources_node,
             "gama": gama,
-            "phi": phi,
-            "rtt_min": rtt_min,
+            "rtt_edge": rtt_edge,
             "distance_ue": distance_ue,
             "distance_bs": distance_bs,
             "e_bs_adj": e_bs_adj,
@@ -384,7 +413,7 @@ def generate_json(path):
 
 
 def load_config(config: object):
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, resources_file, size_file, phi, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, size_file_min, size_file_max, resources_node_min, resources_node_max, resources_file_min, resources_file_max, throughput_min_file_min, throughput_min_file_max, key_index_all, path
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, storage_node_min, storage_node_max, key_index_all, path
 
     mobility_rate = config["mobility_rate"]
     alpha = config["alpha"]
@@ -394,19 +423,15 @@ def load_config(config: object):
     num_bs = num_mbs + (num_mbs * num_sbs_per_mbs)
     num_files = config["num_files"]
     num_ue = config["num_ue"]
-    num_nodes = num_bs + num_ue + num_files
-    size_file_max = config["size_file_max"]
-    size_file_min = config["size_file_min"]
-    resources_file_max = config["resources_file_max"]
-    resources_file_min = config["resources_file_min"]
+    num_nodes = num_bs + num_ue + num_files + NUM_CLOUD
+    requirements = config["requirements"]
 
-    throughput_min_file_max = config["throughput_min_file_max"]
-    throughput_min_file_min = config["throughput_min_file_min"]
+    storage_node_max = config["storage_node_max"]
+    storage_node_min = config["storage_node_min"]
 
-    resources_node_max = config["resources_node_max"]
-    resources_node_min = config["resources_node_min"]
     radius_mbs = config["radius_mbs"]
     radius_sbs = config["radius_sbs"]
+    rtt_min_cloud_mbs = config["rtt_min_cloud_mbs"]
     rtt_min_mbs_mbs = config["rtt_min_mbs_mbs"]
     rtt_min_sbs_mbs = config["rtt_min_sbs_mbs"]
     rtt_min_sbs_ue = config["rtt_min_sbs_ue"]

@@ -112,12 +112,13 @@ command: python3.9 -m pip install --upgrade Pillow
 command: sudo apt-get install tqdm
 command: sudo apt-get install seaborn
 command: sudo apt-get install -y python-typing
-command: pip install tqdm --upgrade
-command: pip install seaborn --upgrade
-command: pip install python-igraph --upgrade
-command: pip install cairocffi --upgrade
-command: pip install openpyxl --upgrade
-command: pip install gurobipy or python3 -m pip install gurobipy
+command: sudo pip install tqdm --upgrade
+command: sudo pip install seaborn --upgrade
+command: sudo pip install python-igraph --upgrade
+command: sudo pip install cairocffi --upgrade
+command: sudo pip install openpyxl --upgrade
+command: sudo pip install gurobipy 
+command: sudo python3 -m pip install gurobipy
 ````
 >RuntimeError: This package is deprecated. See the deprecation notice above.
 ````shell

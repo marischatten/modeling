@@ -1,26 +1,41 @@
 {
 "show_log": 0,
-"show_results": true,
-"show_path": false,
+"show_results": false,
+"show_path": true,
 "show_var": false,
 "show_par": false,
-"plot_distribution": false,
-"plot_data": false,
-"show_all_paths": false,
-"type": "zipf",
-"mobility": "is_mobile",
-"reallocation": "reallocation",
 "show_reallocation": false,
-"path_dataset": "..\\dataset\\instance_1.json",
-"save_data": false,
-"path_output": "..\\output\\data\\instance_1.xlsx",
-"plot_graph": false,
-"path_graph": "..\\output\\graph\\instance_6.png",
+"plot_distribution": false,
 
-"avg_qtd_bulk":5,
-"num_events": 5,
-"num_alpha": 0.56,
+"mobility": true,
+"location_fixed": false,
+"path_location": "..\\dataset\\location\\instance_10.json",
 
-"source": ["F2"],
-"sink": ["UE2"]
+"requests_fixed": false,
+"path_requests": "..\\dataset\\request\\zipf\\instance_10.json",
+
+"plot_graph": true,
+"plot_graph_mobility": true,
+"path_graph": "..\\output\\graph\\instance_10",
+
+"save_data": true,
+"path_output": "..\\output\\data\\instance_10.xlsx",
+
+"enable_ceil_nodes_capacity": true,
+
+"deallocate_request": true,
+"max_events": 10,
+
+"path_time": "..\\output\\time_execution\\instance_10.dat",
+
+"path_dataset": "..\\dataset\\instance\\instance_10.json",
+
+"type": "zipf",
+"fixed": true,
+"avg_qtd_bulk":2,
+"num_events": 20,
+"num_alpha": 0.80,
+
+"source": ["F3"],
+"sink": ["UE40"]
 }

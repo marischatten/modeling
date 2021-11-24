@@ -1,0 +1,1183 @@
+---
+title: "ZipF"
+author: "Marisangila Alves"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(viridis)
+library(hrbrthemes)
+library(ggpubr)
+library(cowplot)
+library('outliers')
+```
+
+```{r echo=FALSE, message=FALSE}
+save = TRUE
+save_pt = FALSE
+# zipf 0.4
+rate_admission04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Rate_Admission', col_names=TRUE))
+server_use04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Server_Use', col_names=TRUE))
+cache_vs_cloud04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+server_use_by_type04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Server_Use_By_Type', col_names=TRUE))
+scattering_optic04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless04 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc04 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc04 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson04 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Poisson', col_names=TRUE))
+zipf04 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Zipf', col_names=TRUE))
+times04 <- read.table("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.dat", header = TRUE)
+delay04 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf04_lambda5fixo.xlsx", sheet='Delay', col_names=TRUE))
+
+# zipf 0.6
+rate_admission06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Rate_Admission', col_names=TRUE))
+server_use06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Server_Use', col_names=TRUE))
+cache_vs_cloud06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+server_use_by_type06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Server_Use_By_Type', col_names=TRUE))
+scattering_optic06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless06 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc06 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc06 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson06 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Poisson', col_names=TRUE))
+zipf06 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Zipf', col_names=TRUE))
+times06 <- read.table("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.dat", header = TRUE)
+delay06 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf06_lambda5fixo.xlsx", sheet='Delay', col_names=TRUE))
+
+# zipf 0.8
+rate_admission08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Rate_Admission', col_names=TRUE))
+server_use08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Server_Use', col_names=TRUE))
+cache_vs_cloud08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+server_use_by_type08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Server_Use_By_Type', col_names=TRUE))
+scattering_optic08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless08 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc08 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc08 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson08 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Poisson', col_names=TRUE))
+zipf08 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Zipf', col_names=TRUE))
+times08 <- read.table("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.dat", header = TRUE)
+delay08 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf08_lambda5fixo.xlsx", sheet='Delay', col_names=TRUE))
+
+# zipf 1.0
+rate_admission1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Rate_Admission', col_names=TRUE))
+server_use1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Server_Use', col_names=TRUE))
+cache_vs_cloud1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+server_use_by_type1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Server_Use_By_Type', col_names=TRUE))
+scattering_optic1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless1 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc1 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc1 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson1 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Poisson', col_names=TRUE))
+zipf1 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Zipf', col_names=TRUE))
+times1 <- read.table("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.dat", header = TRUE)
+delay1 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf10_lambda5fixo.xlsx", sheet='Delay', col_names=TRUE))
+
+# zipf 1.2
+rate_admission12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Rate_Admission', col_names=TRUE))
+server_use12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Server_Use', col_names=TRUE))
+cache_vs_cloud12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+server_use_by_type12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Server_Use_By_Type', col_names=TRUE))
+scattering_optic12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+scattering_wireless12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Scattering_Wireless', col_names=TRUE))
+load_links_optic12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_wireless12 <- data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Load_Links_Wireless', col_names=TRUE))
+path_Realloc12 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc12 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson12 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Poisson', col_names=TRUE))
+zipf12 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Zipf', col_names=TRUE))
+times12 <- read.table("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.dat", header = TRUE)
+delay12 = data.frame(read_excel("../dataAnalysis/data/zipf/instance_zipf12_lambda5fixo.xlsx", sheet='Delay', col_names=TRUE))
+
+zipf = c(0.4,0.6,0.8,1.0,1.2)
+lambda <- 5
+n <- 100
+beta <- 0.2
+mobility <- 40
+
+bs <- unique(server_use04$BS)
+
+#second to millisecond
+delay04$Delay <- delay04$Delay * 1000
+delay06$Delay <- delay06$Delay * 1000
+delay08$Delay <- delay08$Delay * 1000
+delay1$Delay <- delay1$Delay * 1000
+delay12$Delay <- delay12$Delay * 1000
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r length(bs)-1`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS 20GB SBS 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) SBS/UE 0.001s(1ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+     100 Mbps    |      2GB/2000MB             |  48Mb  |
+     100 Mbps    |      4GB/4000MB             |  48Mb  |
+     100 Mbps    |      8GB/8000MB             |  48Mb  |
+
+
+### Distribuição de popularidade do conteúdo solicitado.
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+zipf04 <- count(zipf04, "Caches")
+zipf4 <- zipf04[order(zipf04$freq,decreasing = TRUE),]
+zipf06 <- count(zipf06, "Caches")
+zipf06 <- zipf06[order(zipf06$freq,decreasing = TRUE),]
+zipf08 <- count(zipf08, "Caches")
+zipf08 <- zipf08[order(zipf08$freq,decreasing = TRUE),]
+zipf1 <- count(zipf1, "Caches")
+zipf1 <- zipf1[order(zipf1$freq,decreasing = TRUE),]
+zipf12 <- count(zipf12, "Caches")
+zipf12 <- zipf12[order(zipf12$freq,decreasing = TRUE),]
+old.par <- par(mfrow=c(3, 2))
+hist(zipf04$freq,breaks = "FD" ,freq=F,col=c("#CCE5FF"))
+hist(zipf06$freq,breaks = "FD" ,freq=F,col=c("#36393D"))
+hist(zipf08$freq,breaks = "FD" ,freq=F,col=c("#003366"))
+hist(zipf1$freq,breaks = "FD" ,freq=F,col=c("#B20000"))
+hist(zipf12$freq,breaks = "FD" ,freq=F,col=c("#647687"))
+par(old.par)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+acceptance_requests04 <- round(rate_admission04$Rate_Admission,4) * 100
+acceptance_requests06 <- round(rate_admission06$Rate_Admission,4) * 100
+acceptance_requests08 <- round(rate_admission08$Rate_Admission,4) * 100
+acceptance_requests1 <- round(rate_admission1$Rate_Admission,4) * 100
+acceptance_requests12 <- round(rate_admission12$Rate_Admission,4) * 100
+```
+
+
+### Taxa de requisições alocadas.
+
+$\alpha : 0.4 =$ `r  acceptance_requests04`% -  `r rate_admission04$Admission_Requests`/`r rate_admission04$All_Requests`.
+
+$\alpha : 0.6 =$ `r  acceptance_requests06`% -  `r rate_admission06$Admission_Requests`/`r rate_admission06$All_Requests`.
+
+$\alpha : 0.8 =$ `r  acceptance_requests08`% -  `r rate_admission08$Admission_Requests`/`r rate_admission08$All_Requests`.
+
+$\alpha : 1.0 =$ `r  acceptance_requests1`% -  `r rate_admission1$Admission_Requests`/`r rate_admission1$All_Requests`.
+
+$\alpha : 1.2 =$ `r  acceptance_requests12`% -  `r rate_admission12$Admission_Requests`/`r rate_admission12$All_Requests`.
+
+### Distribuição da Latência
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+type_zipf <- rep("\U03B1:0.4",length(delay04$Delay))
+d_04 <- data.frame(delay = c(delay04$Delay),
+                   type = type_zipf,
+                   stringsAsFactors = FALSE)
+type_zipf <- rep("\U03B1:0.6",length(delay06$Delay))
+d_06 <- data.frame(delay = c(delay06$Delay),
+                   type = type_zipf,
+                   stringsAsFactors = FALSE)
+type_zipf <- rep("\U03B1:0.8",length(delay08$Delay))
+d_08 <- data.frame(delay = c(delay08$Delay),
+                   type = type_zipf,
+                   stringsAsFactors = FALSE)
+type_zipf <- rep("\U03B1:1.0",length(delay1$Delay))
+d_1 <- data.frame(delay = c(delay1$Delay),
+                  type = type_zipf,
+                  stringsAsFactors = FALSE)
+
+type_zipf <- rep("\U03B1:1.2",length(delay12$Delay))
+d_12 <- data.frame(delay = c(delay12$Delay),
+                   type = type_zipf,
+                   stringsAsFactors = FALSE)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+df <- rbind(d_04,d_06,d_08,d_1,d_12)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  x.lab <- "Latência Total da Rede"
+  y.lab <- "Frequência"
+}else{
+  x.lab <- "Total Network Delay"
+  y.lab <- "Frequency"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+ecdf <- ggplot(df,aes(x=delay, colour = type)) + stat_ecdf(geom = "point")+
+  labs(colour = "Zipf")+
+  theme_classic()+  
+  theme(legend.position = "right",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color=NA),
+        #legend.box.just = "right",
+        legend.key = element_rect(colour = NA, fill = NA),
+        #legend.margin = margin(6, 6, 6, 6),
+        legend.title = element_text(face = "bold", size = 10,),
+        legend.text = element_text(size = 10))+ 
+  xlab(x.lab)+
+  ylab(y.lab)+
+  geom_vline(xintercept = 4,linetype = "dotted")+
+  geom_vline(xintercept = 10,linetype = "longdash")
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(ecdf,filename = "graph/pt/zipf/zipf_delay.pdf", dpi = 600)
+  ggsave(ecdf,filename = "graph/pt/zipf/zipf_delay.png", dpi = 600)
+}else{
+  ggsave(ecdf,filename = "graph/zipf/zipf_delay.pdf", dpi = 600)
+  ggsave(ecdf,filename = "graph/zipf/zipf_delay.png", dpi = 600)
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(ecdf)
+```
+
+```{r  echo=FALSE, results=FALSE, warning=FALSE}
+minor4_04 <- round(sum(delay04$Delay < 4)/length(delay04$Delay),4)
+minor10_04 <- round(sum(delay04$Delay < 10)/length(delay04$Delay),4)
+
+minor4_06 <- round(sum(delay06$Delay < 4)/length(delay06$Delay),4)
+minor10_06 <- round(sum(delay06$Delay < 10)/length(delay06$Delay),4)
+
+minor4_08 <- round(sum(delay08$Delay < 4)/length(delay08$Delay),4)
+minor10_08 <- round(sum(delay08$Delay < 10)/length(delay08$Delay),4)
+
+minor4_1 <- round(sum(delay06$Delay < 4)/length(delay1$Delay),4)
+minor10_1 <- round(sum(delay06$Delay < 10)/length(delay1$Delay),4)
+
+minor4_12 <- round(sum(delay12$Delay < 4)/length(delay12$Delay),4)
+minor10_12 <- round(sum(delay12$Delay < 10)/length(delay12$Delay),4)
+```
+$\alpha$: $0.4$
+
+Em $`r minor4_04 * 100`\%$ da amostra a latência das requisições são menores que $4$ milisegundos. 
+
+Em $`r minor10_04 * 100`\%$ da amostra a latência das requisições são menores que $10$ milisegundos. 
+
+$\alpha$: $0.6$
+
+Em $`r minor4_06 * 100`\%$ da amostra a latência das requisições são menores que $4$ milisegundos. 
+
+Em $`r minor10_06 * 100`\%$ da amostra a latência das requisições são menores que $10$ milisegundos. 
+
+$\alpha$: $0.8$
+
+Em $`r minor4_08 * 100`\%$ da amostra a latência das requisições são menores que $4$ milisegundos. 
+
+Em $`r minor10_08 * 100`\%$ da amostra a latência das requisições são menores que $10$ milisegundos. 
+
+$\alpha$: $1.0$
+
+Em $`r minor4_1 * 100`\%$ da amostra a latência das requisições são menores que $4$ milisegundos. 
+
+Em $`r minor10_1 * 100`\%$ da amostra a latência das requisições são menores que $10$ milisegundos.
+
+$\alpha$: $1.2$
+
+Em $`r minor4_12 * 100`\%$ da amostra a latência das requisições são menores que $4$ milisegundos. 
+
+Em $`r minor10_12 * 100`\%$ da amostra a latência das requisições são menores que $10$ milisegundos.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#ANOVA
+summary(model_04 <- aov(Delay~Event, data=delay04))
+#Homogeneidade
+#leveneTest(Delay~Event, data = delay04)
+#Resíduos
+shapiro.test(resid(model_04))
+#Comparar Médias
+#TukeyHSD(model_04)
+# hist(delay04$Delay,breaks = 100)
+# boxplot(delay04$Delay)
+#vioplot(delay04$Delay)
+```
+
+
+### Cache, Cloud e Storage.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Sum by events normalized
+max_load04 = sum(load_links_optic04$Total_Load)
+max_load06 = sum(load_links_optic06$Total_Load)
+max_load08 = sum(load_links_optic08$Total_Load)
+max_load1 = sum(load_links_optic1$Total_Load)
+max_load12 = sum(load_links_optic12$Total_Load)
+
+load_links_normal04 <- c()
+load_links_normal06 <- c()
+load_links_normal08 <- c()
+load_links_normal1 <- c()
+load_links_normal12 <- c()
+
+for (i in 1:n){
+  
+  load_links_n04 <- load_links_optic04 %>% filter(load_links_optic04$Event == i)
+  load_links_n06 <- load_links_optic06 %>% filter(load_links_optic06$Event == i)
+  load_links_n08 <- load_links_optic08 %>% filter(load_links_optic08$Event == i)
+  load_links_n1 <- load_links_optic1 %>% filter(load_links_optic1$Event == i)
+  load_links_n12 <- load_links_optic12 %>% filter(load_links_optic12$Event == i)
+  
+  sum04 <- sum(load_links_n04$Total_Load) 
+  sum06 <- sum(load_links_n06$Total_Load)
+  sum08 <- sum(load_links_n08$Total_Load)
+  sum1 <- sum(load_links_n1$Total_Load)
+  sum12 <- sum(load_links_n12$Total_Load)
+  
+  load_links_normal04 = append(load_links_normal04,sum04)
+  load_links_normal06 = append(load_links_normal06,sum06)
+  load_links_normal08 = append(load_links_normal08,sum08)
+  load_links_normal1 = append(load_links_normal1,sum1)
+  load_links_normal12 = append(load_links_normal12,sum12)
+}
+
+max_sum04 = max(load_links_normal04)
+max_sum06 = max(load_links_normal06)
+max_sum08 = max(load_links_normal06)
+max_sum1 = max(load_links_normal1)
+max_sum12 = max(load_links_normal12)
+
+load_links_normal04 = load_links_normal04/max_sum04
+load_links_normal06 = load_links_normal06/max_sum06
+load_links_normal08 = load_links_normal08/max_sum08
+load_links_normal1 = load_links_normal1/max_sum1
+load_links_normal12 = load_links_normal12/max_sum12
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+ratio_server_use04 <- NULL
+ratio_server_use06 <- NULL
+ratio_server_use08 <- NULL
+ratio_server_use1 <- NULL
+ratio_server_use12 <- NULL
+
+for (i in 1:n){
+  server_use_n04 <- server_use04 %>% filter(server_use04$Event == i)
+  sum_total_storage_n04 <- sum(server_use_n04$Total_Storage)
+  sum_total_use_n04 <- sum(server_use_n04$Total_Use)
+  ratio_server_use_n04 <- (sum_total_use_n04 / sum_total_storage_n04)
+  
+  ratio_server_use04 <- append(ratio_server_use04,ratio_server_use_n04)
+  
+  server_use_n04 <- NULL
+  sum_total_storage_n04 <- NULL
+  ratio_server_use_n04 <- NULL
+}
+for (i in 1:n){
+  server_use_n06 <- server_use06 %>% filter(server_use06$Event == i)
+  sum_total_storage_n06 <- sum(server_use_n06$Total_Storage)
+  sum_total_use_n06 <- sum(server_use_n06$Total_Use)
+  ratio_server_use_n06 <- (sum_total_use_n06 / sum_total_storage_n06)
+  
+  ratio_server_use06 <- append(ratio_server_use06,ratio_server_use_n06)
+  
+  server_use_n06 <- NULL
+  sum_total_storage_n06 <- NULL
+  ratio_server_use_n06 <- NULL
+}
+for (i in 1:n){
+  server_use_n08 <- server_use08 %>% filter(server_use08$Event == i)
+  sum_total_storage_n08 <- sum(server_use_n08$Total_Storage)
+  sum_total_use_n08 <- sum(server_use_n08$Total_Use)
+  ratio_server_use_n08 <- (sum_total_use_n08 / sum_total_storage_n08)
+  
+  ratio_server_use08 <- append(ratio_server_use08,ratio_server_use_n08)
+  
+  server_use_n08 <- NULL
+  sum_total_storage_n08 <- NULL
+  ratio_server_use_n08 <- NULL
+}
+for (i in 1:n){
+  server_use_n1 <- server_use1 %>% filter(server_use1$Event == i)
+  sum_total_storage_n1 <- sum(server_use_n1$Total_Storage)
+  sum_total_use_n1 <- sum(server_use_n1$Total_Use)
+  ratio_server_use_n1 <- (sum_total_use_n1 / sum_total_storage_n1)
+  
+  ratio_server_use1 <- append(ratio_server_use1,ratio_server_use_n1)
+  
+  server_use_n1 <- NULL
+  sum_total_storage_n1 <- NULL
+  ratio_server_use_n1 <- NULL
+}
+for (i in 1:n){
+  server_use_n12 <- server_use12 %>% filter(server_use12$Event == i)
+  sum_total_storage_n12 <- sum(server_use_n12$Total_Storage)
+  sum_total_use_n12 <- sum(server_use_n12$Total_Use)
+  ratio_server_use_n12 <- (sum_total_use_n12 / sum_total_storage_n12)
+  
+  ratio_server_use12 <- append(ratio_server_use12,ratio_server_use_n12)
+  
+  server_use_n12 <- NULL
+  sum_total_storage_n12 <- NULL
+  ratio_server_use_n12 <- NULL
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Simple Moving Average
+cache_hit_SMA04 <- TTR::SMA(cache_vs_cloud04$Cache, n=10)
+cache_hit_SMA06 <- TTR::SMA(cache_vs_cloud06$Cache, n=10)
+cache_hit_SMA08 <- TTR::SMA(cache_vs_cloud08$Cache, n=10)
+cache_hit_SMA1 <- TTR::SMA(cache_vs_cloud1$Cache, n=10)
+cache_hit_SMA12 <- TTR::SMA(cache_vs_cloud12$Cache, n=10)
+
+cache_miss_SMA04 <- TTR::SMA(cache_vs_cloud04$Cloud, n=10)
+cache_miss_SMA06 <- TTR::SMA(cache_vs_cloud06$Cloud, n=10)
+cache_miss_SMA08 <- TTR::SMA(cache_vs_cloud08$Cloud, n=10)
+cache_miss_SMA1 <- TTR::SMA(cache_vs_cloud1$Cloud, n=10)
+cache_miss_SMA12 <- TTR::SMA(cache_vs_cloud12$Cloud, n=10)
+
+ratio_server_use_SMA04 <- TTR::SMA(ratio_server_use04, n=10)
+ratio_server_use_SMA06 <- TTR::SMA(ratio_server_use06, n=10)
+ratio_server_use_SMA08 <- TTR::SMA(ratio_server_use08, n=10)
+ratio_server_use_SMA1 <- TTR::SMA(ratio_server_use1, n=10)
+ratio_server_use_SMA12 <- TTR::SMA(ratio_server_use12, n=10)
+
+load_links_SMA04 <- TTR::SMA(load_links_normal04, n=10)
+load_links_SMA06 <- TTR::SMA(load_links_normal06, n=10)
+load_links_SMA08 <- TTR::SMA(load_links_normal08, n=10)
+load_links_SMA1 <- TTR::SMA(load_links_normal1, n=10)
+load_links_SMA12 <- TTR::SMA(load_links_normal12, n=10)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#create columns
+type_cache <- rep("Cache Hit",100)
+d1_04 <- data.frame(event=c(cache_vs_cloud04$Event),
+                    func = cache_vs_cloud04$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_04 <- data.frame(event=c(cache_vs_cloud04$Event),
+                    func = cache_vs_cloud04$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Server Load",100)
+}
+d3_04 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use_SMA04,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_04 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_SMA04,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_06 <- data.frame(event=c(cache_vs_cloud06$Event),
+                    func = cache_vs_cloud06$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_06 <- data.frame(event=c(cache_vs_cloud06$Event),
+                    func = cache_vs_cloud06$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Server Load",100)
+}
+
+d3_06 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use_SMA06,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_06 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_SMA06,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_08 <- data.frame(event=c(cache_vs_cloud08$Event),
+                    func = cache_vs_cloud08$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_08 <- data.frame(event=c(cache_vs_cloud08$Event),
+                    func = cache_vs_cloud08$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Server Load",100)
+}
+d3_08 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use_SMA08,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_08 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_SMA08,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_1 <- data.frame(event=c(cache_vs_cloud1$Event),
+                   func = cache_vs_cloud1$Cache,
+                   type = type_cache,
+                   stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_1 <- data.frame(event=c(cache_vs_cloud1$Event),
+                   func = cache_vs_cloud1$Cloud,
+                   type = type_cloud,
+                   stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Server Load",100)
+}
+d3_1 <- data.frame(event=c(rep(1:100,1)),
+                   func = ratio_server_use_SMA1,
+                   type = type_server_use,
+                   stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_1 <- data.frame(event=c(rep(1:100,1)),
+                   func = load_links_SMA1,
+                   type = type_network_load,
+                   stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_12 <- data.frame(event=c(cache_vs_cloud12$Event),
+                    func = cache_vs_cloud12$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_12 <- data.frame(event=c(cache_vs_cloud12$Event),
+                    func = cache_vs_cloud12$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Server Load",100)
+}
+d3_12 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use_SMA12,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_12 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_SMA12,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#join columns
+df_04 <- bind_rows(d1_04,d2_04)
+df_06 <- bind_rows(d1_06,d2_06)
+df_08 <- bind_rows(d1_08,d2_08)
+df_1 <- bind_rows(d1_1,d2_1)
+df_12 <- bind_rows(d1_12,d2_12)
+
+df_04_sma <- bind_rows(d4_04,d3_04)
+df_06_sma <- bind_rows(d4_06,d3_06)
+df_08_sma <- bind_rows(d4_08,d3_08)
+df_1_sma <- bind_rows(d4_1,d3_1)
+df_12_sma <- bind_rows(d4_12,d3_12)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Percentual"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Percentage"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+g1 <- ggplot(df_04) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  geom_line(data = df_04_sma, aes( y= func, x= event, group=type, color=type), size=1)+
+  theme_bw()+
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+g2 <- ggplot(df_06) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  geom_line(data = df_06_sma, aes( y= func, x= event, group=type, color=type), size=1)+
+  theme_bw()+
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+g3 <- ggplot(df_08) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  geom_line(data = df_08_sma, aes( y= func, x= event, group=type, color=type), size=1)+
+  theme_bw()+
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+g4 <- ggplot(df_1) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  geom_line(data = df_1_sma, aes( y= func, x= event, group=type, color=type), size=1)+
+  theme_bw()+
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+g5 <- ggplot(df_1) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  geom_line(data = df_12_sma, aes( y= func, x= event, group=type, color=type), size=1)+
+  theme_bw()+
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(g1,filename = "graph/pt/zipf/zipf04.pdf", dpi = 600)
+  ggsave(g2,filename = "graph/pt/zipf/zipf06.pdf", dpi = 600)
+  ggsave(g3,filename = "graph/pt/zipf/zipf08.pdf", dpi = 600)
+  ggsave(g4,filename = "graph/pt/zipf/zipf10.pdf", dpi = 600)
+  ggsave(g5,filename = "graph/pt/zipf/zipf12.pdf", dpi = 600)
+  ggsave(g1,filename = "graph/pt/zipf/zipf04.png", dpi = 600)
+  ggsave(g2,filename = "graph/pt/zipf/zipf06.png", dpi = 600)
+  ggsave(g3,filename = "graph/pt/zipf/zipf08.png", dpi = 600)
+  ggsave(g4,filename = "graph/pt/zipf/zipf10.png", dpi = 600)
+  ggsave(g5,filename = "graph/pt/zipf/zipf12.png", dpi = 600)
+  
+}else{
+  ggsave(g1,filename = "graph/zipf/zipf04.pdf", dpi = 600)
+  ggsave(g2,filename = "graph/zipf/zipf06.pdf", dpi = 600)
+  ggsave(g3,filename = "graph/zipf/zipf08.pdf", dpi = 600)
+  ggsave(g4,filename = "graph/zipf/zipf10.pdf", dpi = 600)
+  ggsave(g5,filename = "graph/zipf/zipf12.pdf", dpi = 600)
+  ggsave(g1,filename = "graph/zipf/zipf04.png", dpi = 600)
+  ggsave(g2,filename = "graph/zipf/zipf06.png", dpi = 600)
+  ggsave(g3,filename = "graph/zipf/zipf08.png", dpi = 600)
+  ggsave(g4,filename = "graph/zipf/zipf10.png", dpi = 600)
+  ggsave(g5,filename = "graph/zipf/zipf12.png", dpi = 600)
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g1)
+print(g2)
+print(g3)
+print(g4)
+print(g5)
+```
+```{r echo=FALSE, results=FALSE, warning=FALSE, fig.width=12, fig.height=12}
+# p <- plot_grid(g1, g2, g3, g4,labels = c('2m', '4m', '6m', '8m','10m','40m'), label_x=0,label_size = 10,label_y = 1,ncol = 2,nrow = 2)
+# plot_grid(p,g5,ncol = 1, nrow = 2)
+```
+
+<!-- ### Médias -->
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+
+outlier(delay04$Delay)
+outlier(delay06$Delay)
+outlier(delay08$Delay)
+outlier(delay1$Delay)
+outlier(delay12$Delay)
+
+delay04$Delay
+
+summary(delay04$Delay)
+summary(delay06$Delay)
+summary(delay08$Delay)
+summary(delay1$Delay)
+summary(delay12$Delay)
+
+quantile(delay04$Delay)
+quantile(delay06$Delay)
+quantile(delay08$Delay)
+quantile(delay1$Delay)
+quantile(delay12$Delay)
+
+quantile(delay04$Delay,probs = 0.90)
+quantile(delay06$Delay)
+quantile(delay08$Delay)
+quantile(delay1$Delay)
+quantile(delay12$Delay)
+
+sd(delay04$Delay)
+sd(delay06$Delay)
+sd(delay08$Delay)
+sd(delay1$Delay)
+sd(delay12$Delay)
+
+var(delay04$Delay)
+var(delay06$Delay)
+var(delay08$Delay)
+var(delay1$Delay)
+var(delay12$Delay)
+
+median(delay04$Delay)
+median(delay06$Delay)
+median(delay08$Delay)
+median(delay1$Delay)
+median(delay12$Delay)
+#################################################################
+# summary(cache_vs_cloud04$Cloud)
+# summary(cache_vs_cloud04$Cache)
+# summary(ratio_server_use04)
+# 
+# hist(cache_vs_cloud04$Cloud)
+# hist(cache_vs_cloud04$Cache)
+# hist(ratio_server_use04)
+# 
+# plot(ecdf(cache_vs_cloud04$Cloud))
+# plot(ecdf(cache_vs_cloud04$Cache))
+# plot(ecdf(ratio_server_use04))
+
+# mean(cache_vs_cloud04$Cloud)
+# mean(cache_vs_cloud04$Cache)
+# mean(ratio_server_use04)
+# 
+# sd(cache_vs_cloud04$Cloud)
+# sd(cache_vs_cloud04$Cache)
+# sd(ratio_server_use04)
+
+# max(cache_vs_cloud04$Cloud)
+#################################################################
+# summary(cache_vs_cloud06$Cloud)
+# summary(cache_vs_cloud06$Cache)
+# summary(ratio_server_use06)
+# 
+# hist(cache_vs_cloud06$Cloud)
+# hist(cache_vs_cloud06$Cache)
+# hist(ratio_server_use06)
+# 
+# plot(ecdf(cache_vs_cloud06$Cloud))
+# plot(ecdf(cache_vs_cloud06$Cache))
+# plot(ecdf(ratio_server_use06))
+# 
+# mean(cache_vs_cloud06$Cloud)
+# mean(cache_vs_cloud06$Cache)
+# mean(ratio_server_use06)
+# 
+# (sd(cache_vs_cloud06$Cloud))
+# (sd(cache_vs_cloud06$Cache))
+# (sd(ratio_server_use06))
+# #################################################################
+# summary(cache_vs_cloud08$Cloud)
+# summary(cache_vs_cloud08$Cache)
+# summary(ratio_server_use08)
+# 
+# hist(cache_vs_cloud08$Cloud)
+# hist(cache_vs_cloud08$Cache)
+# hist(ratio_server_use08)
+# 
+# plot(ecdf(cache_vs_cloud08$Cloud))
+# plot(ecdf(cache_vs_cloud08$Cache))
+# plot(ecdf(ratio_server_use08))
+# 
+# mean(cache_vs_cloud08$Cloud)
+# mean(cache_vs_cloud08$Cache)
+# mean(ratio_server_use08)
+# 
+# sd(cache_vs_cloud08$Cloud)
+# sd(cache_vs_cloud08$Cache)
+# sd(ratio_server_use08)
+# 
+# #################################################################
+# summary(cache_vs_cloud1$Cloud)
+# summary(cache_vs_cloud1$Cache)
+# summary(ratio_server_use1)
+# 
+# 
+# hist(cache_vs_cloud1$Cloud)
+# hist(cache_vs_cloud1$Cache)
+# hist(ratio_server_use1)
+# 
+# plot(ecdf(cache_vs_cloud1$Cloud))
+# plot(ecdf(cache_vs_cloud1$Cache))
+# plot(ecdf(ratio_server_use1))
+# 
+# mean(cache_vs_cloud1$Cloud)
+# mean(cache_vs_cloud1$Cache)
+# mean(ratio_server_use1)
+# 
+# sd(cache_vs_cloud1$Cloud)
+# sd(cache_vs_cloud1$Cache)
+# sd(ratio_server_use1)
+# #################################################################
+# summary(cache_vs_cloud12$Cloud)
+# summary(cache_vs_cloud12$Cache)
+# summary(ratio_server_use12)
+# 
+# hist(cache_vs_cloud12$Cloud)
+# hist(cache_vs_cloud12$Cache)
+# hist(ratio_server_use12)
+# 
+# plot(ecdf(cache_vs_cloud12$Cloud))
+# plot(ecdf(cache_vs_cloud12$Cache))
+# plot(ecdf(ratio_server_use12))
+# 
+# mean(cache_vs_cloud12$Cloud)
+# mean(cache_vs_cloud12$Cache)
+# mean(ratio_server_use12)
+# 
+# sd(cache_vs_cloud12$Cloud)
+# sd(cache_vs_cloud12$Cache)
+# sd(ratio_server_use12)
+
+# max(summary(cache_vs_cloud12$Cloud))
+```
+
+### Correlação entre uso do armazenamento de variação de $\alpha$
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+cor(c(median(ratio_server_use04),median(ratio_server_use06),median(ratio_server_use08),median(ratio_server_use1),median(ratio_server_use12)),zipf)
+```
+
+### Correlação entre as medianas da latência e variação de $\alpha$
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+cor(c(median(delay04$Delay),
+      median(delay06$Delay),
+      median(delay08$Delay),
+      median(delay1$Delay),
+      median(delay12$Delay)),zipf)
+```
+
+### Correlação entre taxas aceitação e variação de $\alpha$
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+
+acceptance_requests <- c(acceptance_requests04,acceptance_requests06,acceptance_requests08,acceptance_requests1,acceptance_requests12)
+cor(acceptance_requests,zipf)
+#plot(acceptance_requests~zipf)
+```
+
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Correlação
+cor(cache_vs_cloud04$Cache,cache_vs_cloud04$Cloud)^2
+cor(cache_vs_cloud04$Cache,c(ratio_server_use04))^2
+cor(cache_vs_cloud04$Cloud,c(ratio_server_use04))^2
+
+cor(cache_vs_cloud06$Cache,cache_vs_cloud06$Cloud)^2
+cor(cache_vs_cloud06$Cache,c(ratio_server_use06))^2
+cor(cache_vs_cloud06$Cloud,c(ratio_server_use06))^2
+
+cor(cache_vs_cloud08$Cache,cache_vs_cloud08$Cloud)^2
+cor(cache_vs_cloud08$Cache,c(ratio_server_use08))^2
+cor(cache_vs_cloud08$Cloud,c(ratio_server_use08))^2
+
+cor(cache_vs_cloud1$Cache,cache_vs_cloud1$Cloud)^2
+cor(cache_vs_cloud1$Cache,c(ratio_server_use1))^2
+cor(cache_vs_cloud1$Cloud,c(ratio_server_use1))^2
+
+cor(cache_vs_cloud12$Cache,cache_vs_cloud12$Cloud)^2
+cor(cache_vs_cloud12$Cache,c(ratio_server_use12))^2
+cor(cache_vs_cloud12$Cloud,c(ratio_server_use12))^2
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# delay_scale04 <- scale(delay04$Delay)
+# set.seed(1)
+# delay_cluster04 <- kmeans(x = delay_scale04, centers = 2)
+# delay_prev04 <- delay_cluster04$cluster
+# plot(delay_scale04, col=delay_prev04)
+# 
+# delay_scale06 <- scale(delay06$Delay)
+# set.seed(1)
+# delay_cluster06 <- kmeans(x = delay_scale06, centers = 2)
+# delay_prev06 <- delay_cluster06$cluster
+# plot(delay_scale06, col=delay_prev06)
+# 
+# delay_scale08 <- scale(delay08$Delay)
+# set.seed(1)
+# delay_cluster08 <- kmeans(x = delay_scale08, centers = 2)
+# delay_prev08 <- delay_cluster08$cluster
+# plot(delay_scale08, col=delay_prev08)
+# 
+# delay_scale1 <- scale(delay1$Delay)
+# set.seed(1)
+# delay_cluster1 <- kmeans(x = delay_scale1, centers = 2)
+# delay_prev1 <- delay_cluster1$cluster
+# plot(delay_scale1, col=delay_prev1)
+# 
+# delay_scale12 <- scale(delay12$Delay)
+# set.seed(1)
+# delay_cluster12 <- kmeans(x = delay_scale12, centers = 2)
+# delay_prev12 <- delay_cluster12$cluster
+# plot(delay_scale12, col=delay_prev12)
+```
+
+### Somatório da Carga dos enlaces ópticos por evento(normalizado pelo maior somatório).
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+
+x <- c(1:100)
+
+# par(mfrow=c(3,2))
+# 
+# plot(ecdf(load_links_optic04$Total_Load),col="#CCE5FF")
+# lines(ecdf(load_links_optic06$Total_Load),col="#36393D")
+# lines(ecdf(load_links_optic08$Total_Load),col="#003366")
+# lines(ecdf(load_links_optic1$Total_Load),col="#B20000")
+# lines(ecdf(load_links_optic12$Total_Load),col="#647687")
+# 
+# plot(load_links_optic04$Total_Load,col="#CCE5FF")
+# plot(load_links_optic06$Total_Load,col="#36393D")
+# plot(load_links_optic08$Total_Load,col="#003366")
+# plot(load_links_optic1$Total_Load,col="#B20000")
+# plot(load_links_optic12$Total_Load,col="#647687")
+# 
+# h04 <- hist(load_links_optic04$Total_Load,col="#CCE5FF")
+# h06 <- hist(load_links_optic06$Total_Load,col="#36393D")
+# h08 <- hist(load_links_optic08$Total_Load,col="#003366")
+# h1 <- hist(load_links_optic1$Total_Load,col="#B20000")
+# h12 <- hist(load_links_optic12$Total_Load,col="#647687")
+# 
+# boxplot(load_links_optic04$Total_Load,col="#CCE5FF")
+# boxplot(load_links_optic06$Total_Load,col="#36393D")
+# boxplot(load_links_optic08$Total_Load,col="#003366")
+# boxplot(load_links_optic1$Total_Load,col="#B20000")
+# boxplot(load_links_optic12$Total_Load,col="#647687")
+
+par(mfrow=c(1,1))
+
+plot(x,load_links_normal04,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Load", ylim = c(0,1))
+model <- lm(load_links_normal04 ~ x + I(x^2) + I(x^3) )
+myPredict <- predict( model , interval="predict" )
+ix <- sort(x,index.return=T)$ix
+lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+plot(x,load_links_normal06,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Load")
+model <- lm(load_links_normal06 ~ x + I(x^2) + I(x^3) )
+myPredict <- predict( model , interval="predict" )
+ix <- sort(x,index.return=T)$ix
+lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+plot(x,load_links_normal08,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Load")
+model <- lm(load_links_normal08 ~ x + I(x^2) + I(x^3) )
+myPredict <- predict( model , interval="predict" )
+ix <- sort(x,index.return=T)$ix
+lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+plot(x,load_links_normal1,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Load")
+model <- lm(load_links_normal1 ~ x + I(x^2) + I(x^3))
+myPredict <- predict( model , interval="predict" )
+ix <- sort(x,index.return=T)$ix
+lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+plot(x,load_links_normal12,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Load")
+model <- lm(load_links_normal12 ~ x + I(x^2) + I(x^3))
+myPredict <- predict( model , interval="predict" )
+ix <- sort(x,index.return=T)$ix
+lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+```
+
+<!-- ### Delay médio por evento. -->
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# delay_links_median04 <- c()
+# delay_links_median06 <- c()
+# delay_links_median08 <- c()
+# delay_links_median1 <- c()
+# delay_links_median12 <- c()
+# 
+# delay_links_sd04 <- c()
+# delay_links_sd06 <- c()
+# delay_links_sd08 <- c()
+# delay_links_sd1 <- c()
+# delay_links_sd12 <- c()
+# 
+# delay_links_median04 <- c()
+# delay_links_median06 <- c()
+# delay_links_median08 <- c()
+# delay_links_median1 <- c()
+# delay_links_median12 <- c()
+# 
+# for (i in 1:n){
+#    delay_links_n04 <- delay04 %>% filter(delay04$Event == i)
+#    delay_links_n06 <- delay06 %>% filter(delay06$Event == i)
+#    delay_links_n08 <- delay08 %>% filter(delay08$Event == i)
+#    delay_links_n1 <- delay1 %>% filter(delay1$Event == i)
+#    delay_links_n12 <- delay12 %>% filter(delay12$Event == i)
+# 
+#    delay_median04 <- median(delay_links_n04$Delay)
+#    delay_median06 <-  median(delay_links_n06$Delay)
+#    delay_median08 <-  median(delay_links_n08$Delay)
+#    delay_median1 <-  median(delay_links_n1$Delay)
+#    delay_median12 <-  median(delay_links_n12$Delay)
+# 
+#    delay_sd04 <- sd(delay_links_n04$Delay)
+#    delay_sd06 <- sd(delay_links_n06$Delay)
+#    delay_sd08 <- sd(delay_links_n08$Delay)
+#    delay_sd1 <- sd(delay_links_n1$Delay)
+#    delay_sd12 <- sd(delay_links_n12$Delay)
+# 
+#    delay_links_median04 = append(delay_links_median04,delay_median04)
+#    delay_links_median06 = append(delay_links_median06,delay_median06)
+#    delay_links_median08 = append(delay_links_median08,delay_median08)
+#    delay_links_median1 = append(delay_links_median1,delay_median1)
+#    delay_links_median12 = append(delay_links_median12,delay_median12)
+# 
+#    delay_links_sd04 = append(delay_links_sd04,delay_sd04)
+#    delay_links_sd06 = append(delay_links_sd06,delay_sd06)
+#    delay_links_sd08 = append(delay_links_sd08,delay_sd08)
+#    delay_links_sd1 = append(delay_links_sd1,delay_sd1)
+#    delay_links_sd12 = append(delay_links_sd12,delay_sd12)
+#  }
+#  delay_links_median04<- na.omit(delay_links_median04)
+#  delay_links_median06 <- na.omit(delay_links_median06)
+#  delay_links_median08 <- na.omit(delay_links_median08)
+#  delay_links_median1 <- na.omit(delay_links_median1)
+#  delay_links_median12 <- na.omit(delay_links_median12)
+# 
+#  delay_links_sd04 <- na.omit(delay_links_sd04)
+#  delay_links_sd06 <- na.omit(delay_links_sd06)
+#  delay_links_sd08 <- na.omit(delay_links_sd08)
+#  delay_links_sd1 <- na.omit(delay_links_sd1)
+#  delay_links_sd12 <- na.omit(delay_links_sd12)
+# 
+#  x <- c(1:99)
+# 
+#  
+#  y04 <-delay_links_median04[1:99]
+#  y06 <-delay_links_median06[1:99]
+#  y08 <-delay_links_median08[1:99]
+#  y1 <-delay_links_median1[1:99]
+#  y12 <-delay_links_median12[1:99]
+#  
+#  plot(x,y04,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Delay",type = 'l')
+#  model <- lm(y04 ~ x + I(x^2) + I(x^3) )
+#  myPredict <- predict( model , interval="predict" )
+#  ix <- sort(x,index.return=T)$ix
+#  lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+#  
+#  plot(x,y06,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Delay")
+#  model <- lm(y06 ~ x + I(x^2) + I(x^3) )
+#  myPredict <- predict( model , interval="predict" )
+#  ix <- sort(x,index.return=T)$ix
+#  lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+#  
+#  plot(x,y08,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Delay")
+#  model <- lm(y08 ~ x + I(x^2) + I(x^3) )
+#  myPredict <- predict( model , interval="predict" )
+#  ix <- sort(x,index.return=T)$ix
+#  lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+#  
+#  plot(x,y1,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Delay")
+#  model <- lm(y1 ~ x + I(x^2) + I(x^3))
+#  myPredict <- predict( model , interval="predict" )
+#  ix <- sort(x,index.return=T)$ix
+#  lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+#  
+#  plot(x,y12,col=rgb(0.4,0.4,0.8,0.6), pch=16 , cex=1.3 , xlab="Events" , ylab="Average Delay")
+#  model <- lm(y12 ~ x + I(x^2) + I(x^3))
+#  myPredict <- predict( model , interval="predict" )
+#  ix <- sort(x,index.return=T)$ix
+#  lines(x[ix], myPredict[ix , 1], col=2, lwd=2 )
+
+``` 
+

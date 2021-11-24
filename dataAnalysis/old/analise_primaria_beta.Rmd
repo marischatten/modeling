@@ -1,0 +1,371 @@
+---
+title: "Análise de dados"
+author: "Marisangila Alves"
+date: "7/28/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+```
+
+```{r echo=FALSE, message=FALSE}
+# beta 0.2
+server_use1 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission1 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering1 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Scattering', col_names=TRUE))
+load_links1 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Load_Links', col_names=TRUE))
+path_Realloc1 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc1 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson1 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Poisson', col_names=TRUE))
+zipf1 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta02.xlsx", sheet='Zipf', col_names=TRUE))
+times1 <- read.table("../dataAnalysis/data/instance_4_alpha05_beta02.dat", header = TRUE)
+
+# beta 0.4
+server_use05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Scattering', col_names=TRUE))
+load_links05 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Load_Links', col_names=TRUE))
+path_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc05 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson05 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Poisson', col_names=TRUE))
+zipf05 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta04.xlsx", sheet='Zipf', col_names=TRUE))
+times05 <- read.table("../dataAnalysis/data/instance_4_alpha05_beta04.dat", header = TRUE)
+
+# beta 0.8
+server_use0 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Server_Use', col_names=TRUE))
+rate_admission0 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Rate_Admission', col_names=TRUE))
+scattering0 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Scattering', col_names=TRUE))
+load_links0 <- data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Load_Links', col_names=TRUE))
+path_Realloc0 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc0 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+
+poisson0 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Poisson', col_names=TRUE))
+zipf0 = data.frame(read_excel("../dataAnalysis/data/instance_4_alpha05_beta08.xlsx", sheet='Zipf', col_names=TRUE))
+times0 <- read.table("../dataAnalysis/data/instance_4_alpha05_beta08.dat", header = TRUE)
+
+
+
+
+alpha <- c(0.5)
+lambda <- 5
+n <- 100
+beta <- c(0.2,0.4,0.8)
+
+bs <- unique(server_use05$BS)
+server_use_bs_by_n1 <- matrix(ncol=n)
+server_use_bs_by_n05 <- matrix(ncol=n)
+server_use_bs_by_n0 <- matrix(ncol=n)
+
+```
+### Parâmetros
+
+          Parâmetros      | Valores
+    ----------------------|----------
+    alfa                  | `r alpha`
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r length(bs)`
+    Cache                 | 100
+    UE                    | 200
+    Resources             | MBS 400 SBS 200
+    Average               | MBS 300 SBS 70
+    RTT inicial           | MBS/MBS 0.001 s MBS/SBS 0.0015 SBS/UE 0.002
+    Tempo da Requisição   | 10
+    
+    
+### Informações da Aplicação.
+
+      Vazão Mínima | Tamanho de Unidade de Cache | Número de Unidades de Cache | Número de Unidades de Recursos
+    ---------------|-----------------------------|-----------------------------|-------------------------------
+       45 Mbps     |            169 MB           |             30               |             5
+       68 Mbps     |            255 MB           |             30               |            10
+       56 Mbps     |            210 MB           |             30               |             5
+       86 Mbps     |            319 MB           |             30               |            10
+     
+   
+### Tempo de execução da otimização.
+
+```{r echo=FALSE, message=FALSE, results=FALSE, warning=FALSE}
+max_time1 <- max(times1$times)
+times.optimize1 <- times1$times[times1$times != max_time1]
+events1 <- c(1:length(times.optimize1))
+times_df1 <- data.frame(events1,times.optimize1)
+
+max_time05 <- max(times05$times)
+times.optimize05 <- times05$times[times05$times != max_time05]
+events05 <- c(1:length(times.optimize05))
+times_df05 <- data.frame(events05,times.optimize05)
+
+max_time0 <- max(times0$times)
+times.optimize0 <- times0$times[times0$times != max_time0]
+events0 <- c(1:length(times.optimize0))
+times_df0 <- data.frame(events0,times.optimize0)
+
+par(mflow= c(1,2))
+plot(type = "l",times_df1,col="blue",xlab = "Requests",ylab = "Time Execution")
+lines(times_df05,col="red")
+lines(times_df0,col="green")
+legend(x = "bottomright", 
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+       col = c("blue","red","green"), 
+       horiz = F ,
+       lty = 1,
+       lwd = 3, 
+       bty = "n")
+
+```
+
+
+### Distribuição da chegada de requisições.
+
+
+```{r echo=FALSE, message=FALSE, results=FALSE, warning=FALSE}
+par(mflow= c(1,3));
+hist(poisson1$Qtd_Requests)
+```
+
+### Distribuição de popularidade do conteúdo solicitado.
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+zipf <- count(zipf1, "Caches")
+zipf <- zipf[order(zipf$freq,decreasing = TRUE),]
+print(zipf)
+hist(zipf$freq,breaks = "FD" )
+```
+
+   
+    
+### Taxa de requisições alocadas.
+
+$\alpha : 1 =$ `r  round(rate_admission1$Rate_Admission,4)`
+
+$\alpha : 0.5 =$ `r  round(rate_admission05$Rate_Admission,4)`
+
+$\alpha : 0 =$ `r  round(rate_admission0$Rate_Admission,4)`
+
+### Uso de servidor por evento.
+    
+```{r echo=FALSE, message=FALSE, results=FALSE, warning=FALSE}
+x1 <- c()
+x05 <- c()
+x0 <- c()
+
+for(i in bs){
+  for(j in 1:n){
+    server_use_bs1 <- server_use1 %>% filter(server_use1$BS == i)
+    server_use_bs05 <- server_use05 %>% filter(server_use05$BS == i)
+    server_use_bs0 <- server_use0 %>% filter(server_use0$BS == i)
+    server_use_n1 <-  server_use_bs1 %>% filter(server_use_bs1$Event == j)
+    server_use_n05 <-  server_use_bs05 %>% filter(server_use_bs05$Event == j)
+    server_use_n0 <-  server_use_bs0 %>% filter(server_use_bs0$Event == j)
+    server_use_n_last1 <- server_use_n1$Use
+    server_use_n_last05 <- server_use_n05$Use
+    server_use_n_last0 <- server_use_n0$Use
+    x1 <- append(x1,server_use_n_last1)
+    x05 <- append(x05,server_use_n_last05)
+    x0 <- append(x0,server_use_n_last0)
+  }
+  server_use_bs_by_n1 <- rbind(server_use_bs_by_n1,x1)
+  server_use_bs_by_n05 <- rbind(server_use_bs_by_n05,x05)
+  server_use_bs_by_n0 <- rbind(server_use_bs_by_n0,x0)
+  x1 <- NULL
+  x05 <- NULL
+  x0 <- NULL
+}
+server_use_bs_by_n1 <- server_use_bs_by_n1[-1,]
+server_use_bs_by_n05 <- server_use_bs_by_n05[-1,]
+server_use_bs_by_n0 <- server_use_bs_by_n0[-1,]
+row.names(server_use_bs_by_n1) <- bs
+row.names(server_use_bs_by_n05) <- bs
+row.names(server_use_bs_by_n0) <- bs
+#print(server_use_bs_by_n1[,99])
+#barplot(server_use_bs_by_n1,xlab = "Events")
+#barplot(server_use_bs_by_n05,xlab = "Events")
+#barplot(server_use_bs_by_n0,xlab = "Events")
+ 
+# Grouped barplot
+#barplot(server_use_bs_by_n, col=colors()[c(23,89,12)] , border="white", font.axis=2,beside=T,legend=rownames(bs), xlab="BS",font.lab=2)
+
+plot(ecdf(server_use1$Use),col="blue",xlab = "Requests",ylab = "Rate Server Use")
+lines(ecdf(server_use05$Use),col="red")
+lines(ecdf(server_use0$Use),col="green")
+legend(x = "bottomright", 
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+       col = c("blue","red","green"), 
+       horiz = F ,
+       lty = 1,
+       lwd = 3, 
+       bty = "n")
+
+#hist(server_use1$Use,freq=F,breaks=10)
+#lines(density(server_use1$Use))
+#hist(server_use05$Use,freq=F,breaks=10)
+#lines(density(server_use05$Use))
+#hist(server_use0$Use,freq=F,breaks=10)
+#lines(density(server_use0$Use))
+```
+
+
+### Fraguimentação de enlaces por evento.
+
+```{r echo=FALSE}
+
+plot(scattering1$Scattering,type="l",xlab = "Events",ylab = "Scattering",col="blue")
+lines(scattering05$Scattering,col="red")
+lines(scattering0$Scattering,col="green")
+legend(x = "topleft",
+       legend = c("alpha = 1", "alpha = 0.5", "alpha = 0"),
+       col = c("blue","red","green"),
+       horiz = F ,
+       lty = 1,
+       lwd = 3,
+       bty = "n")
+```
+
+
+### Carga média de enlaces por evento.
+```{r echo=FALSE}
+load_links_means1 <- c()
+load_links_means05 <- c()
+load_links_means0 <- c()
+load_links_sd1 <- c()
+load_links_sd05 <- c()
+load_links_sd0 <- c()
+for (i in 1:n){
+  load_links_n1 <- load_links1 %>% filter(load_links1$Event == i)
+  load_links_n05 <- load_links05 %>% filter(load_links05$Event == i)
+  load_links_n0 <- load_links0 %>% filter(load_links0$Event == i)
+  mean1 <- mean(load_links_n1$Total_Load)
+  mean05 <- mean(load_links_n05$Total_Load)
+  mean0 <- mean(load_links_n0$Total_Load)
+  sd1 <- sd(load_links_n1$Total_Load)
+  sd05 <- sd(load_links_n05$Total_Load)
+  sd0 <- sd(load_links_n0$Total_Load)
+  load_links_means1 = append(load_links_means1,mean1)
+  load_links_means05 = append(load_links_means05,mean05)
+  load_links_means0 = append(load_links_means0,mean0)
+  load_links_sd1 = append(load_links_means1,sd1)
+  load_links_sd05 = append(load_links_means05,sd05)
+  load_links_sd0 = append(load_links_means0,sd0)
+}
+
+
+load_links_means1 <- na.omit(load_links_means1)
+load_links_means05 <- na.omit(load_links_means05)
+load_links_means0 <- na.omit(load_links_means0)
+
+
+plot(load_links_means1, type="l",xlab = "Events",ylab = "Average Links Load ",col="blue",ylim = c(min(load_links_means0),max(load_links_means1)))
+lines(load_links_means05,col="red")
+lines(load_links_means0,col="green")
+legend(x = "topleft", 
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+       col = c("blue","red","green"), 
+       horiz = F,
+       lty = 1,
+       lwd = 3, 
+       bty = "n")
+
+
+```
+
+
+### Número de Realocação de Enlaces por Requisição
+
+```{r echo=FALSE}
+
+path_Realloc1_count <- count(path_Realloc1, "Request")
+path_Realloc05_count <- count(path_Realloc05, "Request")
+path_Realloc0_count <- count(path_Realloc0, "Request")
+
+plot(ecdf(path_Realloc1_count$freq),col="blue",xlab = "Requests",ylab = "Path Reallocation")
+lines(ecdf(path_Realloc05_count$freq),col="red")
+lines(ecdf(path_Realloc0_count$freq),col="green")
+legend(x = "bottomright",
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"),
+       col = c("blue","red","green"),
+       horiz = F ,
+       lty = 1,
+       lwd = 3,
+       bty = "n"
+       )
+       
+```
+
+### Número de Realocação de Servidor por Requisição
+
+```{r echo=FALSE}
+host_Realloc1_count <- count(host_Realloc1, "Request")
+host_Realloc05_count <- count(host_Realloc05, "Request")
+host_Realloc0_count <- count(host_Realloc0, "Request")
+
+
+plot(ecdf(host_Realloc1_count$freq),col="blue",xlab = "Requests",ylab = "Path Reallocation")
+lines(ecdf(host_Realloc05_count$freq),col="red")
+lines(ecdf(host_Realloc0_count$freq),col="green")
+legend(x = "bottomright",
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+         col = c("blue","red","green"),
+         horiz = F ,
+         lty = 1,
+         lwd = 3,
+         bty = "n"
+         )
+
+
+
+
+```
+
+### Número de Realocação de Enlaces por Evento
+
+```{r echo=FALSE}
+
+path_Realloc1_count_event <- count(path_Realloc1, "Event")
+path_Realloc05_count_event <- count(path_Realloc05, "Event")
+path_Realloc0_count_event <- count(path_Realloc0, "Event")
+
+plot(path_Realloc1_count_event$freq, type="l", col="blue",xlab = "Events",ylab = "Path Reallocation", ylim = c(min(path_Realloc0_count_event$freq),max(path_Realloc1_count_event$freq)))
+lines(path_Realloc05_count_event$freq,col="red")
+lines(path_Realloc0_count_event$freq,col="green")
+legend(x = "bottomright",
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+       col = c("blue","red","green"),
+       horiz = F ,
+       lty = 1,
+       lwd = 3,
+       bty = "n"
+        )
+       
+```
+
+### Número de Realocação de Servidor por Evento
+
+```{r echo=FALSE}
+host_Realloc1_count_event <- count(host_Realloc1, "Event")
+host_Realloc05_count_event <- count(host_Realloc05, "Event")
+host_Realloc0_count_event <- count(host_Realloc0, "Event")
+
+plot(host_Realloc1_count_event$freq,type="l", col="blue",xlab = "Events",ylab = "Host Reallocation", ylim = c(min(host_Realloc1_count_event$freq),max(host_Realloc0_count_event$freq)))
+lines(host_Realloc05_count_event$freq,col="red")
+lines(host_Realloc0_count_event$freq,col="green")
+legend(x = "bottomright",
+       legend = c("beta = 0.2", "beta = 0.4","beta = 0.8"), 
+       col = c("blue","red","green"),
+       horiz = F ,
+       lty = 1,
+       lwd = 3,
+       bty = "n"
+      )
+print(host_Realloc1_count_event)
+```

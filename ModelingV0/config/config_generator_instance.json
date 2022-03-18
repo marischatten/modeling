@@ -14,8 +14,8 @@
         [8000, 48, 100]
     ],
 
-    "storage_node_max" :  20000,
-    "storage_node_min" :  4000,
+    "storage_node_max" :  60000,
+    "storage_node_min" :  12000,
     "radius_mbs" :  300,
     "radius_sbs" :  70,
     "rtt_min_cloud_mbs": 0.001,
@@ -23,5 +23,5 @@
     "rtt_min_sbs_mbs" :  0.001,
     "rtt_min_sbs_ue" :  0.001,
 
-    "path": "..\\dataset\\instance\\instance_x_standard.json"
+    "path": "..\\dataset\\instance\\storage\\instance_x_storage_12.json"
 }

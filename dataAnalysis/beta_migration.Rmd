@@ -1,0 +1,360 @@
+---
+title: "Beta"
+author: "Marisangila Alves"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library("dplyr")
+library(ggplot2)
+library(plyr)
+library(viridis)
+library(hrbrthemes)
+library(ggpubr)
+library(cowplot)
+library(outliers)
+library(stringr)
+
+#my library
+source("library_beta.r")
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+save = FALSE
+save_pt = FALSE
+```
+
+```{r echo=FALSE, message=FALSE}
+path_Realloc00 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_0.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc00 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_0.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests00 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_0.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc01 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_01.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc01 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_01.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests01 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_01.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc02 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_02.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc02 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_02.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests02 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_02.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc03 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_03.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc03 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_03.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests03 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_03.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc04 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_04.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc04 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_04.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests04 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_04.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc05 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_05.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc05 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_05.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests05 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_05.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc06 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_06.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc06 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_06.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests06 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_06.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc07 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_07.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc07 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_07.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests07 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_07.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc08 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_08.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc08 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_08.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests08 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_08.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc09 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_09.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc09 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_09.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests09 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_09.xlsx", sheet='Requests', col_names=TRUE))
+
+path_Realloc10 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_sem_beta.xlsx", sheet='Paths_Reallocation', col_names=TRUE))
+host_Realloc10 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_sem_beta.xlsx", sheet='Hosts_Reallocation', col_names=TRUE))
+requests10 = data.frame(read_excel("../dataAnalysis/data/beta/instance_10_beta_sem_beta.xlsx", sheet='Requests', col_names=TRUE))
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+#count hops without content: n-2 
+HOPS <- 2
+BUFFER <- 48 
+
+NUM_SBS_BY_MBS = 15
+NUM_MBS = 2
+
+zipf = c(0.8)
+lambda <- 5
+n <- 20
+beta <- c(0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)
+mobility <- 10
+storage <- c(0.2,0.4,0.6,0.8)
+
+mbs <- 2
+sbs_by_mbs <- 2
+
+bs <- (mbs * sbs_by_mbs) + mbs
+
+qos <- c(100)
+
+r <- lambda * n
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r length(bs)-1`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS 20GB SBS 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) SBS/UE 0.001s(1ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+    100 Mbps    |      2GB/2000MB             |  48Mb  |
+    100 Mbps    |      4GB/4000MB             |  48Mb  |
+    100 Mbps    |      8GB/8000MB             |  48Mb  |
+
+
+<!-- ### Migração de Path por requisições. -->
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+#type <- rep("0.0",length(requests))
+
+# path00 <- set_qtd_realloc(path_Realloc00)
+# df_path00 <- create_df_realloc(r,path00)
+# plot_path00 <- plot_graph_realloc_path(df_path00)
+# plot_path00
+# 
+# path01 <- set_qtd_realloc(path_Realloc01)
+# df_path01 <- create_df_realloc(r,path01)
+# plot_path01 <- plot_graph_realloc_path(df_path01)
+# plot_path01
+# 
+# path02 <- set_qtd_realloc(path_Realloc02)
+# df_path02 <- create_df_realloc(r,path02)
+# plot_path02 <- plot_graph_realloc_path(df_path02)
+# plot_path02
+# 
+# path03 <- set_qtd_realloc(path_Realloc03)
+# df_path03 <- create_df_realloc(r,path03)
+# plot_path03 <- plot_graph_realloc_path(df_path03)
+# plot_path03
+# 
+# path04 <- set_qtd_realloc(path_Realloc04)
+# df_path04 <- create_df_realloc(r,path04)
+# plot_path04 <- plot_graph_realloc_path(df_path04)
+# plot_path04
+# 
+# path05 <- set_qtd_realloc(path_Realloc05)
+# df_path05 <- create_df_realloc(r,path05)
+# plot_path05 <- plot_graph_realloc_path(df_path05)
+# plot_path05
+# 
+# path06 <- set_qtd_realloc(path_Realloc06)
+# df_path06 <- create_df_realloc(r,path06)
+# plot_path06 <- plot_graph_realloc_path(df_path06)
+# plot_path06
+# 
+# path07 <- set_qtd_realloc(path_Realloc07)
+# df_path07 <- create_df_realloc(r,path07)
+# plot_path07 <- plot_graph_realloc_path(df_path07)
+# plot_path07
+# 
+# path08 <- set_qtd_realloc(path_Realloc08)
+# df_path08 <- create_df_realloc(r,path08)
+# plot_path08 <- plot_graph_realloc_path(df_path08)
+# plot_path08
+# 
+# path09 <- set_qtd_realloc(path_Realloc09)
+# df_path09 <- create_df_realloc(r,path09)
+# plot_path09 <- plot_graph_realloc_path(df_path09)
+# plot_path09
+# 
+# path10 <- set_qtd_realloc(path_Realloc10)
+# df_path10 <- create_df_realloc(r,path10)
+# plot_path10 <- plot_graph_realloc_path(df_path10)
+# plot_path10
+
+```
+
+
+<!-- ### Migração de Host por requisições. -->
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+# host00 <- set_qtd_realloc_host(host_Realloc00,requests00,r)
+# df_host00 <- create_df_realloc(r,host00)
+# plot_host00 <- plot_graph_realloc_host(df_host00)
+# plot_host00
+# 
+# host01 <- set_qtd_realloc_host(host_Realloc01,requests01,r)
+# df_host01 <- create_df_realloc(r,host01)
+# plot_host01 <- plot_graph_realloc_host(df_host01)
+# plot_host01
+# 
+# host02 <- set_qtd_realloc_host(host_Realloc02,requests02,r)
+# df_host02 <- create_df_realloc(r,host02)
+# plot_host02 <- plot_graph_realloc_host(df_host02)
+# plot_host02
+# 
+# host03 <- set_qtd_realloc_host(host_Realloc03,requests03,r)
+# df_host03 <- create_df_realloc(r,host03)
+# plot_host03 <- plot_graph_realloc_host(df_host03)
+# plot_host03
+# 
+# host04 <- set_qtd_realloc_host(host_Realloc04,requests04,r)
+# df_host04 <- create_df_realloc(r,host04)
+# plot_host04 <- plot_graph_realloc_host(df_host04)
+# plot_host04
+# 
+# host05 <- set_qtd_realloc_host(host_Realloc05,requests05,r)
+# df_host05 <- create_df_realloc(r,host05)
+# plot_host05 <- plot_graph_realloc_host(df_host05)
+# plot_host05
+# 
+# host06 <- set_qtd_realloc_host(host_Realloc06,requests06,r)
+# df_host06 <- create_df_realloc(r,host06)
+# plot_host06 <- plot_graph_realloc_host(df_host06)
+# plot_host06
+# 
+# host07 <- set_qtd_realloc_host(host_Realloc07,requests07,r)
+# df_host07 <- create_df_realloc(r,host07)
+# plot_host07 <- plot_graph_realloc_host(df_host07)
+# plot_host07
+# 
+# host08 <- set_qtd_realloc_host(host_Realloc08,requests08,r)
+# df_host08 <- create_df_realloc(r,host08)
+# plot_host08 <- plot_graph_realloc_host(df_host08)
+# plot_host08
+# 
+# host09 <- set_qtd_realloc_host(host_Realloc09,requests09,r)
+# df_host09 <- create_df_realloc(r,host09)
+# plot_host09 <- plot_graph_realloc_host(df_host09)
+# plot_host09
+# 
+# host10 <- set_qtd_realloc_host(host_Realloc10,requests10,r)
+# df_host10 <- create_df_realloc(r,host10)
+# plot_host10 <- plot_graph_realloc_host(df_host10)
+# plot_host10
+```
+
+
+### Migração de Paths por eventos.
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+plot_realloc_by_event_path_00 <- plot_path_realloc_by_event(path_Realloc00,n)
+plot_realloc_by_event_path_00
+
+plot_realloc_by_event_path_01 <- plot_path_realloc_by_event(path_Realloc01,n)
+plot_realloc_by_event_path_01
+
+plot_realloc_by_event_path_02 <- plot_path_realloc_by_event(path_Realloc02,n)
+plot_realloc_by_event_path_02
+
+plot_realloc_by_event_path_03 <- plot_path_realloc_by_event(path_Realloc03,n)
+plot_realloc_by_event_path_03
+
+plot_realloc_by_event_path_04 <- plot_path_realloc_by_event(path_Realloc04,n)
+plot_realloc_by_event_path_04
+
+plot_realloc_by_event_path_05 <- plot_path_realloc_by_event(path_Realloc05,n)
+plot_realloc_by_event_path_05
+
+plot_realloc_by_event_path_06 <- plot_path_realloc_by_event(path_Realloc06,n)
+plot_realloc_by_event_path_06
+
+plot_realloc_by_event_path_07 <- plot_path_realloc_by_event(path_Realloc07,n)
+plot_realloc_by_event_path_07
+
+plot_realloc_by_event_path_08 <- plot_path_realloc_by_event(path_Realloc08,n)
+plot_realloc_by_event_path_08
+
+plot_realloc_by_event_path_09 <- plot_path_realloc_by_event(path_Realloc09,n)
+plot_realloc_by_event_path_09
+
+plot_realloc_by_event_path_10 <- plot_path_realloc_by_event(path_Realloc10,n)
+plot_realloc_by_event_path_10
+```
+
+
+### Migração de Hosts por eventos.
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+host_realloc_last_state_00 <- get_last_status_realloc_host(host_Realloc00,n)
+host_realloc_by_request_00 <- set_sum_request_by_event(host_realloc_last_state_00)
+df_realloc_by_event_host_00 <- create_df_realloc_host_by_event(host_realloc_by_request_00,n)
+plot_realloc_by_event_host_00 <- plot_graph_realloc_by_event(df_realloc_by_event_host_00)
+plot_realloc_by_event_host_00
+
+host_realloc_last_state_01 <- get_last_status_realloc_host(host_Realloc01,n)
+host_realloc_by_request_01 <- set_sum_request_by_event(host_realloc_last_state_01)
+df_realloc_by_event_host_01 <- create_df_realloc_host_by_event(host_realloc_by_request_01,n)
+plot_realloc_by_event_host_01 <- plot_graph_realloc_by_event(df_realloc_by_event_host_01)
+plot_realloc_by_event_host_01
+
+host_realloc_last_state_02 <- get_last_status_realloc_host(host_Realloc02,n)
+host_realloc_by_request_02 <- set_sum_request_by_event(host_realloc_last_state_02)
+df_realloc_by_event_host_02 <- create_df_realloc_host_by_event(host_realloc_by_request_02,n)
+plot_realloc_by_event_host_02 <- plot_graph_realloc_by_event(df_realloc_by_event_host_02)
+plot_realloc_by_event_host_02
+
+host_realloc_last_state_03 <- get_last_status_realloc_host(host_Realloc03,n)
+host_realloc_by_request_03 <- set_sum_request_by_event(host_realloc_last_state_03)
+df_realloc_by_event_host_03 <- create_df_realloc_host_by_event(host_realloc_by_request_03,n)
+plot_realloc_by_event_host_03 <- plot_graph_realloc_by_event(df_realloc_by_event_host_03)
+plot_realloc_by_event_host_03
+
+host_realloc_last_state_04 <- get_last_status_realloc_host(host_Realloc04,n)
+host_realloc_by_request_04 <- set_sum_request_by_event(host_realloc_last_state_04)
+df_realloc_by_event_host_04 <- create_df_realloc_host_by_event(host_realloc_by_request_04,n)
+plot_realloc_by_event_host_04 <- plot_graph_realloc_by_event(df_realloc_by_event_host_04)
+plot_realloc_by_event_host_04
+
+host_realloc_last_state_05 <- get_last_status_realloc_host(host_Realloc05,n)
+host_realloc_by_request_05 <- set_sum_request_by_event(host_realloc_last_state_05)
+df_realloc_by_event_host_05 <- create_df_realloc_host_by_event(host_realloc_by_request_05,n)
+plot_realloc_by_event_host_05 <- plot_graph_realloc_by_event(df_realloc_by_event_host_05)
+plot_realloc_by_event_host_05
+
+host_realloc_last_state_06 <- get_last_status_realloc_host(host_Realloc06,n)
+host_realloc_by_request_06 <- set_sum_request_by_event(host_realloc_last_state_06)
+df_realloc_by_event_host_06 <- create_df_realloc_host_by_event(host_realloc_by_request_06,n)
+plot_realloc_by_event_host_06 <- plot_graph_realloc_by_event(df_realloc_by_event_host_06)
+plot_realloc_by_event_host_06
+
+host_realloc_last_state_07 <- get_last_status_realloc_host(host_Realloc07,n)
+host_realloc_by_request_07 <- set_sum_request_by_event(host_realloc_last_state_07)
+df_realloc_by_event_host_07 <- create_df_realloc_host_by_event(host_realloc_by_request_07,n)
+plot_realloc_by_event_host_07 <- plot_graph_realloc_by_event(df_realloc_by_event_host_07)
+plot_realloc_by_event_host_07
+
+host_realloc_last_state_08 <- get_last_status_realloc_host(host_Realloc08,n)
+host_realloc_by_request_08 <- set_sum_request_by_event(host_realloc_last_state_08)
+df_realloc_by_event_host_08 <- create_df_realloc_host_by_event(host_realloc_by_request_08,n)
+plot_realloc_by_event_host_08 <- plot_graph_realloc_by_event(df_realloc_by_event_host_08)
+plot_realloc_by_event_host_08
+
+host_realloc_last_state_09 <- get_last_status_realloc_host(host_Realloc09,n)
+host_realloc_by_request_09 <- set_sum_request_by_event(host_realloc_last_state_09)
+df_realloc_by_event_host_09 <- create_df_realloc_host_by_event(host_realloc_by_request_09,n)
+plot_realloc_by_event_host_09 <- plot_graph_realloc_by_event(df_realloc_by_event_host_09)
+plot_realloc_by_event_host_09
+
+host_realloc_last_state_10 <- get_last_status_realloc_host(host_Realloc10,n)
+host_realloc_by_request_10 <- set_sum_request_by_event(host_realloc_last_state_10)
+df_realloc_by_event_host_10 <- create_df_realloc_host_by_event(host_realloc_by_request_10,n)
+plot_realloc_by_event_host_10 <- plot_graph_realloc_by_event(df_realloc_by_event_host_10)
+plot_realloc_by_event_host_10
+```

@@ -71,6 +71,7 @@ show_var = False
 show_par = False
 plot_distribution = False
 type = Type.ZIPF
+approach = Approach.NETWORK_AWARE
 mobility = False
 show_reallocation = False
 requests_fixed = True
@@ -272,7 +273,14 @@ def run_model(source, sink, event):
     start_time_5 = time.time()
     od = OptimizeData(data=data, sources=source, sinks=sink)
     od.model = gp.Model("Orchestrator")
-    key = od.run_model(show_log, enable_ceil_nodes_capacity)
+
+    if approach == approach.NETWORK_AWARE:
+        key = od.run_model(show_log, enable_ceil_nodes_capacity)
+    if approach == approach.ONE_HOP:
+        key = od.run_model_one_hop(show_log, enable_ceil_nodes_capacity)
+    if approach == approach.MULTI_HOP:
+        key = od.run_model_multi_hop(show_log, enable_ceil_nodes_capacity)
+
     end_time_5 = time.time()
     paths = None
     hosts = None
@@ -331,6 +339,7 @@ def picture(path):
             bbox=(1000, 1000), )
     '''
 
+
 def load_dataset(dataset: object):
     global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, buffer_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue
 
@@ -385,6 +394,17 @@ def load_type_enum(t):
     if str(t).upper() == 'ZIPF':
         type = type.ZIPF
 
+
+def load_approach_enum(a):
+    global approach
+    if str(a).upper() == str('NETWORK_AWARE'):
+        approach = approach.NETWORK_AWARE
+    if str(a).upper() == str('ONE_HOP'):
+        approach = approach.ONE_HOP
+    if str(a).upper() == str('MULTI_HOP'):
+        approach = approach.MULTI_HOP
+
+
 def load_config(config: object):
     global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, mobility, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request
     show_log = config["show_log"]
@@ -395,6 +415,7 @@ def load_config(config: object):
     show_par = config["show_par"]
     plot_distribution = config["plot_distribution"]
     load_type_enum(config["type"])
+    load_approach_enum(config["approach"])
     mobility = config["mobility"]
     location_fixed = config["location_fixed"]
     path_location = config["path_location"]

@@ -37,6 +37,12 @@ class Type(Enum):
     SINGLE = 1
     ZIPF = 2
 
+# This class changes the models.
+class Approach (Enum):
+    NETWORK_AWARE = 1
+    ONE_HOP = 2
+    MULTI_HOP = 3
+
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
@@ -417,8 +423,8 @@ class HandleData:
         if not is_update:
             self.__calc_omega_user_node()
         self.__calc_current_throughput_edge()
-        self.__calc_diff_throughput()
-        self.__calc_psi_edge()
+        # self.__calc_diff_throughput()
+        # self.__calc_psi_edge()
 
         self.__calc_weight_network()
         self.__calc_connectivity_edges()
@@ -714,13 +720,27 @@ class OptimizeData:
 
     def run_model(self, show_log, enable_ceil_nodes_capacity):
         # self.model.reset()
-        self.create_vars()
+        self.__create_vars()
         self.__set_function_objective()
         self.__create_constraints(enable_ceil_nodes_capacity)
-        self.execute(show_log)
+        self.__execute(show_log)
         return self.__data.__s[-1]
 
-    def create_vars(self):
+    def run_model_one_hop(self, show_log, enable_ceil_nodes_capacity):
+        # self.__create_vars()
+        # self.__set_function_objective()
+        # self.__create_constraints(enable_ceil_nodes_capacity, True)
+        # self.__execute(show_log)
+        return self.__data.__s[-1]
+
+    def run_model_multi_hop(self, show_log, enable_ceil_nodes_capacity):
+        # self.__create_vars()
+        # self.__set_function_objective_multi_hop()
+        # self.__create_constraints(enable_ceil_nodes_capacity)
+        # self.__execute(show_log)
+        return self.__data.__s[-1]
+
+    def __create_vars(self):
         self.__create_var_flow()
         self.__create_var_host()
         self.__create_var_fit()
@@ -757,19 +777,37 @@ class OptimizeData:
                                     self.__data.weight_network_dict[req[SOURCE], i, j]
                                     * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
-                                    * self.__data.psi_edge_dict[req[SOURCE], i, j]
+                                    # * self.__data.psi_edge_dict[req[SOURCE], i, j]
                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
                                     self.__data.key_index_all for i in self.__data.key_index_all for req in
                                     self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
+    def __set_function_objective_multi_hop(self):
+        self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
+                                                self.__data.size_file_dict[req[SOURCE]]) *
+                                               self.__data.req_dict[req[SINK], req[SOURCE]] * (
+                                                   self.y[req[KEY], i])) / ((
+                                                                                    self.__data.resources_node_dict[
+                                                                                        i] *
+                                                                                    self.__data.gama_file_node_dict[
+                                                                                        req[
+                                                                                            SOURCE], i]) + DELTA)
+                                              for i in self.__data.key_index_bs for req in
+                                              self.__data.requests)))
+                                , sense=gp.GRB.MINIMIZE)
 
-    def __create_constraints(self, enable_ceil_nodes_capacity):
-        # This constraint set y value.
-        self.__set_constraint_y_value()
+    def __create_constraints(self, enable_ceil_nodes_capacity,one_hop = False):
 
-        # This constraint this is a logical fit.
-        self.__set_constraints_fit()
+        if one_hop:
+            # This constraint set y value.
+            self.__set_constraint_y_value_one_hop()
+        else:
+            # This constraint set y value.
+            self.__set_constraint_y_value()
+
+            # This constraint this is a logical fit.
+            self.__set_constraints_fit()
 
         # This constraint limit the use  of node resources.
         if enable_ceil_nodes_capacity:
@@ -800,6 +838,13 @@ class OptimizeData:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(self.z[req[SOURCE], i] <= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
                 self.model.addConstr(self.z[req[SOURCE], i] >= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
+
+    def __set_constraint_y_value_one_hop(self):
+        for req in self.__data.requests:
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.y[req[KEY], i] <= self.x[req[KEY], req[SOURCE], i] ,'c1_0')
+                self.model.addConstr(
+                    self.y[req[KEY], i] >= self.x[req[KEY], req[SOURCE], i], 'c1_1')
 
     def __set_constraint_node_resources_capacity(self):
         for i in self.__data.key_index_bs:
@@ -865,7 +910,7 @@ class OptimizeData:
                 ))
                 , 'c7')
 
-    def execute(self, log):
+    def __execute(self, log):
         self.model.setParam("LogToConsole", log)
         start_time_execution_optimize = time.time()
         self.model.optimize()

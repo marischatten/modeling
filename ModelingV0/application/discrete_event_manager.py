@@ -232,6 +232,7 @@ def process_datas(pd, event):
         pd.calc_delay_by_request(event, event_null,last_req)
         pd.calc_cache_vs_cloud(event,event_null,last_host)
     else:
+        print("teste")
         pd.calc_server_use(event, event_null)
         pd.calc_delay_by_request(event, event_null)
         pd.calc_cache_vs_cloud(event, event_null)

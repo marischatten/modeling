@@ -727,17 +727,17 @@ class OptimizeData:
         return self.__data.__s[-1]
 
     def run_model_one_hop(self, show_log, enable_ceil_nodes_capacity):
-        # self.__create_vars()
-        # self.__set_function_objective()
-        # self.__create_constraints(enable_ceil_nodes_capacity, True)
-        # self.__execute(show_log)
+        self.__create_vars()
+        self.__set_function_objective()
+        self.__create_constraints(enable_ceil_nodes_capacity, one_hop=True)
+        self.__execute(show_log)
         return self.__data.__s[-1]
 
     def run_model_multi_hop(self, show_log, enable_ceil_nodes_capacity):
-        # self.__create_vars()
-        # self.__set_function_objective_multi_hop()
-        # self.__create_constraints(enable_ceil_nodes_capacity)
-        # self.__execute(show_log)
+        self.__create_vars()
+        self.__set_function_objective_multi_hop()
+        self.__create_constraints(enable_ceil_nodes_capacity, multi_hop=True)
+        self.__execute(show_log)
         return self.__data.__s[-1]
 
     def __create_vars(self):
@@ -764,12 +764,7 @@ class OptimizeData:
         self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
                                                 self.__data.size_file_dict[req[SOURCE]]) *
                                                                    self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                                                                   self.y[req[KEY], i])) / ((
-                                                                                                        self.__data.resources_node_dict[
-                                                                                                            i] *
-                                                                                                        self.__data.gama_file_node_dict[
-                                                                                                            req[
-                                                                                                                SOURCE], i]) + DELTA)
+                                                                   self.y[req[KEY], i])) / ((self.__data.resources_node_dict[i] * self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)
                                                                   for i in self.__data.key_index_bs for req in
                                                                   self.__data.requests)))
                                 +
@@ -783,31 +778,69 @@ class OptimizeData:
                                     self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
-    def __set_function_objective_multi_hop(self):
-        self.model.setObjective(((gp.quicksum(((self.__data.resources_node_dict[i] -
-                                                self.__data.size_file_dict[req[SOURCE]]) *
-                                               self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                                                   self.y[req[KEY], i])) / ((
-                                                                                    self.__data.resources_node_dict[
-                                                                                        i] *
-                                                                                    self.__data.gama_file_node_dict[
-                                                                                        req[
-                                                                                            SOURCE], i]) + DELTA)
-                                              for i in self.__data.key_index_bs for req in
-                                              self.__data.requests)))
-                                , sense=gp.GRB.MINIMIZE)
+    # def __set_function_objective_multi_hop(self):
+    #     self.model.setObjective(((gp.quicksum(
+    #                                         ((self.__data.resources_node_dict[i] -
+    #                                         self.__data.size_file_dict[req[SOURCE]]) *
+    #                                         self.__data.req_dict[req[SINK], req[SOURCE]] * (
+    #                                         # self.x[req[KEY], req[SOURCE], i]
+    #                                         self.y[req[KEY], i]
+    #                                         ))
+    #                                         /
+    #                                         ((
+    #                                         self.__data.resources_node_dict[i] *
+    #                                         self.__data.gama_file_node_dict[ req[SOURCE], i]) + DELTA)
+    #                                         for i in self.__data.key_index_bs
+    #                                         for req in self.__data.requests
+    #                                         )))
+    #                             , sense=gp.GRB.MINIMIZE)
 
-    def __create_constraints(self, enable_ceil_nodes_capacity,one_hop = False):
+    def __set_function_objective_multi_hop(self):
+            self.model.setObjective(((gp.quicksum(
+                ((self.__data.resources_node_dict[i] -
+                  self.__data.size_file_dict[req[SOURCE]]) *
+                 self.__data.req_dict[req[SINK], req[SOURCE]] * (
+                     # self.x[req[KEY], req[SOURCE], i]
+                     self.y[req[KEY], i]
+                 ))
+                /
+                ((
+                         self.__data.resources_node_dict[i] *
+                         self.__data.gama_file_node_dict[req[SOURCE], i]) + DELTA)
+                for i in self.__data.key_index_bs
+                for req in self.__data.requests
+            )))
+                                    +
+                                    ((gp.quicksum(
+                                        #self.__data.weight_network_dict[req[SOURCE], i, j] *
+                                        self.x[req[KEY], i, j]
+                                        * self.__data.req_dict[req[SINK], req[SOURCE]]
+                                        # * self.__data.psi_edge_dict[req[SOURCE], i, j]
+                                        * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
+                                        self.__data.key_index_all for i in self.__data.key_index_all for req in
+                                        self.__data.requests)))
+                                    , sense=gp.GRB.MINIMIZE)
+
+    def __create_constraints(self, enable_ceil_nodes_capacity,one_hop = False, multi_hop = False):
 
         if one_hop:
             # This constraint set y value.
             self.__set_constraint_y_value_one_hop()
+            # This constraint this is a logical fit.
+            self.__set_constraints_fit()
+        elif multi_hop:
+            # This constraint set y value.
+            self.__set_constraint_y_value()
+            # This constraint this is a logical fit.
+            self.__set_constraints_fit()
         else:
             # This constraint set y value.
             self.__set_constraint_y_value()
-
             # This constraint this is a logical fit.
             self.__set_constraints_fit()
+
+        # This constraint bound the host by request.
+        self.__set_constraint_y_bound()
 
         # This constraint limit the use  of node resources.
         if enable_ceil_nodes_capacity:
@@ -828,10 +861,20 @@ class OptimizeData:
     def __set_constraint_y_value(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.y[req[KEY], i] <= (
-                            self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON,'c1_0')
-                self.model.addConstr(
-                    self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1_1')
+                self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON,'c1_0')
+                self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1_1')
+
+    # def __set_constraint_y_value(self):
+    #     for req in self.__data.requests:
+    #         for i in self.__data.key_index_bs:
+    #             self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i]), 'c1_0')
+    #             self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i]), 'c1_1')
+
+    def __set_constraint_y_value_one_hop(self):
+        for req in self.__data.requests:
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.y[req[KEY], i] <= self.x.sum(req[KEY], req[SOURCE], i), 'c1_0')
+                self.model.addConstr(self.y[req[KEY], i] >= self.x.sum(req[KEY], req[SOURCE], i), 'c1_1')
 
     def __set_constraints_fit(self):
         for req in self.__data.requests:
@@ -839,17 +882,27 @@ class OptimizeData:
                 self.model.addConstr(self.z[req[SOURCE], i] <= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
                 self.model.addConstr(self.z[req[SOURCE], i] >= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
 
-    def __set_constraint_y_value_one_hop(self):
+    # def __set_constraints_fit(self):
+    #     for req in self.__data.requests:
+    #         for i in self.__data.key_index_bs:
+    #             self.model.addConstr(self.z[req[SOURCE], i] <= (self.x.sum(req[KEY], req[SOURCE], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
+    #             self.model.addConstr(self.z[req[SOURCE], i] >= (self.x.sum(req[KEY], req[SOURCE], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
+
+    def __set_constraint_y_bound(self):
         for req in self.__data.requests:
-            for i in self.__data.key_index_bs:
-                self.model.addConstr(self.y[req[KEY], i] <= self.x[req[KEY], req[SOURCE], i] ,'c1_0')
-                self.model.addConstr(
-                    self.y[req[KEY], i] >= self.x[req[KEY], req[SOURCE], i], 'c1_1')
+            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_bs) >= 1, 'multi_hop')
+            self.model.addConstr(gp.quicksum(self.x[req[KEY], req[SOURCE], i] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_bs) <= 1, 'multi_hop')
 
     def __set_constraint_node_resources_capacity(self):
-        for i in self.__data.key_index_bs:
-            self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
-                self.__data.size_file_dict[c] * self.z[c, i] for c in self.__data.key_index_file),'c3')
+        for req in self.__data.requests:
+            for i in self.__data.key_index_bs:
+                self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
+                    self.__data.size_file_dict[c] * self.z[c, i] * self.__data.req_dict[req[SINK], req[SOURCE]] for c in self.__data.key_index_file),'c3')
+
+    # def __set_constraint_node_resources_capacity(self):
+    #     for i in self.__data.key_index_bs:
+    #         self.model.addConstr(self.__data.resources_node_dict[i] >= gp.quicksum(
+    #         self.__data.size_file_dict[c] * self.z[c, i] for c in self.__data.key_index_file),'c3')
 
     def __set_constraint_throughput(self):
         for req in self.__data.requests:
@@ -885,11 +938,13 @@ class OptimizeData:
                         gp.quicksum(
                             self.x[req[KEY], req[SOURCE], i]
                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SOURCE], i]
+                            * self.__data.req_dict[req[SINK], req[SOURCE]]
                             for i in self.__data.key_index_bs
                         )
                         - gp.quicksum(
                     self.x[req[KEY], i, req[SOURCE]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SOURCE]]
+                    * self.__data.req_dict[req[SINK], req[SOURCE]]
                     for i in self.__data.key_index_bs
                 ))
                 , 'c6')
@@ -901,11 +956,13 @@ class OptimizeData:
                         gp.quicksum(
                             self.x[req[KEY], req[SINK], i]
                             * self.__data.connectivity_edges_dict[req[SOURCE], req[SINK], i]
+                            * self.__data.req_dict[req[SINK], req[SOURCE]]
                             for i in self.__data.key_index_bs
                         )
                         - gp.quicksum(
                     self.x[req[KEY], i, req[SINK]]
                     * self.__data.connectivity_edges_dict[req[SOURCE], i, req[SINK]]
+                    * self.__data.req_dict[req[SINK], req[SOURCE]]
                     for i in self.__data.key_index_bs
                 ))
                 , 'c7')

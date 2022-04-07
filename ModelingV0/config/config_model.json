@@ -1,5 +1,5 @@
 {
-  "show_log": 1,
+  "show_log": 0,
   "show_results": true,
   "show_path": true,
   "show_var": false,
@@ -20,7 +20,7 @@
   "plot_graph_mobility": true,
   "path_graph": "..\\output\\graph\\beta\\instance_10_multi_hop",
 
-  "save_data": false,
+  "save_data": true,
   "path_output": "..\\output\\data\\beta\\instance_10_multi_hop.xlsx",
 
   "path_time": "..\\output\\time_execution\\beta\\instance_10_multi_hop.dat",
@@ -29,7 +29,7 @@
   "deallocate_request": false,
   "max_events": 10,
 
-  "approach": "network_aware",
+  "approach": "one_aware",
   "type": "zipf",
   "fixed": true,
   "avg_qtd_bulk": 5,

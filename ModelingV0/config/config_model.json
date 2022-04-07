@@ -1,7 +1,7 @@
 {
-  "show_log": 0,
-  "show_results": false,
-  "show_path": false,
+  "show_log": 1,
+  "show_results": true,
+  "show_path": true,
   "show_var": false,
   "show_par": false,
   "show_reallocation": false,
@@ -10,30 +10,30 @@
   "path_dataset": "..\\dataset\\instance\\beta\\instance_10_beta.json",
 
   "mobility": true,
-  "location_fixed": true,
+  "location_fixed": false,
   "path_location": "..\\dataset\\location\\beta\\instance_10_beta.json",
 
-  "requests_fixed": true,
+  "requests_fixed": false,
   "path_requests": "..\\dataset\\request\\beta\\instance_10_beta.json",
 
   "plot_graph": true,
   "plot_graph_mobility": true,
   "path_graph": "..\\output\\graph\\beta\\instance_10_multi_hop",
 
-  "save_data": true,
+  "save_data": false,
   "path_output": "..\\output\\data\\beta\\instance_10_multi_hop.xlsx",
 
   "path_time": "..\\output\\time_execution\\beta\\instance_10_multi_hop.dat",
 
   "enable_ceil_nodes_capacity": true,
-  "deallocate_request": true,
+  "deallocate_request": false,
   "max_events": 10,
 
-  "approach": "multi_hop",
+  "approach": "network_aware",
   "type": "zipf",
-  "fixed": false,
+  "fixed": true,
   "avg_qtd_bulk": 5,
-  "num_events": 100,
+  "num_events": 5,
   "num_alpha": 0.80,
   "source": [
     "F3"
@@ -42,3 +42,4 @@
     "UE40"
   ]
 }
+

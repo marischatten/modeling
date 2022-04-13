@@ -772,35 +772,16 @@ class OptimizeData:
                                     self.__data.weight_network_dict[req[SOURCE], i, j]
                                     * self.x[req[KEY], i, j]
                                     * self.__data.req_dict[req[SINK], req[SOURCE]]
-                                    # * self.__data.psi_edge_dict[req[SOURCE], i, j]
                                     * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
                                     self.__data.key_index_all for i in self.__data.key_index_all for req in
                                     self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
-
-    # def __set_function_objective_multi_hop(self):
-    #     self.model.setObjective(((gp.quicksum(
-    #                                         ((self.__data.resources_node_dict[i] -
-    #                                         self.__data.size_file_dict[req[SOURCE]]) *
-    #                                         self.__data.req_dict[req[SINK], req[SOURCE]] * (
-    #                                         # self.x[req[KEY], req[SOURCE], i]
-    #                                         self.y[req[KEY], i]
-    #                                         ))
-    #                                         /
-    #                                         ((
-    #                                         self.__data.resources_node_dict[i] *
-    #                                         self.__data.gama_file_node_dict[ req[SOURCE], i]) + DELTA)
-    #                                         for i in self.__data.key_index_bs
-    #                                         for req in self.__data.requests
-    #                                         )))
-    #                             , sense=gp.GRB.MINIMIZE)
 
     def __set_function_objective_multi_hop(self):
             self.model.setObjective(((gp.quicksum(
                 ((self.__data.resources_node_dict[i] -
                   self.__data.size_file_dict[req[SOURCE]]) *
                  self.__data.req_dict[req[SINK], req[SOURCE]] * (
-                     # self.x[req[KEY], req[SOURCE], i]
                      self.y[req[KEY], i]
                  ))
                 /
@@ -812,10 +793,8 @@ class OptimizeData:
             )))
                                     +
                                     ((gp.quicksum(
-                                        #self.__data.weight_network_dict[req[SOURCE], i, j] *
                                         self.x[req[KEY], i, j]
                                         * self.__data.req_dict[req[SINK], req[SOURCE]]
-                                        # * self.__data.psi_edge_dict[req[SOURCE], i, j]
                                         * self.__data.connectivity_edges_dict[req[SOURCE], i, j] for j in
                                         self.__data.key_index_all for i in self.__data.key_index_all for req in
                                         self.__data.requests)))
@@ -825,19 +804,13 @@ class OptimizeData:
 
         if one_hop:
             # This constraint set y value.
-            self.__set_constraint_y_value_one_hop()
-            # This constraint this is a logical fit.
-            self.__set_constraints_fit()
-        elif multi_hop:
-            # This constraint set y value.
-            self.__set_constraint_y_value()
-            # This constraint this is a logical fit.
-            self.__set_constraints_fit()
-        else:
-            # This constraint set y value.
-            self.__set_constraint_y_value()
-            # This constraint this is a logical fit.
-            self.__set_constraints_fit()
+            self.__set_constraint_one_hop()
+
+        # This constraint set y value.
+        self.__set_constraint_y_value()
+
+        # This constraint this is a logical fit.
+        self.__set_constraints_fit()
 
         # This constraint bound the host by request.
         self.__set_constraint_y_bound()
@@ -858,35 +831,28 @@ class OptimizeData:
         # This constraint ensures the equilibrium of flow in the destiny(sink) nodes in the network.
         self.__set_constraint_flow_conservation_sink()
 
-    def __set_constraint_y_value(self):
-        for req in self.__data.requests:
-            for i in self.__data.key_index_bs:
-                self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON,'c1_0')
-                self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1_1')
-
     # def __set_constraint_y_value(self):
     #     for req in self.__data.requests:
     #         for i in self.__data.key_index_bs:
-    #             self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i]), 'c1_0')
-    #             self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i]), 'c1_1')
+    #             self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]) + EPSILON,'c1_0')
+    #             self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i] / self.__data.size_file_dict[req[SOURCE]]), 'c1_1')
 
-    def __set_constraint_y_value_one_hop(self):
+    def __set_constraint_y_value(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
-                self.model.addConstr(self.y[req[KEY], i] <= self.x.sum(req[KEY], req[SOURCE], i), 'c1_0')
-                self.model.addConstr(self.y[req[KEY], i] >= self.x.sum(req[KEY], req[SOURCE], i), 'c1_1')
+                self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i]),'c1_0')
+                self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i]), 'c1_1')
+
+    def __set_constraint_one_hop(self):
+        for req in self.__data.requests:
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) >= 2, 'c1_0')
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) <= 2, 'c1_1')
 
     def __set_constraints_fit(self):
         for req in self.__data.requests:
             for i in self.__data.key_index_bs:
                 self.model.addConstr(self.z[req[SOURCE], i] <= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
                 self.model.addConstr(self.z[req[SOURCE], i] >= (self.y.sum(req[KEY], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
-
-    # def __set_constraints_fit(self):
-    #     for req in self.__data.requests:
-    #         for i in self.__data.key_index_bs:
-    #             self.model.addConstr(self.z[req[SOURCE], i] <= (self.x.sum(req[KEY], req[SOURCE], i)/self.__data.size_file_dict[req[SOURCE]] + EPSILON), 'c2_0')
-    #             self.model.addConstr(self.z[req[SOURCE], i] >= (self.x.sum(req[KEY], req[SOURCE], i)/self.__data.size_file_dict[req[SOURCE]]), 'c2_1')
 
     def __set_constraint_y_bound(self):
         for req in self.__data.requests:
@@ -1241,8 +1207,8 @@ class LogData:
         print("VARS.\n")
         self.__log_omega_user_node()
         self.__log_current_throughput_edge()
-        self.__log_diff_throughput_edge()
-        self.__log_psi_edge()
+        # self.__log_diff_throughput_edge()
+        # self.__log_psi_edge()
         self.__log_weight_network()
         self.__log_connectivity_edges()
 
@@ -1250,8 +1216,8 @@ class LogData:
         print("VARS.\n")
         self.__log_omega_user_node_dict()
         self.__log_current_throughput_edge_dict()
-        self.__log_diff_throughput_edge_dict()
-        self.__log_psi_edge_dict()
+        # self.__log_diff_throughput_edge_dict()
+        # self.__log_psi_edge_dict()
         self.__log_weight_network_dict()
         self.__log_connectivity_edges_dict()
 

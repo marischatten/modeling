@@ -59,7 +59,9 @@ rtt_min_cloud_mbs = 0
 rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
 rtt_min_sbs_ue = 0
+rtt_min_cloud_ue =0
 
+approach = opt.Approach.NETWORK_AWARE
 path = ''
 
 
@@ -136,6 +138,11 @@ def generate_distance_ue():
         # ue to mbs and cloud
         for i in range(num_mbs + NUM_CLOUD):
             distance_ue[u][i] = float(radius_mbs + 1)
+
+
+    if approach.ONE_HOP:
+        for i in range(len(key_index_ue)):
+            distance_ue[i][0] = 1
 
     print("DISTÂNCIA ENTRE UE E SBS.")
     for u in range(len(key_index_ue)):
@@ -245,7 +252,10 @@ def generate_rtt_min():
                 if tag_i[:3] == 'MBS' and tag_j[:4] == 'MBS0':
                     rtt_min[i][j] = NO_EDGE
                     rtt_min[j][i] = rtt_min_cloud_mbs
-
+                if approach.ONE_HOP:
+                    if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
+                        rtt_min[i][j] = rtt_min_cloud_ue
+                        rtt_min[j][i] = NO_EDGE
 
     print("RTT MÍNIMO POR ENLACE.")
     for i in range(num_nodes):
@@ -279,7 +289,10 @@ def generate_rtt():
                 if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                     if caching_to_bs(tag_i, tag_j):
                         rtt_edge[i][j] = 0
-
+                if approach.ONE_HOP:
+                    if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
+                        rtt_edge[i][j] = rtt_min[i][j]
+                        rtt_edge[j][i] = rtt_min[j][i]
     print("RTT POR ENLACE.")
     for i in range(num_nodes):
         for j in range(num_nodes):
@@ -386,6 +399,7 @@ def generate_json(path):
             "rtt_min_mbs_mbs": rtt_min_mbs_mbs,
             "rtt_min_sbs_mbs": rtt_min_sbs_mbs,
             "rtt_min_sbs_ue": rtt_min_sbs_ue,
+            "rtt_min_cloud_ue": rtt_min_cloud_ue,
             "num_bs": num_bs,
             "num_ue": num_ue,
             "num_files": num_files,
@@ -413,7 +427,7 @@ def generate_json(path):
 
 
 def load_config(config: object):
-    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, num_nodes, requirements, storage_node_min, storage_node_max, key_index_all, path
+    global mobility_rate, alpha, beta, num_sbs_per_mbs, num_bs, num_mbs, num_ue, num_files, key_index_file, key_index_bs, key_index_ue, key_index_bs_ue, e_bs_adj, size_file, throughput_min_file, resources_node, rtt_min, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, rtt_min_cloud_ue,num_nodes, requirements, storage_node_min, storage_node_max, key_index_all, path
 
     mobility_rate = config["mobility_rate"]
     alpha = config["alpha"]
@@ -435,11 +449,22 @@ def load_config(config: object):
     rtt_min_mbs_mbs = config["rtt_min_mbs_mbs"]
     rtt_min_sbs_mbs = config["rtt_min_sbs_mbs"]
     rtt_min_sbs_ue = config["rtt_min_sbs_ue"]
+    rtt_min_cloud_ue = config["rtt_min_cloud_ue"]
 
+    load_approach_enum(config["approach"])
     path = config["path"]
 
     print(opt.CYAN, "LOADED CONFIGURATION.", opt.RESET)
 
+
+def load_approach_enum(a):
+    global approach
+    if str(a).upper() == str('NETWORK_AWARE'):
+        approach = approach.NETWORK_AWARE
+    if str(a).upper() == str('ONE_HOP'):
+        approach = approach.ONE_HOP
+    if str(a).upper() == str('MULTI_HOP'):
+        approach = approach.MULTI_HOP
 
 if __name__ == "__main__":
     main()

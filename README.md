@@ -124,3 +124,12 @@ command: sudo python3 -m pip install gurobipy
 ````shell
 command: sudo apt-get install python-igraph
 ````
+
+>OSError: 
+>no library called "cairo-2" was found 
+>no library called "cairo" was found 
+>no library called "libcairo-2" was found
+
+````shell
+command: sudo apt-get install libpango1.0-0 libcairo2 libpq-dev
+````

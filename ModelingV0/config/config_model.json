@@ -7,7 +7,7 @@
   "show_reallocation": false,
   "plot_distribution": false,
 
-  "path_dataset": "..\\dataset\\instance\\beta\\instance_10_beta.json",
+  "path_dataset": "..\\dataset\\instance\\teste.json",
 
   "mobility": true,
   "location_fixed": false,
@@ -18,28 +18,28 @@
 
   "plot_graph": true,
   "plot_graph_mobility": true,
-  "path_graph": "..\\output\\graph\\beta\\instance_10_multi_hop",
+  "path_graph": "..\\output\\graph\\\\teste",
 
   "save_data": true,
-  "path_output": "..\\output\\data\\beta\\instance_10_multi_hop.xlsx",
+  "path_output": "..\\output\\data\\teste.xlsx",
 
-  "path_time": "..\\output\\time_execution\\beta\\instance_10_multi_hop.dat",
+  "path_time": "..\\output\\time_execution\\teste.dat",
 
   "enable_ceil_nodes_capacity": true,
   "deallocate_request": false,
   "max_events": 10,
 
-  "approach": "one_aware",
+  "approach": "one_hop",
   "type": "zipf",
   "fixed": true,
-  "avg_qtd_bulk": 5,
-  "num_events": 5,
+  "avg_qtd_bulk": 3,
+  "num_events": 2,
   "num_alpha": 0.80,
   "source": [
     "F3"
   ],
   "sink": [
-    "UE40"
+    "UE1"
   ]
 }
 

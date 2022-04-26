@@ -16,7 +16,7 @@ import tqdm
 # from ortools.linear_solver import pywraplp  # https://developers.google.com/optimization/introduction/python
 # from ortools.graph import pywrapgraph
 
-# import igraph as ig
+import igraph as ig
 from utils.utils import *
 import simulation.request as r
 from optimization.optimize import *
@@ -232,7 +232,6 @@ def process_datas(pd, event):
         pd.calc_delay_by_request(event, event_null,last_req)
         pd.calc_cache_vs_cloud(event,event_null,last_host)
     else:
-        print("teste")
         pd.calc_server_use(event, event_null)
         pd.calc_delay_by_request(event, event_null)
         pd.calc_cache_vs_cloud(event, event_null)
@@ -257,7 +256,7 @@ def make_data():
                 key_index_ue, e_bs_adj,
                 size_file,buffer_file,
                 throughput_min_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue
+                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue, approach
                 )
 
 
@@ -321,7 +320,7 @@ def show_vars():
 
 def picture(path):
     path_with_ext = path + ".png"
-    '''
+
     color_dict = {"F": "#4682B4", "M": "#3CB371", "S": "#F0E68C", "U": "#A52A2A"}
     color_dict_cloud = {"MBS0": "#4B0082"}
     g = ig.Graph(directed=1)
@@ -329,16 +328,16 @@ def picture(path):
     key_nodes = key_index_bs + key_index_ue + key_index_file
     for i, name in enumerate(key_nodes):
         g.add_vertices(name)
-    
+
     for i, name_orig in enumerate(key_nodes):
         for j, name_dest in enumerate(key_nodes):
             if data.graph_adj_matrix[i][j] != NO_EDGE:
                 g.add_edge(name_orig, name_dest)
-    
+
     g.vs["color"] = [color_dict[node[0:1]] for node in g.vs["name"]]
     ig.plot(g, vertex_label=key_nodes, target=path_with_ext, edge_color="#808080", vertex_size=10, edge_arrow_size=0.7,
             bbox=(1000, 1000), )
-    '''
+
 
 
 def load_dataset(dataset: object):

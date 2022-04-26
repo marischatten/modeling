@@ -46,6 +46,8 @@ class Approach (Enum):
 
 # This class manages and handles the data of an instance of the problem.
 class Data:
+    approach = Approach.NETWORK_AWARE
+
     __BREAK = 100
 
     max_events = 0
@@ -120,7 +122,7 @@ class Data:
     gama_file_node = list()
 
     # psi \in {0,1}
-    psi_edge = list()
+    # psi_edge = list()
 
     # Vars
 
@@ -131,7 +133,7 @@ class Data:
     throughput_current_edge = None
 
     # bwdiff_fij \in R
-    throughput_diff_edge = None
+    # throughput_diff_edge = None
 
     # rr_i \in R
     current_resources_node = None
@@ -146,7 +148,7 @@ class Data:
 
     load_links_dict = dict()
     throughput_current_edge_dict = dict()
-    throughput_diff_edge_dict = dict()
+    # throughput_diff_edge_dict = dict()
 
     size_file_dict = dict()
     buffer_file_dict = dict()
@@ -157,7 +159,7 @@ class Data:
     gama_file_node_dict = dict()
     omega_user_node_dict = dict()
     e_bs_adj_dict = dict()
-    psi_edge_dict = dict()
+    # psi_edge_dict = dict()
     rtt_edge_dict = dict()
 
     distance_ue_dict = dict()
@@ -170,8 +172,9 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, bf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0, approach = Approach.NETWORK_AWARE):
 
+        self.approach = approach
         self.mobility = mobility
         self.mobility_rate = mr
         self.alpha = alpha
@@ -341,23 +344,23 @@ class Data:
                         self.throughput_current_edge[f][i][
                             j]
 
-    def throughput_diff_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_with_ue)):
-                for j in range(len(self.key_index_with_ue)):
-                    tag_file = self.key_index_file[f]
-                    tag_orig = self.key_index_with_ue[i]
-                    tag_dest = self.key_index_with_ue[j]
-                    self.throughput_diff_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_diff_edge[f][i][j]
+    # def throughput_diff_to_dictionary(self):
+    #     for f in range(len(self.key_index_file)):
+    #         for i in range(len(self.key_index_with_ue)):
+    #             for j in range(len(self.key_index_with_ue)):
+    #                 tag_file = self.key_index_file[f]
+    #                 tag_orig = self.key_index_with_ue[i]
+    #                 tag_dest = self.key_index_with_ue[j]
+    #                 self.throughput_diff_edge_dict[tag_file, tag_orig, tag_dest] = self.throughput_diff_edge[f][i][j]
 
-    def psi_edge_to_dictionary(self):
-        for f in range(len(self.key_index_file)):
-            for i in range(len(self.key_index_all)):
-                for j in range(len(self.key_index_all)):
-                    tag_file = self.key_index_file[f]
-                    tag_orig = self.key_index_all[i]
-                    tag_dest = self.key_index_all[j]
-                    self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
+    # def psi_edge_to_dictionary(self):
+    #     for f in range(len(self.key_index_file)):
+    #         for i in range(len(self.key_index_all)):
+    #             for j in range(len(self.key_index_all)):
+    #                 tag_file = self.key_index_file[f]
+    #                 tag_orig = self.key_index_all[i]
+    #                 tag_dest = self.key_index_all[j]
+    #                 self.psi_edge_dict[tag_file, tag_orig, tag_dest] = self.psi_edge[f][i][j]
 
     def weight_network_to_dictionary(self):
         for f in range(len(self.key_index_file)):
@@ -448,6 +451,8 @@ class HandleData:
                 if tag_i[:3] == 'MBS':
                     # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
                     self.__data.omega_user_node[u][i] = 0
+                elif tag_i[:4] == 'MBS0':
+                    self.__data.omega_user_node[u][i] = 1
                 else:
                     if self.__data.distance_ue[u][i] <= self.__data.radius_sbs:
                         self.__data.omega_user_node[u][i] = 1
@@ -486,38 +491,38 @@ class HandleData:
 
         self.__data.throughput_current_to_dictionary()
 
-    def __calc_diff_throughput(self):
-        self.__data.throughput_diff_edge = [
-            [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
-             range(self.__data.num_nodes + self.__data.num_files)]
-            for f in
-            range(self.__data.num_files)]
+    # def __calc_diff_throughput(self):
+    #     self.__data.throughput_diff_edge = [
+    #         [[0.0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+    #          range(self.__data.num_nodes + self.__data.num_files)]
+    #         for f in
+    #         range(self.__data.num_files)]
+    #
+    #     for f in range(len(self.__data.key_index_file)):
+    #         for i in range(len(self.__data.key_index_with_ue)):
+    #             for j in range(len(self.__data.key_index_with_ue)):
+    #                 if self.__data.throughput_current_edge[f][i][j] == NO_EDGE:
+    #                     self.__data.throughput_diff_edge[f][i][j] = 0.0
+    #                 if self.__data.throughput_current_edge[f][i][j] == 0:
+    #                     self.__data.throughput_diff_edge[f][i][j] = 0.0
+    #                 else:
+    #                     self.__data.throughput_diff_edge[f][i][j] = round(
+    #                         self.__data.throughput_current_edge[f][i][j] - self.__data.throughput_min_file[f], 2)
+    #     self.__data.throughput_diff_to_dictionary()
 
-        for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_with_ue)):
-                for j in range(len(self.__data.key_index_with_ue)):
-                    if self.__data.throughput_current_edge[f][i][j] == NO_EDGE:
-                        self.__data.throughput_diff_edge[f][i][j] = 0.0
-                    if self.__data.throughput_current_edge[f][i][j] == 0:
-                        self.__data.throughput_diff_edge[f][i][j] = 0.0
-                    else:
-                        self.__data.throughput_diff_edge[f][i][j] = round(
-                            self.__data.throughput_current_edge[f][i][j] - self.__data.throughput_min_file[f], 2)
-        self.__data.throughput_diff_to_dictionary()
-
-    def __calc_psi_edge(self):
-        self.__data.psi_edge = [
-            [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
-             range(self.__data.num_nodes + self.__data.num_files)]
-            for f in
-            range(self.__data.num_files)]
-
-        for f in range(len(self.__data.key_index_file)):
-            for i in range(len(self.__data.key_index_all)):
-                for j in range(len(self.__data.key_index_all)):
-                    if self.__data.throughput_diff_edge[f][i][j] >= (self.__data.throughput_min_file[f] * self.__data.beta):
-                        self.__data.psi_edge[f][i][j] = 1
-        self.__data.psi_edge_to_dictionary()
+    # def __calc_psi_edge(self):
+    #     self.__data.psi_edge = [
+    #         [[0 for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
+    #          range(self.__data.num_nodes + self.__data.num_files)]
+    #         for f in
+    #         range(self.__data.num_files)]
+    #
+    #     for f in range(len(self.__data.key_index_file)):
+    #         for i in range(len(self.__data.key_index_all)):
+    #             for j in range(len(self.__data.key_index_all)):
+    #                 if self.__data.throughput_diff_edge[f][i][j] >= (self.__data.throughput_min_file[f] * self.__data.beta):
+    #                     self.__data.psi_edge[f][i][j] = 1
+    #     self.__data.psi_edge_to_dictionary()
 
     def __calc_weight_network(self):
         self.__data.weight_network = [[[NO_EDGE for i in range(self.__data.num_nodes + self.__data.num_files)] for j in
@@ -540,6 +545,10 @@ class HandleData:
                     if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                         if self.__is_caching(tag_i, tag_j) and (tag_f == tag_i):
                             self.__data.weight_network[f][i][j] = 0
+
+                    if self.__data.approach.ONE_HOP:
+                        if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
+                            self.__data.weight_network[f][i][j] = 1
 
         self.__data.weight_network_to_dictionary()
 
@@ -1120,37 +1129,37 @@ class LogData:
         for k in self.data.throughput_current_edge_dict.keys():
             print(k, self.data.throughput_current_edge_dict[k])
 
-    def __log_diff_throughput_edge(self):
-        print("DIFFERENCE THROUGHPUT")
-        for f, filename in enumerate(self.data.key_index_file):
-            print(filename.upper())
-            for i in range(len(self.data.key_index_all)):
-                for j in range(len(self.data.key_index_all)):
-                    print(self.data.throughput_diff_edge[f][i][j], end=" ")
-                print()
-            print()
+    # def __log_diff_throughput_edge(self):
+    #     print("DIFFERENCE THROUGHPUT")
+    #     for f, filename in enumerate(self.data.key_index_file):
+    #         print(filename.upper())
+    #         for i in range(len(self.data.key_index_all)):
+    #             for j in range(len(self.data.key_index_all)):
+    #                 print(self.data.throughput_diff_edge[f][i][j], end=" ")
+    #             print()
+    #         print()
         print()
 
-    def __log_diff_throughput_edge_dict(self):
-        print("DIFFERENCE THROUGHPUT")
-        for k in self.data.throughput_diff_edge_dict.keys():
-            print(k, self.data.throughput_diff_edge_dict[k])
+    # def __log_diff_throughput_edge_dict(self):
+    #     print("DIFFERENCE THROUGHPUT")
+    #     for k in self.data.throughput_diff_edge_dict.keys():
+    #         print(k, self.data.throughput_diff_edge_dict[k])
 
-    def __log_psi_edge(self):
-        print("DIFFERENCE INSIDE BOUND BETA (beta).")
-        for f, filename in enumerate(self.data.key_index_file):
-            print(filename.upper())
-            for i in range(len(self.data.key_index_all)):
-                for j in range(len(self.data.key_index_all)):
-                    print(self.data.psi_edge[f][i][j], end=" ")
-                print()
-            print()
-        print()
-
-    def __log_psi_edge_dict(self):
-        print("DIFFERENCE INSIDE BOUND BETA (beta).")
-        for k in self.data.psi_edge_dict.keys():
-            print(k, self.data.psi_edge_dict[k])
+    # def __log_psi_edge(self):
+    #     print("DIFFERENCE INSIDE BOUND BETA (beta).")
+    #     for f, filename in enumerate(self.data.key_index_file):
+    #         print(filename.upper())
+    #         for i in range(len(self.data.key_index_all)):
+    #             for j in range(len(self.data.key_index_all)):
+    #                 print(self.data.psi_edge[f][i][j], end=" ")
+    #             print()
+    #         print()
+    #     print()
+    #
+    # def __log_psi_edge_dict(self):
+    #     print("DIFFERENCE INSIDE BOUND BETA (beta).")
+    #     for k in self.data.psi_edge_dict.keys():
+    #         print(k, self.data.psi_edge_dict[k])
 
     def __log_weight_network(self):
         print("WEIGHT NETWORK.")
@@ -1218,8 +1227,8 @@ class LogData:
         self.__log_current_throughput_edge_dict()
         # self.__log_diff_throughput_edge_dict()
         # self.__log_psi_edge_dict()
-        self.__log_weight_network_dict()
-        self.__log_connectivity_edges_dict()
+        # self.__log_weight_network_dict()
+        # self.__log_connectivity_edges_dict()
 
 
 # This class store all result and plot a graphics.

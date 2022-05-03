@@ -1,0 +1,46 @@
+{
+  "show_log": 0,
+  "show_results": false,
+  "show_path": false,
+  "show_var": false,
+  "show_par": false,
+  "show_reallocation": false,
+  "plot_distribution": false,
+
+  "path_dataset": "..\\dataset\\instance\\instance_x_standard.json",
+
+  "mobility": true,
+  "location_fixed": true,
+  "path_location": "..\\dataset\\location\\instance_x_standard.json",
+
+  "requests_fixed": true,
+  "path_requests": "..\\dataset\\request\\zipf\\instance_zipf06_lambda5fixo.json",
+
+  "plot_graph": false,
+  "plot_graph_mobility": false,
+  "path_graph": ".\\output\\graph\\instance_x_standard_zipf06",
+
+  "save_data": true,
+  "path_output": "..\\output\\data\\zipf\\instance_x_standard_zipf06.xlsx",
+
+  "path_time": "..\\output\\time_execution\\zipf\\instance_x_standard_zipf06.dat",
+
+  "enable_ceil_nodes_capacity": true,
+  "deallocate_request": true,
+  "max_events": 10,
+
+  "approach": "network_aware",
+  "type": "zipf",
+  "fixed": true,
+  "avg_qtd_bulk": 5,
+  "num_events": 100,
+  "num_alpha": 0.80,
+  "source": [
+    "F3"
+  ],
+  "sink": [
+    "UE40"
+  ]
+}
+
+

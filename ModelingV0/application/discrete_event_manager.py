@@ -53,6 +53,7 @@ rtt_min_cloud_mbs = 0
 rtt_min_mbs_mbs = 0
 rtt_min_sbs_mbs = 0
 rtt_min_sbs_ue = 0
+rtt_min_cloud_ue = 0
 
 distance_ue = list()
 distance_bs = list
@@ -256,7 +257,7 @@ def make_data():
                 key_index_ue, e_bs_adj,
                 size_file,buffer_file,
                 throughput_min_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue, approach
+                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue, rtt_min_cloud_ue, approach
                 )
 
 
@@ -341,7 +342,7 @@ def picture(path):
 
 
 def load_dataset(dataset: object):
-    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, buffer_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue
+    global mobility_rate, alpha, beta, num_bs, num_ue, num_files, num_mbs, num_sbs, key_index_file, key_index_bs, key_index_ue, e_bs_adj, size_file, buffer_file, throughput_min_file, resources_node, rtt_edge, gama, distance_ue, distance_bs, radius_mbs, radius_sbs, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs, rtt_min_sbs_ue, rtt_min_cloud_ue
 
     mobility_rate = dataset["mobility_rate"]
     alpha = dataset['alpha']
@@ -370,6 +371,7 @@ def load_dataset(dataset: object):
     rtt_min_mbs_mbs =  dataset["rtt_min_mbs_mbs"]
     rtt_min_sbs_mbs = dataset["rtt_min_sbs_mbs"]
     rtt_min_sbs_ue = dataset["rtt_min_sbs_ue"]
+    rtt_min_cloud_ue = dataset["rtt_min_cloud_ue"]
 
     if num_bs is not None and num_ue is not None and num_files is not None:
         gama = [[0 for i in range(num_bs + num_ue)] for f in range(num_files)]

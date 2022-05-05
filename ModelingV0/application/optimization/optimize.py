@@ -111,6 +111,7 @@ class Data:
     rtt_min_mbs_mbs = 0
     rtt_min_sbs_mbs = 0
     rtt_min_sbs_ue = 0
+    rtt_min_cloud_ue = 0
 
     # D \in R
     radius_mbs = 0
@@ -172,7 +173,7 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, bf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0, approach = Approach.NETWORK_AWARE):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0, rtt_min_cloud_ue=0, approach = Approach.NETWORK_AWARE):
 
         self.approach = approach
         self.mobility = mobility
@@ -214,6 +215,7 @@ class Data:
         self.rtt_min_mbs_mbs = rtt_min_mbs_mbs
         self.rtt_min_sbs_mbs = rtt_min_sbs_mbs
         self.rtt_min_sbs_ue = rtt_min_sbs_ue
+        self.rtt_min_cloud_ue = rtt_min_cloud_ue
 
         if num_bs != 0 and num_ue != 0 and num_file != 0:
             self.req = [[0 for f in range(self.num_files)] for u in range(self.num_ue)]
@@ -585,6 +587,9 @@ class HandleData:
                         self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_mbs_mbs)
                     if (tag_i[:3] == "MBS" and tag_j[:3] == "SBS") or (tag_i[:3] == "SBS" and tag_j[:3] == "MBS"):
                         self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_sbs_mbs)
+                    if self.__data.approach == Approach.ONE_HOP:
+                        if tag_i[:4] == "MBS0" and tag_j[:2] == "UE":
+                            self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_cloud_ue)
 
     def __calc_rtt_by_load(self, tag_i,tag_j,rtt_min):
         self.__data.rtt_edge_dict[tag_i, tag_j] = rtt_min * self.__calc_exponential_scale_rtt(self.__data.total_load_links[tag_i, tag_j])

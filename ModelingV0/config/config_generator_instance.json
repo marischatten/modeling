@@ -26,5 +26,5 @@
     "rtt_min_cloud_ue": 0.004,
 
     "approach": "one_hop",
-    "path": "..\\dataset\\instance\\storage\\one_hop_standard_08.json"
+    "path": "..\\dataset\\instance\\storage\\teste.json"
 }

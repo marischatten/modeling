@@ -587,9 +587,9 @@ class HandleData:
                         self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_mbs_mbs)
                     if (tag_i[:3] == "MBS" and tag_j[:3] == "SBS") or (tag_i[:3] == "SBS" and tag_j[:3] == "MBS"):
                         self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_sbs_mbs)
-                    if self.__data.approach == Approach.ONE_HOP:
-                        if tag_i[:4] == "MBS0" and tag_j[:2] == "UE":
-                            self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_cloud_ue)
+                    # if self.__data.approach == Approach.ONE_HOP:
+                    #     if tag_i[:4] == "MBS0" and tag_j[:2] == "UE":
+                    #         self.__calc_rtt_by_load(tag_i, tag_j, self.__data.rtt_min_cloud_ue)
 
     def __calc_rtt_by_load(self, tag_i,tag_j,rtt_min):
         self.__data.rtt_edge_dict[tag_i, tag_j] = rtt_min * self.__calc_exponential_scale_rtt(self.__data.total_load_links[tag_i, tag_j])

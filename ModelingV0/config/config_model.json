@@ -1,24 +1,24 @@
 {
   "show_log": 0,
-  "show_results": true,
+  "show_results": false,
   "show_path": true,
   "show_var": false,
   "show_par": false,
   "show_reallocation": false,
   "plot_distribution": false,
 
-  "path_dataset": "..\\dataset\\instance\\teste.json",
+  "path_dataset": "..\\dataset\\instance\\instance_x_standard.json",
 
   "mobility": true,
-  "location_fixed": false,
-  "path_location": "..\\dataset\\location\\beta\\instance_10_beta.json",
+  "location_fixed": true,
+  "path_location": "..\\dataset\\location\\instance_x_standard.json",
 
-  "requests_fixed": false,
-  "path_requests": "..\\dataset\\request\\beta\\instance_10_beta.json",
+  "requests_fixed": true,
+  "path_requests": "..\\dataset\\request\\instance_x_standard.json",
 
-  "plot_graph": true,
-  "plot_graph_mobility": true,
-  "path_graph": "..\\output\\graph\\\\teste",
+  "plot_graph": false,
+  "plot_graph_mobility": false,
+  "path_graph": ".\\output\\graph\\teste",
 
   "save_data": true,
   "path_output": "..\\output\\data\\teste.xlsx",
@@ -26,20 +26,23 @@
   "path_time": "..\\output\\time_execution\\teste.dat",
 
   "enable_ceil_nodes_capacity": true,
-  "deallocate_request": false,
+  "deallocate_request": true,
   "max_events": 10,
 
-  "approach": "one_hop",
+  "approach": "network_aware",
   "type": "zipf",
-  "fixed": true,
-  "avg_qtd_bulk": 3,
-  "num_events": 2,
+  "fixed": false,
+  "avg_qtd_bulk": 5,
+  "num_events": 100,
   "num_alpha": 0.80,
+  "bandwidth_maximum": 0,
+
   "source": [
     "F3"
   ],
   "sink": [
-    "UE1"
+    "UE40"
   ]
 }
+
 

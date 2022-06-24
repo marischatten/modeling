@@ -3,10 +3,10 @@
     "alpha" :  0.5,
     "beta" :  0.1,
     "num_mbs" :  2,
-    "num_sbs_per_mbs" :  2,
+    "num_sbs_per_mbs" :  15,
 
-    "num_files" :  10,
-    "num_ue" :  10,
+    "num_files" : 100,
+    "num_ue" : 200,
 
     "requirements" :  [
         [2000, 48, 100],
@@ -14,8 +14,8 @@
         [8000, 48, 100]
     ],
 
-    "storage_node_max" :  20000,
-    "storage_node_min" :  4000,
+    "storage_node_max" :  40000,
+    "storage_node_min" :  8000,
     "radius_mbs" :  300,
     "radius_sbs" :  70,
     "rtt_min_cloud_mbs": 0.001,
@@ -25,6 +25,6 @@
 
     "rtt_min_cloud_ue": 0.01,
 
-    "approach": "bandwidth_max",
-    "path": "..\\dataset\\instance\\minor.json"
+    "approach": "network_aware",
+    "path": "..\\dataset\\instance\\storage\\standard_gamma32_storage_80.json"
 }

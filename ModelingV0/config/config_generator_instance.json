@@ -25,6 +25,6 @@
 
     "rtt_min_cloud_ue": 0.01,
 
-    "approach": "network_aware",
-    "path": "..\\dataset\\instance\\storage\\standard_gamma32_storage_80.json"
+    "approach": "one_hop",
+    "path": "..\\dataset\\instance\\storage\\standard_gamma32_storage_80_one_hop.json"
 }

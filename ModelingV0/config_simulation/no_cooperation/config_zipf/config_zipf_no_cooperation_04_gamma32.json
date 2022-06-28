@@ -21,9 +21,9 @@
   "path_graph": ".\\output\\graph\\instance_x_standard_zipf04",
 
   "save_data": true,
-  "path_output": "..\\output\\data\\zipf\\instance_x_standard_zipf04_one_hop.xlsx",
+  "path_output": "..\\output\\data\\zipf\\instance_x_standard_zipf04_no_cooperation.xlsx",
 
-  "path_time": "..\\output\\time_execution\\zipf\\instance_x_standard_zipf04_one_hop.dat",
+  "path_time": "..\\output\\time_execution\\zipf\\instance_x_standard_zipf04_no_cooperation.dat",
 
   "enable_ceil_nodes_capacity": true,
   "deallocate_request": true,

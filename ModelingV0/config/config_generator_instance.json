@@ -25,6 +25,8 @@
 
     "rtt_min_cloud_ue": 0.01,
 
+    "bandwidth_maximum": 0,
+
     "approach": "one_hop",
     "path": "..\\dataset\\instance\\storage\\standard_gamma32_storage_80_one_hop.json"
 }

@@ -92,6 +92,7 @@ fixed = False
 avg_qtd_bulk = 2
 num_events = 2
 num_alpha = 0.56
+bandwidth_maximum = 0
 
 # single.
 s_single = np.array(['F1'])
@@ -257,7 +258,7 @@ def make_data():
                 key_index_ue, e_bs_adj,
                 size_file,buffer_file,
                 throughput_min_file, resources_node, rtt_edge, radius_mbs, radius_sbs,
-                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue, rtt_min_cloud_ue, approach
+                gama, distance_ue, distance_bs, max_events, locations, rtt_min_cloud_mbs, rtt_min_mbs_mbs, rtt_min_sbs_mbs,  rtt_min_sbs_ue, rtt_min_cloud_ue, approach, bandwidth_maximum
                 )
 
 
@@ -276,11 +277,15 @@ def run_model(source, sink, event):
     od.model = gp.Model("Orchestrator")
 
     if approach == approach.NETWORK_AWARE:
-        key = od.run_model(show_log, enable_ceil_nodes_capacity)
+        key = od.run_model_network_aware(show_log, enable_ceil_nodes_capacity)
+    if approach == approach.NO_COOPERATION:
+        key = od.run_model_no_cooperation(show_log, enable_ceil_nodes_capacity)
     if approach == approach.ONE_HOP:
         key = od.run_model_one_hop(show_log, enable_ceil_nodes_capacity)
     if approach == approach.MULTI_HOP:
         key = od.run_model_multi_hop(show_log, enable_ceil_nodes_capacity)
+    if approach == approach.BANDWIDTH_MAX:
+        key = od.run_model_bandwidth_max(show_log, enable_ceil_nodes_capacity)
 
     end_time_5 = time.time()
     paths = None
@@ -401,14 +406,18 @@ def load_approach_enum(a):
     global approach
     if str(a).upper() == str('NETWORK_AWARE'):
         approach = approach.NETWORK_AWARE
+    if str(a).upper() == str('NO_COOPERATION'):
+        approach = approach.NO_COOPERATION
     if str(a).upper() == str('ONE_HOP'):
         approach = approach.ONE_HOP
     if str(a).upper() == str('MULTI_HOP'):
         approach = approach.MULTI_HOP
+    if str(a).upper() == str('BANDWIDTH_MAX'):
+        approach = approach.BANDWIDTH_MAX
 
 
 def load_config(config: object):
-    global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, mobility, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request
+    global show_log, show_results, show_path, show_var, show_par, plot_distribution, show_reallocation, mobility, path_dataset, save_data, path_output, plot_graph, plot_graph_mobility, path_graph, enable_ceil_nodes_capacity, path_time, requests_fixed, path_requests, fixed, avg_qtd_bulk, num_events, num_alpha, s_single, t_single, max_events, location_fixed, path_location, deallocate_request, bandwidth_maximum
     show_log = config["show_log"]
     show_results = config["show_results"]
     show_path = config["show_path"]
@@ -439,6 +448,8 @@ def load_config(config: object):
     num_events = config["num_events"]
     num_alpha = config["num_alpha"]
     max_events = config["max_events"]
+    bandwidth_maximum = config["bandwidth_maximum"]
+
     # single.
     s_single = config["source"]
     t_single = config["sink"]

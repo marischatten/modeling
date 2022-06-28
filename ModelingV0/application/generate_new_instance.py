@@ -11,7 +11,7 @@ NO_EDGE = 99999
 MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
 NUM_CLOUD = 1
-MAX_GAMA = 6 # WARNING
+MAX_GAMA = 32 # WARNING
 TO_GB = 1000
 TO_MB = 8
 mobility_rate = 0
@@ -140,7 +140,7 @@ def generate_distance_ue():
             distance_ue[u][i] = float(radius_mbs + 1)
 
 
-    if approach.ONE_HOP:
+    if approach.ONE_HOP or approach.NO_COOPERATION:
         for i in range(len(key_index_ue)):
             distance_ue[i][0] = 1
 
@@ -252,7 +252,7 @@ def generate_rtt_min():
                 if tag_i[:3] == 'MBS' and tag_j[:4] == 'MBS0':
                     rtt_min[i][j] = NO_EDGE
                     rtt_min[j][i] = rtt_min_cloud_mbs
-                if approach.ONE_HOP:
+                if approach.ONE_HOP or approach.NO_COOPERATION:
                     if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
                         rtt_min[i][j] = rtt_min_cloud_ue
                         rtt_min[j][i] = NO_EDGE
@@ -289,7 +289,7 @@ def generate_rtt():
                 if (tag_i[:1] == 'F' and tag_j[:3] == 'MBS') or (tag_i[:1] == 'F' and tag_j[:3] == 'SBS'):
                     if caching_to_bs(tag_i, tag_j):
                         rtt_edge[i][j] = 0
-                if approach.ONE_HOP:
+                if approach.ONE_HOP or approach.NO_COOPERATION:
                     if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
                         rtt_edge[i][j] = rtt_min[i][j]
                         rtt_edge[j][i] = rtt_min[j][i]
@@ -461,10 +461,15 @@ def load_approach_enum(a):
     global approach
     if str(a).upper() == str('NETWORK_AWARE'):
         approach = approach.NETWORK_AWARE
+    if str(a).upper() == str('NO_COOPERATION'):
+        approach = approach.NO_COOPERATION
     if str(a).upper() == str('ONE_HOP'):
         approach = approach.ONE_HOP
     if str(a).upper() == str('MULTI_HOP'):
         approach = approach.MULTI_HOP
+    if str(a).upper() == str('BANDWIDTH_MAX'):
+        approach = approach.BANDWIDTH_MAX
+
 
 if __name__ == "__main__":
     main()

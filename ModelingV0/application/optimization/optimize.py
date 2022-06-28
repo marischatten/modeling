@@ -37,11 +37,14 @@ class Type(Enum):
     SINGLE = 1
     ZIPF = 2
 
+
 # This class changes the models.
 class Approach (Enum):
     NETWORK_AWARE = 1
-    ONE_HOP = 2
-    MULTI_HOP = 3
+    NO_COOPERATION = 2
+    ONE_HOP = 3
+    MULTI_HOP = 4
+    BANDWIDTH_MAX = 5
 
 
 # This class manages and handles the data of an instance of the problem.
@@ -79,6 +82,7 @@ class Data:
     num_mbs = 0
     num_sbs = 0
 
+    bandwidth_maximum = 0
     # f \in F
     key_index_file = list()
     # i \in BS
@@ -173,7 +177,7 @@ class Data:
                  key_f=None, key_i=None, key_u=None,
                  e_bs_adj=None,
                  sf=None, bf=None, thp=None, rt_i=None, rtt_edge=None, radius_mbs=0, radius_sbs=0,
-                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0, rtt_min_cloud_ue=0, approach = Approach.NETWORK_AWARE):
+                 gama_file_node=None, dis_ue=None, dis_bs=None, max_event =None, location_ue=None, rtt_min_cloud_mbs=0, rtt_min_mbs_mbs=0, rtt_min_sbs_mbs=0,  rtt_min_sbs_ue=0, rtt_min_cloud_ue=0, approach = Approach.NETWORK_AWARE, bwd_max =0):
 
         self.approach = approach
         self.mobility = mobility
@@ -182,6 +186,7 @@ class Data:
         self.beta = beta
         self.num_bs = num_bs + NUM_CLOUD
         self.num_ue = num_ue
+
         if num_bs != 0 and num_ue != 0:
             self.num_nodes = num_bs + num_ue + NUM_CLOUD
         self.num_files = num_file
@@ -195,6 +200,8 @@ class Data:
             self.key_index_with_file = key_i + key_f
             self.key_index_with_ue = key_i + key_u
             self.key_index_all = key_i + key_u + key_f
+
+        bandwidth_maximum = bwd_max
 
         self.e_bs_adj = e_bs_adj
 
@@ -548,7 +555,7 @@ class HandleData:
                         if self.__is_caching(tag_i, tag_j) and (tag_f == tag_i):
                             self.__data.weight_network[f][i][j] = 0
 
-                    if self.__data.approach.ONE_HOP:
+                    if self.__data.approach.ONE_HOP or self.__data.approach.NO_COOPERATION:
                         if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
                             self.__data.weight_network[f][i][j] = 1
 
@@ -732,7 +739,7 @@ class OptimizeData:
         self.__data = data
         self.__data.__s = self.__data.insert_requests(sources, sinks)
 
-    def run_model(self, show_log, enable_ceil_nodes_capacity):
+    def run_model_network_aware(self, show_log, enable_ceil_nodes_capacity):
         # self.model.reset()
         self.__create_vars()
         self.__set_function_objective()
@@ -740,17 +747,32 @@ class OptimizeData:
         self.__execute(show_log)
         return self.__data.__s[-1]
 
+    def run_model_no_cooperation(self, show_log, enable_ceil_nodes_capacity):
+        self.__create_vars()
+        self.__set_function_objective_no_network_aware()
+        self.__create_constraints(enable_ceil_nodes_capacity, no_cooperation=True)
+        self.__execute(show_log)
+        return self.__data.__s[-1]
+
     def run_model_one_hop(self, show_log, enable_ceil_nodes_capacity):
         self.__create_vars()
-        self.__set_function_objective()
+        self.__set_function_objective_no_network_aware()
         self.__create_constraints(enable_ceil_nodes_capacity, one_hop=True)
         self.__execute(show_log)
         return self.__data.__s[-1]
 
     def run_model_multi_hop(self, show_log, enable_ceil_nodes_capacity):
         self.__create_vars()
-        self.__set_function_objective_multi_hop()
+        self.__set_function_objective_no_network_aware()
         self.__create_constraints(enable_ceil_nodes_capacity, multi_hop=True)
+        self.__execute(show_log)
+        return self.__data.__s[-1]
+
+    def run_model_bandwidth_max(self, show_log, enable_ceil_nodes_capacity):
+        # self.model.reset()
+        self.__create_vars()
+        self.__set_function_objective_no_network_aware()
+        self.__create_constraints(enable_ceil_nodes_capacity, bandwidth_max=True)
         self.__execute(show_log)
         return self.__data.__s[-1]
 
@@ -791,7 +813,7 @@ class OptimizeData:
                                     self.__data.requests)))
                                 , sense=gp.GRB.MINIMIZE)
 
-    def __set_function_objective_multi_hop(self):
+    def __set_function_objective_no_network_aware(self):
             self.model.setObjective(((gp.quicksum(
                 ((self.__data.resources_node_dict[i] -
                   self.__data.size_file_dict[req[SOURCE]]) *
@@ -814,11 +836,14 @@ class OptimizeData:
                                         self.__data.requests)))
                                     , sense=gp.GRB.MINIMIZE)
 
-    def __create_constraints(self, enable_ceil_nodes_capacity,one_hop = False, multi_hop = False):
+    def __create_constraints(self, enable_ceil_nodes_capacity, no_cooperation = False, one_hop = False, multi_hop = False, bandwidth_max= False):
 
         if one_hop:
-            # This constraint set y value.
+            # This constraint set limit to the hops.
             self.__set_constraint_one_hop()
+        if no_cooperation:
+            # This constraint set limit to the hops.
+            self.__set_constraint_no_cooperation()
 
         # This constraint set y value.
         self.__set_constraint_y_value()
@@ -845,6 +870,10 @@ class OptimizeData:
         # This constraint ensures the equilibrium of flow in the destiny(sink) nodes in the network.
         self.__set_constraint_flow_conservation_sink()
 
+        # This constraint ensures that the link had a limited bandwidth.
+        if bandwidth_max:
+            self.__set_constraint_bandwidth_max()
+
     # def __set_constraint_y_value(self):
     #     for req in self.__data.requests:
     #         for i in self.__data.key_index_bs:
@@ -857,10 +886,15 @@ class OptimizeData:
                 self.model.addConstr(self.y[req[KEY], i] <= (self.x[req[KEY], req[SOURCE], i]),'c1_0')
                 self.model.addConstr(self.y[req[KEY], i] >= (self.x[req[KEY], req[SOURCE], i]), 'c1_1')
 
+    def __set_constraint_no_cooperation(self):
+        for req in self.__data.requests:
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) >= 2, 'c1_4')
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) <= 2, 'c1_5')
+
     def __set_constraint_one_hop(self):
         for req in self.__data.requests:
-                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) >= 2, 'c1_0')
-                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) <= 2, 'c1_1')
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) >= 3, 'c1_2')
+                self.model.addConstr(gp.quicksum(self.x[req[KEY], i, j] * self.__data.req_dict[req[SINK], req[SOURCE]] for i in self.__data.key_index_all for j in self.__data.key_index_all ) <= 3, 'c1_3')
 
     def __set_constraints_fit(self):
         for req in self.__data.requests:
@@ -946,6 +980,14 @@ class OptimizeData:
                     for i in self.__data.key_index_bs
                 ))
                 , 'c7')
+
+    def __set_constraint_bandwidth_max(self):
+        for i in self.__data.key_index_bs:
+            for j in self.__data.key_index_bs:
+                self.model.addConstr(
+                    gp.quicksum(self.__data.throughput_current_edge_dict[k, i, j] * self.x[k, i, j] for k in self.__data.key_index_file)
+                <= self.__data.bandwidth_maximum
+                )
 
     def __execute(self, log):
         self.model.setParam("LogToConsole", log)

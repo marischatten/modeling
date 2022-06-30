@@ -29,7 +29,7 @@
   "deallocate_request": true,
   "max_events": 10,
 
-  "approach": "multi_hop",
+  "approach": "one_hop",
   "type": "zipf",
   "fixed": false,
   "avg_qtd_bulk": 2,

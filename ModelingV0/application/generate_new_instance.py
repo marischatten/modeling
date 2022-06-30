@@ -11,7 +11,7 @@ NO_EDGE = 99999
 MAX_COVERAGE_PER_UE = 2
 MAX_USE_NODE = 0.5
 NUM_CLOUD = 1
-MAX_GAMA = 32 # WARNING
+MAX_GAMA = 6 # WARNING
 TO_GB = 1000
 TO_MB = 8
 mobility_rate = 0
@@ -194,7 +194,7 @@ def generate_resources_node():
             resources_node[i] = storage_node_min
 
     resources_node[0] = sum(size_file)
-    print("SOMARIO DA CAPACIDADE.", sum(resources_node[1:]))
+    print("SOMATÓRIO DA CAPACIDADE.", sum(resources_node[1:]))
     print("CAPACIDADE DA BS. MB.")
     for i in range(num_bs + NUM_CLOUD):
         print(round(resources_node[i],0), end=" ")

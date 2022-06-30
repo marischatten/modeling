@@ -35,6 +35,9 @@
   "avg_qtd_bulk": 5,
   "num_events": 100,
   "num_alpha": 0.80,
+
+  "bandwidth_maximum": 0,
+  
   "source": [
     "F3"
   ],

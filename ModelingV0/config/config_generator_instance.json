@@ -3,10 +3,10 @@
     "alpha" :  0.5,
     "beta" :  0.1,
     "num_mbs" :  2,
-    "num_sbs_per_mbs" :  15,
+    "num_sbs_per_mbs" :  2,
 
-    "num_files" : 100,
-    "num_ue" : 200,
+    "num_files" : 10,
+    "num_ue" : 50,
 
     "requirements" :  [
         [2000, 48, 100],
@@ -27,6 +27,6 @@
 
     "bandwidth_maximum": 0,
 
-    "approach": "one_hop",
-    "path": "..\\dataset\\instance\\storage\\standard_gamma32_storage_80_one_hop.json"
+    "approach": "multi_hop",
+    "path": "..\\dataset\\instance\\teste.json"
 }

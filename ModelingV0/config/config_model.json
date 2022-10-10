@@ -1,52 +1,48 @@
 {
   "show_log": 0,
   "show_results": false,
-  "show_path": true,
+  "show_path": false,
   "show_var": false,
   "show_par": false,
   "show_reallocation": false,
   "plot_distribution": false,
 
-
-  "path_dataset": "..\\dataset\\instance\\teste.json",
+  "path_dataset": "..\\dataset\\instance\\default.json",
 
   "mobility": true,
-  "location_fixed": false,
-  "path_location": "..\\dataset\\location\\teste.json",
+  "location_fixed": true,
+  "path_location": "..\\dataset\\location\\default.json",
 
-  "requests_fixed": false,
-  "path_requests": "..\\dataset\\request\\teste.json",
+  "requests_fixed": true,
+  "path_requests": "..\\dataset\\request\\default.json",
 
-  "plot_graph": true,
+  "plot_graph": false,
   "plot_graph_mobility": false,
-
-
-  "path_graph": "..\\output\\graph\\teste",
+  "path_graph": ".\\output\\graph\\default_network_aware",
 
   "save_data": true,
+  "path_output": "..\\..\\dataAnalysis\\data\\network_aware\\storage\\default_network_aware.xlsx",
 
-  "path_output": "..\\output\\data\\teste.xlsx",
-
-  "path_time": "..\\output\\time_execution\\teste.dat",
+  "path_time": "..\\output\\time_execution\\storage\\default_network_aware.dat",
 
   "enable_ceil_nodes_capacity": true,
   "deallocate_request": true,
-  "max_events": 1,
+  "max_events": 10,
 
   "approach": "network_aware",
-
-  "type": "single",
-  "fixed": true,
-  "avg_qtd_bulk": 2,
-  "num_events": 5,
+  "type": "zipf",
+  "fixed": false,
+  "avg_qtd_bulk": 5,
+  "num_events": 100,
   "num_alpha": 0.80,
-  "bandwidth_maximum": 0,
+
+   "bandwidth_maximum": 0,
 
   "source": [
     "F3"
   ],
   "sink": [
-    "UE1"
+    "UE40"
   ]
 }
 

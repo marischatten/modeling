@@ -1,0 +1,381 @@
+---
+title: "Request"
+author: "Marisangila Alves"
+date: "7/7/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(ggpubr)
+library(cowplot)
+library(TTR)
+library(outliers)
+library(stringr)
+
+source("../source/utils.r")
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+delay_one_hop =  data.frame(read_excel("data/request/request3.xlsx", sheet='Delay', col_names=TRUE))
+delay_multi_hop = data.frame(read_excel("data/request/request3.xlsx", sheet='Delay', col_names=TRUE))
+delay_network_aware = data.frame(read_excel("data/request/request5_standard.xlsx", sheet='Delay', col_names=TRUE))
+
+cache_hit_one_hop =  data.frame(read_excel("data/request/request3.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+cache_hit_multi_hop = data.frame(read_excel("data/request/request3.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+cache_hit_network_aware = data.frame(read_excel("data/request/request5_standard.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+
+storage_one_hop =  data.frame(read_excel("data/request/request3.xlsx", sheet='Server_Use', col_names=TRUE))
+storage_multi_hop = data.frame(read_excel("data/request/request3.xlsx", sheet='Server_Use', col_names=TRUE))
+storage_network_aware = data.frame(read_excel("data/request/request5_standard.xlsx", sheet='Server_Use', col_names=TRUE))
+
+poisson_one_hop= data.frame(read_excel("data/request/request3.xlsx", sheet='Poisson', col_names=TRUE))
+poisson_multi_hop= data.frame(read_excel("data/request/request3.xlsx", sheet='Poisson', col_names=TRUE))
+poisson_network_aware= data.frame(read_excel("data/request/request5_standard.xlsx", sheet='Poisson', col_names=TRUE))
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+save = FALSE
+save_pt = TRUE
+
+#count hops without content: n-2 
+HOPS <- 2
+BUFFER <- 48 
+
+NUM_SBS_BY_MBS = 15
+NUM_MBS = 2
+
+zipf = 0.8
+lambda <- 5
+n <- 100
+beta <- 0.2
+mobility <- 10
+storage <- c(0.4)
+
+# bs <- unique(server_use04$BS)
+
+
+qos <- c(100)
+#second to millisecond
+delay_one_hop$Delay <- delay_one_hop$Delay * 1000
+delay_multi_hop$Delay <- delay_multi_hop$Delay * 1000
+delay_network_aware$Delay <- delay_network_aware$Delay * 1000
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r 32`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS: 20GB - SBS: 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) / SBS/UE 0.001s(1ms) / CLOUD/UE 0.01 (10ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+     `r qos` Mbps |      2GB/2000MB             |  48Mb  |
+     `r qos` Mbps |      4GB/4000MB             |  48Mb  |
+     `r qos` Mbps |      8GB/8000MB             |  48Mb  |
+
+
+
+<!-- ### Distribuição das Requisições. -->
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+old.par <- par(mfrow=c(1, 3))
+hist(poisson_one_hop$Qtd_Requests, freq=F, col=c("#CCE5FF"))
+lines(density(poisson_one_hop$Qtd_Requests))
+
+hist(poisson_multi_hop$Qtd_Requests, freq=F, col=c("#CCE5FF"))
+lines(density(poisson_multi_hop$Qtd_Requests))
+
+hist(poisson_network_aware$Qtd_Requests, freq=F, col=c("#CCE5FF"))
+lines(density(poisson_network_aware$Qtd_Requests))
+par(old.par)
+```
+
+### Distribuição.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+type_model <- rep("Único Salto",length(delay_one_hop$Delay))
+d_one_hop <- data.frame(delay = c(delay_one_hop$Delay),
+                   type = type_model,
+                   stringsAsFactors = FALSE)
+
+type_model <- rep("Multissaltos",length(delay_multi_hop$Delay))
+d_multi_hop <- data.frame(delay = c(delay_multi_hop$Delay),
+                   type = type_model,
+                   stringsAsFactors = FALSE)
+type_model <- rep("Orientado à Rede",length(delay_network_aware$Delay))
+d_network_aware <- data.frame(delay = c(delay_network_aware$Delay),
+                   type = type_model,
+                   stringsAsFactors = FALSE)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+df_dist <- rbind(d_one_hop,d_multi_hop,d_network_aware)
+```
+
+### Distribuição.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  y.lab <- "Latência"
+  leg <- "Modelo"
+}else{
+  y.lab <- "Latency"
+  leg <- "Model"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+g_delay_distribution<- ggplot(df_dist,aes(x=type, y=delay, group=type, color=type,fill=type)) +
+  geom_boxplot(alpha=0.8,color="Black") + 
+  theme_bw()+
+  #scale_x_continuous(breaks=c(20,40,60), labels=c("20%","40%","80%"))+ #WARNING
+  theme(legend.position = "none",
+  #       #legend.direction = "vertical",
+  #       #legend.box = "horizontal",
+  #       #legend.justification = c("right", "top"),
+  #       #legend.box.background = element_rect(color="black", size=1),
+  #       #legend.box.just = "right",
+  #       #legend.margin = margin(4, 4, 4, 2),
+  #       legend.title = element_blank(),
+  #       legend.text = element_text(size = 18),
+         axis.text=element_text(size=16),
+         axis.title=element_text(size=16)
+  ) +
+  ylab(y.lab) + 
+  xlab(element_blank()) 
+ # ylim(c(0,25))
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g_delay_distribution)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(g_delay_distribution,filename = "graph/latency/pt/latency_boxplot.png", dpi = 600)
+}else{
+  ggsave(g_delay_distribution,filename = "graph/latency/en/latency_boxplot.png", dpi = 600)
+}
+```
+
+
+
+### Cache Hit
+```{r echo=TRUE, results=TRUE, warning=FALSE}
+type_cache <- rep("Único Salto",100)
+d_one_hop <- data.frame(event=c(cache_hit_one_hop$Event),
+                    func =  cache_hit_one_hop$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cache <- rep("Multissaltos",100)
+d_multi_hop<- data.frame(event=c(cache_hit_multi_hop$Event),
+                    func =  cache_hit_multi_hop$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cache <- rep("Orientado à Rede",100)
+d_network_aware <- data.frame(event=c(cache_hit_network_aware$Event),
+                    func =  cache_hit_network_aware$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+
+df_cache_hit <- bind_rows(d_one_hop,d_multi_hop,d_network_aware)
+
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Cache Hit"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Cache Hit"
+}
+
+g_cache_hit <- ggplot(df_cache_hit) + 
+  geom_line(position="identity", stat="identity", size=1,aes( y=func, x=event, fill=type, group=type, color=type))+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+if (save_pt){
+  ggsave(g_cache_hit,filename = "graph/latency/pt/cache_hit.png", dpi = 600)
+}else{
+  ggsave(g_cache_hit,filename = "graph/latency/en/cache_hit.png", dpi = 600)
+}
+print(g_cache_hit)
+```
+
+```{r echo=TRUE, results=TRUE, warning=FALSE}
+print("Médias e Desvios.")
+print("One Hop.")
+mean(cache_hit_one_hop$Cache)
+sd(cache_hit_one_hop$Cache)
+print("Multi Hop.")
+mean(cache_hit_multi_hop$Cache)
+sd(cache_hit_multi_hop$Cache)
+print("Network Aware.")
+mean(cache_hit_network_aware$Cache)
+sd(cache_hit_network_aware$Cache)
+```
+
+### Uso Total do Armazenamento.
+```{r echo=TRUE, results=TRUE, warning=FALSE}
+storage_one_hop_ran <- storage_one_hop %>% filter(storage_one_hop$BS != 'MBS0')
+storage_multi_hop_ran <- storage_multi_hop %>% filter(storage_multi_hop$BS != 'MBS0')
+storage_network_aware_ran <- storage_network_aware %>% filter(storage_network_aware$BS != 'MBS0')
+
+ratio_storage_one_hop <- NULL
+ratio_storage_multi_hop <- NULL
+ratio_storage_network_aware <- NULL
+
+for (i in 1:n){
+  storage_one_hop_n <- storage_one_hop_ran %>% filter(storage_one_hop_ran$Event == i)
+  sum_total_storage_one_hop_n <- sum(storage_one_hop_n$Total_Storage)
+  sum_use_storage_one_hop_n <- sum(storage_one_hop_n$Total_Use)
+  ratio_storage_one_hop_n <- (sum_use_storage_one_hop_n / sum_total_storage_one_hop_n)
+  
+  ratio_storage_one_hop <- append(ratio_storage_one_hop,ratio_storage_one_hop_n)
+  
+  sum_total_storage_one_hop_n <- NULL
+  sum_use_storage_one_hop_n <- NULL
+  ratio_storage_one_hop_n <- NULL
+}
+for (i in 1:n){
+  storage_multi_hop_n <- storage_multi_hop_ran %>% filter(storage_multi_hop_ran$Event == i)
+  sum_total_storage_multi_hop_n <- sum(storage_multi_hop_n$Total_Storage)
+  sum_use_storage_multi_hop_n <- sum(storage_multi_hop_n$Total_Use)
+  ratio_storage_multi_hop_n <- (sum_use_storage_multi_hop_n / sum_total_storage_multi_hop_n)
+  
+  ratio_storage_multi_hop <- append(ratio_storage_multi_hop,ratio_storage_multi_hop_n)
+  
+  sum_total_storage_multi_hop_n <- NULL
+  sum_use_storage_multi_hop_n <- NULL
+  ratio_storage_multi_hop_n <- NULL
+}
+
+for (i in 1:n){
+  storage_network_aware_n <- storage_network_aware_ran %>% filter(storage_network_aware_ran$Event == i)
+  sum_total_storage_network_aware_n <- sum(storage_network_aware_n$Total_Storage)
+  sum_use_storage_network_aware_n <- sum(storage_network_aware_n$Total_Use)
+  ratio_storage_network_aware_n <- (sum_use_storage_network_aware_n / sum_total_storage_network_aware_n)
+  
+  ratio_storage_network_aware <- append(ratio_storage_network_aware,ratio_storage_network_aware_n)
+  
+  sum_total_storage_network_aware_n <- NULL
+  sum_use_storage_network_aware_n <- NULL
+  ratio_storage_network_aware_n <- NULL
+}
+
+
+type_cache <- rep("Único Salto",100)
+s_one_hop <- data.frame(event=c(cache_hit_one_hop$Event),
+                    func =  ratio_storage_one_hop,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cache <- rep("Multissaltos",100)
+s_multi_hop<- data.frame(event=c(cache_hit_multi_hop$Event),
+                    func =  ratio_storage_multi_hop,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cache <- rep("Orientado à Rede",100)
+s_network_aware <- data.frame(event=c(cache_hit_network_aware$Event),
+                    func =  ratio_storage_network_aware,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+
+df_storage <- bind_rows(s_one_hop,s_multi_hop,s_network_aware)
+
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Uso do Armazenamento"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Stroage Load"
+}
+
+g_storage <- ggplot(df_storage) + 
+  geom_line(position="identity", stat="identity", size=1,aes( y=func, x=event, fill=type, group=type, color=type))+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)+ylim(c(0,1))
+if (save_pt){
+  ggsave(g_storage,filename = "graph/latency/pt/storage.png", dpi = 600)
+}else{
+  ggsave(g_storage,filename = "graph/latency/en/storage.png", dpi = 600)
+}
+print(g_storage)
+
+print("Médias e Desvios.")
+print("One Hop.")
+mean(ratio_storage_one_hop)
+sd(ratio_storage_one_hop)
+print("Multi Hop.")
+mean(ratio_storage_multi_hop)
+sd(ratio_storage_multi_hop)
+print("Network Aware.")
+mean(ratio_storage_network_aware)
+sd(ratio_storage_network_aware)
+```
+
+
+### Histogramas.
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+par(
+  mfrow=c(1,3),
+  mar=c(4,4,1,0)
+)
+h <- hist(delay_one_hop$Delay, breaks=10, plot=FALSE)
+h
+plot(h,freq=FALSE, main="Único Salto", ylab = "Proporção", xlab="Latência (ms)", col="#f9918a", xlim=c(0,10), ylim=c(0,1))
+h <- hist(delay_multi_hop$Delay, breaks=10, plot=FALSE)
+h
+plot(h,freq=FALSE, main="Multissaltos", ylab = "Proporção", xlab="Latência (ms)", col="#33c860", xlim=c(0,10), ylim=c(0,1))
+h <- hist(delay_network_aware$Delay, breaks=10, plot=FALSE)
+plot(h,freq=FALSE, main="Orientado à Rede", ylab = "Proporção", xlab="Latência (ms)", col="#81b0ff", xlim=c(0,10), ylim=c(0,1))
+h
+
+
+# ggplot(df_dist) + 
+#   geom_histogram(aes(x=type, y=delay, group=type, color=type,fill=type),
+#                  binwidth=.01 )+
+#   facet_wrap(~type,ncol=3,nrow = 1)
+```
+
+

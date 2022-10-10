@@ -1,0 +1,376 @@
+---
+title: "ZIPF - Latency: Network Aware, Multi Hop e One Hop"
+author: "Marisangila Alves"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+html_document: default
+pdf_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(viridis)
+library(hrbrthemes)
+library(ggpubr)
+library(cowplot)
+library(outliers)
+library(stringr)
+
+source("../source/utils.r")
+source("../source/latency.r")
+```
+
+```{r echo=FALSE, message=FALSE}
+delay04_na = load_data("../dataAnalysis/with_baselines/data/network_aware/zipf/instance_x_standard_zipf04", delay=TRUE)
+delay08_na = load_data("../dataAnalysis/with_baselines/data/network_aware/zipf/instance_x_standard_zipf08", delay=TRUE)
+delay12_na = load_data("../dataAnalysis/with_baselines/data/network_aware/zipf/instance_x_standard_zipf12", delay=TRUE)
+
+delay04_mh = load_data("../dataAnalysis/with_baselines/data/multi_hop/zipf/instance_x_standard_zipf04", delay=TRUE)
+delay08_mh = load_data("../dataAnalysis/with_baselines/data/multi_hop/zipf/instance_x_standard_zipf08", delay=TRUE)
+delay12_mh = load_data("../dataAnalysis/with_baselines/data/multi_hop/zipf/instance_x_standard_zipf12", delay=TRUE)
+
+delay04_oh = load_data("../dataAnalysis/with_baselines/data/one_hop/zipf/instance_x_standard_zipf04", delay=TRUE)
+delay08_oh = load_data("../dataAnalysis/with_baselines/data/one_hop/zipf/instance_x_standard_zipf08", delay=TRUE)
+delay12_oh = load_data("../dataAnalysis/with_baselines/data/one_hop/zipf/instance_x_standard_zipf12", delay=TRUE)
+
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+save = TRUE
+save_pt = FALSE
+
+#count hops without content: n-2 
+HOPS <- 2
+BUFFER <- 48 
+
+NUM_SBS_BY_MBS = 15
+NUM_MBS = 2
+
+zipf = c(0.4,0.6,0.8,1.0,1.2)
+lambda <- 5
+n <- 100
+beta <- 0.2
+mobility <- 10
+storage <- c(0.2,0.4,0.6,0.8)
+
+# bs <- unique(server_use04$BS)
+
+qos <- c(100)
+
+#second to millisecond
+delay04_na$Delay <- delay04_na$Delay * 1000
+delay08_na$Delay <- delay08_na$Delay * 1000
+delay12_na$Delay <- delay12_na$Delay * 1000
+
+delay04_mh$Delay <- delay04_mh$Delay * 1000
+delay08_mh$Delay <- delay08_mh$Delay * 1000
+delay12_mh$Delay <- delay12_mh$Delay * 1000
+
+delay04_oh$Delay <- delay04_oh$Delay * 1000
+delay08_oh$Delay <- delay08_oh$Delay * 1000
+delay12_oh$Delay <- delay12_oh$Delay * 1000
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    BS                    | `r length(bs)-1`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS 20GB SBS 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) SBS/UE 0.001s(1ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+    Gama                  | max 6 hosts
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+    100 Mbps    |      2GB/2000MB             |  48Mb  |
+    100 Mbps    |      4GB/4000MB             |  48Mb  |
+    100 Mbps    |      8GB/8000MB             |  48Mb  |
+
+
+### Distribuição de popularidade do conteúdo solicitado.
+
+```{r echo=FALSE, message=FALSE, results=TRUE, warning=FALSE}
+# zipf04 <- count(zipf04, "Caches")
+# zipf4 <- zipf04[order(zipf04$freq,decreasing = TRUE),]
+# zipf06 <- count(zipf06, "Caches")
+# zipf06 <- zipf06[order(zipf06$freq,decreasing = TRUE),]
+# zipf08 <- count(zipf08, "Caches")
+# zipf08 <- zipf08[order(zipf08$freq,decreasing = TRUE),]
+# zipf1 <- count(zipf1, "Caches")
+# zipf1 <- zipf1[order(zipf1$freq,decreasing = TRUE),]
+# zipf12 <- count(zipf12, "Caches")
+# zipf12 <- zipf12[order(zipf12$freq,decreasing = TRUE),]
+# old.par <- par(mfrow=c(3, 2))
+# hist(zipf04$freq,breaks = "FD" ,freq=F,col=c("#CCE5FF"))
+# hist(zipf06$freq,breaks = "FD" ,freq=F,col=c("#36393D"))
+# hist(zipf08$freq,breaks = "FD" ,freq=F,col=c("#003366"))
+# hist(zipf1$freq,breaks = "FD" ,freq=F,col=c("#B20000"))
+# hist(zipf12$freq,breaks = "FD" ,freq=F,col=c("#647687"))
+# par(old.par)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# acceptance_requests04 <- round(rate_admission04$Rate_Admission,4) * 100
+# acceptance_requests06 <- round(rate_admission06$Rate_Admission,4) * 100
+# acceptance_requests08 <- round(rate_admission08$Rate_Admission,4) * 100
+# acceptance_requests1 <- round(rate_admission1$Rate_Admission,4) * 100
+# acceptance_requests12 <- round(rate_admission12$Rate_Admission,4) * 100
+```
+
+<!-- ### Distribuição da Latência -->
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# type_zipf <- rep("\U03B1:0.4",length(delay04$Delay))
+# d_04 <- data.frame(delay = c(delay04$Delay),
+#                    type = type_zipf,
+#                    stringsAsFactors = FALSE)
+# type_zipf <- rep("\U03B1:0.6",length(delay06$Delay))
+# d_06 <- data.frame(delay = c(delay06$Delay),
+#                    type = type_zipf,
+#                    stringsAsFactors = FALSE)
+# type_zipf <- rep("\U03B1:0.8",length(delay08$Delay))
+# d_08 <- data.frame(delay = c(delay08$Delay),
+#                    type = type_zipf,
+#                    stringsAsFactors = FALSE)
+# type_zipf <- rep("\U03B1:1.0",length(delay1$Delay))
+# d_1 <- data.frame(delay = c(delay1$Delay),
+#                   type = type_zipf,
+#                   stringsAsFactors = FALSE)
+# 
+# type_zipf <- rep("\U03B1:1.2",length(delay12$Delay))
+# d_12 <- data.frame(delay = c(delay12$Delay),
+#                    type = type_zipf,
+#                    stringsAsFactors = FALSE)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# df <- rbind(d_04,d_06,d_08,d_1,d_12)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# if (save_pt){
+#   x.lab <- "Latência Total da Rede"
+#   y.lab <- "Frequência"
+#   leg <- "Zipf"
+# }else{
+#   x.lab <- "Total Network Delay"
+#   y.lab <- "Frequency"
+#   leg <- "Zipf"
+# }
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# ecdf <- ggplot(df,aes(x=delay, colour = type)) + stat_ecdf(geom = "point")+
+#   labs(colour = leg)+
+#   theme_classic()+  
+#   theme(legend.position = "right",
+#         #legend.justification = c("right", "top"),
+#         #legend.box.background = element_rect(color=NA),
+#         #legend.box.just = "right",
+#         legend.key = element_rect(colour = NA, fill = NA),
+#         #legend.margin = margin(6, 6, 6, 6),
+#         legend.title = element_text(face = "bold", size = 10,),
+#         legend.text = element_text(size = 10))+ 
+#   xlab(x.lab)+
+#   ylab(y.lab)+
+#   geom_vline(xintercept = 4,linetype = "dotted")+
+#   geom_vline(xintercept = 10,linetype = "longdash")
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# if (save_pt){
+#   ggsave(ecdf,filename = "graph/pt/zipf/zipf_delay.pdf", dpi = 600)
+#   ggsave(ecdf,filename = "graph/pt/zipf/zipf_delay.png", dpi = 600)
+# }else{
+#   ggsave(ecdf,filename = "graph/zipf/zipf_delay.pdf", dpi = 600)
+#   ggsave(ecdf,filename = "graph/zipf/zipf_delay.png", dpi = 600)
+# }
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# print(ecdf)
+```
+
+```{r  echo=FALSE, results=FALSE, warning=FALSE}
+# minor4_04 <- round(sum(delay04$Delay < 4)/length(delay04$Delay),4)
+# minor10_04 <- round(sum(delay04$Delay < 10)/length(delay04$Delay),4)
+# 
+# minor4_06 <- round(sum(delay06$Delay < 4)/length(delay06$Delay),4)
+# minor10_06 <- round(sum(delay06$Delay < 10)/length(delay06$Delay),4)
+# 
+# minor4_08 <- round(sum(delay08$Delay < 4)/length(delay08$Delay),4)
+# minor10_08 <- round(sum(delay08$Delay < 10)/length(delay08$Delay),4)
+# 
+# minor4_1 <- round(sum(delay06$Delay < 4)/length(delay1$Delay),4)
+# minor10_1 <- round(sum(delay06$Delay < 10)/length(delay1$Delay),4)
+# 
+# minor4_12 <- round(sum(delay12$Delay < 4)/length(delay12$Delay),4)
+# minor10_12 <- round(sum(delay12$Delay < 10)/length(delay12$Delay),4)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Create dataframe
+d_04_na <- create_dataframe_latency(delay_04_na)
+d_08_na <- create_dataframe_latency(delay_08_na)
+d_12_na <- create_dataframe_latency(delay_12_na)
+
+d_04_mh <- create_dataframe_latency(delay_04_mh)
+d_08_mh <- create_dataframe_latency(delay_08_mh)
+d_12_mh <- create_dataframe_latency(delay_12_mh)
+
+d_04_oh <- create_dataframe_latency(delay_04_oh)
+d_08_oh <- create_dataframe_latency(delay_08_oh)
+d_12_oh <- create_dataframe_latency(delay_12_oh)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Join dataframe
+df_delay_na <- rbind(d_04_na,d_08_na,d_12_na)
+df_delay_mh <- rbind(d_04_mh,d_08_mh,d_12_mh)
+df_delay_oh <- rbind(d_04_oh,d_08_oh,d_12_oh)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Create graoh
+g_delay_na <- plot_graph_latency(save_pt,save,df_delay_na)
+g_delay_mh <- plot_graph_latency(save_pt,save,df_delay_mh)
+g_delay_oh <- plot_graph_latency(save_pt,save,df_delay_oh)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g_delay_na)
+print(g_delay_mh)
+print(g_delay_oh)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+save_graph(save_pt,save)
+```
+
+### Correlação entre proporções e variação de $\alpha$
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# colnames(df_04) <-  c("Zipf")
+# df_04$Zipf <- rep(0.4,300)
+# 
+# # colnames(df_06) <-  c("Zipf")
+# # df_06$Zipf <- rep(0.6,300)
+# 
+# colnames(df_08) <-  c("Zipf")
+# df_08$Zipf <- rep(0.8,300)
+# 
+# # colnames(df_1) <-  c("Zipf")
+# # df_1$Zipf <- rep(1.0,300)
+# 
+# colnames(df_12) <-  c("Zipf")
+# df_12$Zipf <- rep(1.2,300)
+# 
+# #df_cor_zipf <- rbind(df_04,df_06,df_08,df_1,df_12)
+# df_cor_zipf <- rbind(df_04,df_08,df_12)
+# colnames(df_cor_zipf) <-  c("Zipf","Value","Type")
+# 
+# 
+# df_cor_zipf_server_load <- df_cor_zipf %>% filter(df_cor_zipf$Type == "Storage Load") 
+# df_cor_zipf_cache_hit <- df_cor_zipf %>% filter(df_cor_zipf$Type == "Cache Hit") 
+# df_cor_zipf_cache_miss <- df_cor_zipf %>% filter(df_cor_zipf$Type == "Cache Miss") 
+# 
+# print("Storage Load")
+# cor(df_cor_zipf_server_load$Zipf,df_cor_zipf_server_load$Value, method = "pearson")
+# print("Cache Hit")
+# cor(df_cor_zipf_cache_hit$Zipf,df_cor_zipf_cache_hit$Value, method = "pearson")
+# print("Cache Miss")
+# cor(df_cor_zipf_cache_miss$Zipf,df_cor_zipf_cache_miss$Value, method = "pearson")
+```
+
+### Correlação entre a latência e variação de $\alpha$
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# cor(df_delay$delay,df_delay$type, method = "pearson")
+```
+
+
+### Médias
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# summary(delay04$Delay)
+# quantile(delay04$Delay)
+# quantile(delay04$Delay,probs = 0.95)
+
+# delay04$Delay
+# boxplot(delay04$Delay)
+# hist(delay04$Delay)
+# plot(delay04$Delay)
+# outlier(delay04$Delay)
+
+
+
+# summary(delay06$Delay)
+# quantile(delay06$Delay)
+# quantile(delay06$Delay,probs = 0.95)
+
+
+# delay06$Delay
+# boxplot(delay06$Delay)
+# hist(delay06$Delay)
+# plot(delay06$Delay)
+# outlier(delay06$Delay)
+
+
+
+
+# summary(delay08$Delay)
+# quantile(delay08$Delay)
+# quantile(delay08$Delay,probs = 0.95)
+
+
+# delay08$Delay
+# boxplot(delay08$Delay)
+# hist(delay08$Delay)
+# plot(delay08$Delay)
+# outlier(delay08$Delay)
+
+
+
+# summary(delay1$Delay)
+# quantile(delay1$Delay)
+# quantile(delay1$Delay,probs = 0.95)
+
+
+# delay1$Delay
+# boxplot(delay1$Delay)
+# hist(delay1$Delay)
+# plot(delay1$Delay)
+# outlier(delay1$Delay)
+
+
+
+# summary(delay12$Delay)
+# quantile(delay12$Delay)
+# quantile(delay12$Delay,probs = 0.95)
+
+# delay12$Delay
+# boxplot(delay12$Delay)
+# hist(delay12$Delay)
+# plot(delay12$Delay)
+# outlier(delay12$Delay)
+
+# var(delay04$Delay)
+# var(delay06$Delay)
+# var(delay08$Delay)
+# var(delay1$Delay)
+# var(delay12$Delay)
+
+```

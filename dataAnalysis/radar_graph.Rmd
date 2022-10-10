@@ -1,0 +1,91 @@
+---
+title: "Radar Graph"
+author: "Marisangila Alves"
+date: "10/26/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(ggpubr)
+library(cowplot)
+library(TTR)
+library(outliers)
+library(stringr)
+
+source("../source/utils.r")
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+
+
+delay_one_hop = delay02 = data.frame(read_excel("data/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Delay', col_names=TRUE))
+delay_multi_hop = data.frame(read_excel("data/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Delay', col_names=TRUE))
+delay_network_aware = data.frame(read_excel("data/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Delay', col_names=TRUE))
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+save = FALSE
+save_pt = TRUE
+
+#count hops without content: n-2 
+HOPS <- 2
+BUFFER <- 48 
+
+NUM_SBS_BY_MBS = 15
+NUM_MBS = 2
+
+zipf = 0.8
+lambda <- 5
+n <- 100
+beta <- 0.2
+mobility <- 10
+storage <- c(0.4)
+
+# bs <- unique(server_use04$BS)
+
+
+qos <- c(100)
+#second to millisecond
+delay_one_hop$Delay <- delay_one_hop$Delay * 1000
+delay_multi_hop$Delay <- delay_multi_hop$Delay * 1000
+delay_network_aware$Delay <- delay_network_aware$Delay * 1000
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r 32`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS: 20GB - SBS: 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) / SBS/UE 0.001s(1ms) / CLOUD/UE 0.01 (10ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+     `r qos` Mbps |      2GB/2000MB             |  48Mb  |
+     `r qos` Mbps |      4GB/4000MB             |  48Mb  |
+     `r qos` Mbps |      8GB/8000MB             |  48Mb  |
+
+
+```{r config, echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+
+```
+

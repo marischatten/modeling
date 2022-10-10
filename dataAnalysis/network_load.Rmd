@@ -1,0 +1,1429 @@
+---
+title: "network_load"
+author: "Marisangila Alves"
+date: "7/9/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(ggpubr)
+library(cowplot)
+library(TTR)
+library(outliers)
+library(stringr)
+
+source("../source/utils.r")
+source("../source/library_network_load.r")
+source("../source/hops.r")
+
+fit_sd <- function(thp_cur)
+{
+for (i in 1:n){
+  if(thp_cur[[1]][i] == 0 || thp_cur[[1]][i] < 0  || is.na(thp_cur[[1]][i]) )
+  {
+    thp_cur[[2]][i] = 0
+    thp_cur[[2]][i] = 0
+    thp_cur[[3]][i] = 0
+  }
+  if (is.na(thp_cur[[2]][i]) || is.na(thp_cur[[3]][i])){
+    thp_cur[[2]][i] = 0
+    thp_cur[[3]][i] = 0
+  }
+  if( thp_cur[[2]][i] < 0 || thp_cur[[3]][i] < 0){
+    thp_cur[[2]][i] = 0
+    thp_cur[[3]][i] = 0
+  }
+}
+  return(thp_cur)
+}
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+delay_one_hop =  data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Delay', col_names=TRUE))
+delay_multi_hop = data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='Delay', col_names=TRUE))
+delay_network_aware = data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Delay', col_names=TRUE))
+
+poisson_one_hop = data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Poisson', col_names=TRUE))
+poisson_multi_hop = data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='Poisson', col_names=TRUE))
+poisson_netwok_aware = data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Poisson', col_names=TRUE))
+
+paths_one_hop <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Requests', col_names=TRUE))
+paths_multi_hop <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='Requests', col_names=TRUE))
+paths_network_aware <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Requests', col_names=TRUE))
+
+rtt_one_hop <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='RTT', col_names=TRUE))
+rtt_multi_hop <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='RTT', col_names=TRUE))
+rtt_network_aware <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='RTT', col_names=TRUE))
+
+scattering_optic_one_hop <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Scattering_Optic', col_names=TRUE))
+
+server_use02 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Server_Use', col_names=TRUE))
+server_use04 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='Server_Use', col_names=TRUE))
+server_use06 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Server_Use', col_names=TRUE))
+
+cache_vs_cloud02 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+cache_vs_cloud04 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+cache_vs_cloud06 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='CacheVsCloud', col_names=TRUE))
+
+load_links_optic02 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_one_hop.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_optic04 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_multi_hop.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+load_links_optic06 <- data.frame(read_excel("data/gamma_6/latency/instance_x_standard_storage04_network_aware.xlsx", sheet='Load_Links_Optic', col_names=TRUE))
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE, message=FALSE}
+save = FALSE
+save_pt = TRUE
+
+HOPS_TO_CLOUD = 4 
+
+#count hops without content: n-2 
+HOPS <- 2
+BUFFER <- 48 
+
+NUM_SBS_BY_MBS = 15
+NUM_MBS = 2
+
+zipf = 0.8
+lambda <- 5
+n <- 100
+beta <- 0.2
+mobility <- 10
+storage <- c(0.4)
+
+# bs <- unique(server_use04$BS)
+
+
+qos <- c(100)
+#second to millisecond
+delay_one_hop$Delay <- delay_one_hop$Delay * 1000
+delay_multi_hop$Delay <- delay_multi_hop$Delay * 1000
+delay_network_aware$Delay <- delay_network_aware$Delay * 1000
+```
+
+### Parâmetros
+
+    Parâmetros      | Valores
+    ----------------------|----------
+    alfa zipf             | `r zipf` 
+    lambda                | `r lambda`
+    n                     | `r n`
+    beta                  | `r beta`
+    BS                    | `r 32`
+    Cache                 | 100
+    UE                    | 200
+    Storage               | MBS: 20GB - SBS: 4GB
+    Coverage              | MBS 300 SBS 70
+    RTT inicial           | CS/MBS 0.001s(1ms) MBS/MBS 0.001s(1ms) MBS/SBS 0.001s(1ms) / SBS/UE 0.001s(1ms) / CLOUD/UE 0.01 (10ms)
+    Tempo da Requisição   | 10 eventos
+    Mobilidade            | `r mobility`m
+
+
+### Informações da Aplicação.
+
+    Vazão Mínima |     Tamanho da Cache        | Buffer |
+    -------------|-----------------------------|--------|
+     `r qos` Mbps |      2GB/2000MB             |  48Mb  |
+     `r qos` Mbps |      4GB/4000MB             |  48Mb  |
+     `r qos` Mbps |      8GB/8000MB             |  48Mb  |
+
+
+### Delay médio por evento.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+# tratamento de outlier.
+for (i in 1:length(delay_multi_hop$Delay)){
+  if(delay_multi_hop$Delay[i] > 130){
+    delay_multi_hop$Delay[i] = mean(delay_multi_hop$Delay)
+  }
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+delay_links_median_one_hop <- c()
+delay_links_median_multi_hop <- c()
+delay_links_median_network_aware <- c()
+
+delay_links_sd_one_hop <- c()
+delay_links_sd_multi_hop <- c()
+delay_links_sd_network_aware <- c()
+
+delay_links_sum_one_hop <- c()
+delay_links_sum_multi_hop <- c()
+delay_links_sum_network_aware <- c()
+  
+for (i in 1:n){
+  delay_links_n_one_hop <- delay_one_hop %>% filter(delay_one_hop$Event == i)
+  delay_links_n_multi_hop <- delay_multi_hop %>% filter(delay_multi_hop$Event == i)
+  delay_links_n_network_aware <- delay_network_aware %>% filter(delay_network_aware$Event == i)
+
+  delay_links_median_one_hop <- append(delay_links_median_one_hop,mean(delay_links_n_one_hop$Delay))
+  delay_links_median_multi_hop <- append(delay_links_median_multi_hop,mean(delay_links_n_multi_hop$Delay))
+  delay_links_median_network_aware <- append(delay_links_median_network_aware,mean(delay_links_n_network_aware$Delay))
+  
+  delay_links_sd_one_hop <- append(delay_links_sd_one_hop,sd(delay_links_n_one_hop$Delay))
+  delay_links_sd_multi_hop <- append(delay_links_sd_multi_hop,sd(delay_links_n_multi_hop$Delay))
+  delay_links_sd_network_aware <- append(delay_links_sd_network_aware,sd(delay_links_n_network_aware$Delay))
+  
+  delay_links_sum_one_hop <- append(delay_links_sum_one_hop,sum(delay_links_n_one_hop$Delay))
+  delay_links_sum_multi_hop <- append(delay_links_sum_multi_hop,sum(delay_links_n_multi_hop$Delay))
+  delay_links_sum_network_aware <- append(delay_links_sum_network_aware,sum(delay_links_n_network_aware$Delay))
+}
+delay_links_sd_one_hop <- na.omit(delay_links_sd_one_hop)
+delay_links_sd_multi_hop <- na.omit(delay_links_sd_multi_hop)
+delay_links_sd_network_aware <- na.omit(delay_links_sd_network_aware)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#TOP
+delay_links_one_hop_top <- delay_links_median_one_hop + delay_links_sd_one_hop
+delay_links_one_multi_hop_top <- delay_links_median_multi_hop + delay_links_sd_multi_hop
+delay_links_network_aware_top <- delay_links_median_network_aware + delay_links_sd_network_aware
+#BOTTOM
+delay_links_one_hop_bottom <- delay_links_median_one_hop - delay_links_sd_one_hop
+delay_links_one_multi_hop_bottom <- delay_links_median_multi_hop - delay_links_sd_multi_hop
+delay_links_network_aware_bottom <- delay_links_median_network_aware - delay_links_sd_network_aware
+```
+
+### Delay Médio das Requisições por Evento.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Create dataframe
+if (save_pt){
+  type_model <- rep("Único Salto",n)
+}else{
+  type_model <- rep("One-hop",n)
+}
+d_one_hop <- data.frame(id = rep(1:n),
+                   delay = c(delay_links_median_one_hop),
+                   type = type_model,
+                   top = delay_links_one_hop_top,
+                   bottom = delay_links_one_hop_bottom,
+                   sum = delay_links_sum_one_hop,
+                   stringsAsFactors = FALSE)
+
+if (save_pt){
+  type_model <- rep("Multissaltos",n)
+}else{
+  type_model <- rep("Multi-hop",n)
+}
+d_multi_hop <- data.frame(id = rep(1:n),
+                   delay = c(delay_links_median_multi_hop),
+                   type = type_model,
+                   top = delay_links_one_multi_hop_top,
+                   bottom = delay_links_one_multi_hop_bottom,
+                   sum = delay_links_sum_multi_hop,
+                   stringsAsFactors = FALSE)
+if (save_pt){
+  type_model <- rep("Orientado à Rede",n)
+}else{
+  type_model <- rep("Network-aware",n)
+}
+d_network_aware <- data.frame(id = rep(1:n),
+                   delay = c(delay_links_median_network_aware),
+                   type = type_model,
+                   top = delay_links_network_aware_top,
+                   bottom = delay_links_network_aware_bottom,
+                   sum = delay_links_sum_network_aware,
+                   stringsAsFactors = FALSE)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Join dataframe
+df_delay <- rbind(d_one_hop,d_multi_hop,d_network_aware)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Latência Média"
+  leg <- "Modelo"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Average Network Delay"
+  leg <- "Model"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+g_delay_average <- ggplot(df_delay, aes(x=id, y=delay, group=type, color=type, fill=type)) +
+  geom_line(alpha=0.8, position="identity", stat="identity",size=1.5) +
+  geom_ribbon(aes(ymin =  bottom, ymax =  top),alpha=0.25, color=NA)+
+  theme_bw()+
+
+# g_delay_average <- ggplot(df_delay, aes(x=id, y=delay, group=type, color=type, fill=type)) +
+#   geom_line() +
+#   geom_crossbar(aes(ymin =  bottom, ymax =  top),alpha=0.25)+
+  theme(legend.position = "top",
+        #legend.direction = "vertical",
+        #legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+         axis.text=element_text(size=16),
+         axis.title=element_text(size=16))+
+  ylab(y.lab) + xlab(x.lab) +
+geom_vline(xintercept = 70,linetype = "dotted")
+# geom_vline(xintercept = 81,linetype = "longdash")+
+# geom_vline(xintercept = 85,linetype = "solid")
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g_delay_average)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(g_delay_average,filename = "graph/all_metrics/pt/latency_average.png", dpi = 600)
+}else{
+  ggsave(g_delay_average,filename = "graph/all_metrics/en/latency_average.png", dpi = 600)
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Latência Total da Rede"
+  leg <- "Modelo"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Total Network Delay"
+  leg <- "Model"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+g_delay_sum <- ggplot(df_delay, aes(x=id, y=sum, group=type, color=type, fill=type)) +
+  geom_line(alpha=0.8, position="identity", stat="identity",size=1) +
+  #geom_ribbon(aes(ymin =  bottom, ymax =  top),alpha=0.25, color=NA)+
+  theme_bw()+
+  theme(legend.position = "top",
+        #legend.direction = "vertical",
+        #legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+         axis.text=element_text(size=16),
+         axis.title=element_text(size=16))+
+  ylab(y.lab) + xlab(x.lab)+
+  # geom_rect(xmin=10,xmax=30,ymin=0,ymax=500, alpha="0.25")
+  annotate("rect", fill = "grey", alpha = 0.40, xmin = 13, xmax = 35,ymin = 0, ymax = max(df_delay$sum)) +
+  annotate("rect", fill = "grey", alpha = 0.40, xmin = 45, xmax = 65,ymin = 0, ymax = max(df_delay$sum)) +
+  annotate("rect", fill = "grey", alpha = 0.40, xmin = 75, xmax = 90,ymin = 0, ymax = max(df_delay$sum))
+  
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g_delay_sum)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(g_delay_sum,filename = "graph/all_metrics/pt/latency_sum.png", dpi = 600)
+}else{
+  ggsave(g_delay_sum,filename = "graph/all_metrics/en/latency_sum.png", dpi = 600)
+}
+```
+
+### Cache, Cloud e Storage.
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+server_use02_ran <- server_use02 %>% filter(server_use02$BS != 'MBS0')
+server_use04_ran <- server_use04 %>% filter(server_use04$BS != 'MBS0')
+server_use06_ran <- server_use06 %>% filter(server_use06$BS != 'MBS0')
+
+
+ratio_server_use02 <- NULL
+ratio_server_use04 <- NULL
+ratio_server_use06 <- NULL
+
+
+for (i in 1:n){
+  server_use_n02 <- server_use02_ran %>% filter(server_use02_ran$Event == i)
+  sum_total_storage_n02 <- sum(server_use_n02$Total_Storage)
+  sum_total_use_n02 <- sum(server_use_n02$Total_Use)
+  ratio_server_use_n02 <- (sum_total_use_n02 / sum_total_storage_n02)
+  
+  ratio_server_use02 <- append(ratio_server_use02,ratio_server_use_n02)
+  
+  server_use_n02 <- NULL
+  sum_total_storage_n02 <- NULL
+  ratio_server_use_n02 <- NULL
+}
+for (i in 1:n){
+  server_use_n04 <- server_use04_ran %>% filter(server_use04_ran$Event == i)
+  sum_total_storage_n04 <- sum(server_use_n04$Total_Storage)
+  sum_total_use_n04 <- sum(server_use_n04$Total_Use)
+  ratio_server_use_n04 <- (sum_total_use_n04 / sum_total_storage_n04)
+  
+  ratio_server_use04 <- append(ratio_server_use04,ratio_server_use_n04)
+  
+  server_use_n04 <- NULL
+  sum_total_storage_n04 <- NULL
+  ratio_server_use_n04 <- NULL
+}
+for (i in 1:n){
+  server_use_n06 <- server_use06_ran %>% filter(server_use06_ran$Event == i)
+  sum_total_storage_n06 <- sum(server_use_n06$Total_Storage)
+  sum_total_use_n06 <- sum(server_use_n06$Total_Use)
+  ratio_server_use_n06 <- (sum_total_use_n06 / sum_total_storage_n06)
+  
+  ratio_server_use06 <- append(ratio_server_use06,ratio_server_use_n06)
+  
+  server_use_n06 <- NULL
+  sum_total_storage_n06 <- NULL
+  ratio_server_use_n06 <- NULL
+}
+
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Sum by events normalized - Fronthaul
+
+load_links_optic02_ran <- load_links_optic02 %>% filter(load_links_optic02$Link != "('MBS0', 'MBS2')"  & load_links_optic02$Link != "('MBS0', 'MBS1')")
+load_links_optic04_ran <- load_links_optic04 %>% filter(load_links_optic04$Link != "('MBS0', 'MBS2')"  & load_links_optic04$Link != "('MBS0', 'MBS1')")
+load_links_optic06_ran <- load_links_optic06 %>% filter(load_links_optic06$Link != "('MBS0', 'MBS2')"  & load_links_optic06$Link != "('MBS0', 'MBS1')")
+
+load_link_sd_event02 <- c()
+load_link_sd_event04 <- c()
+load_link_sd_event06 <- c()
+
+load_links_normal02 <- c()
+load_links_normal04 <- c()
+load_links_normal06 <- c()
+
+
+for (i in 1:n){
+  
+  load_links_n02 <- load_links_optic02_ran %>% filter(load_links_optic02_ran$Event == i)
+  load_links_n04 <- load_links_optic04_ran %>% filter(load_links_optic04_ran$Event == i)
+  load_links_n06 <- load_links_optic06_ran %>% filter(load_links_optic06_ran$Event == i)
+  
+  sum02 <- sum(load_links_n02$Total_Load) 
+  sum04 <- sum(load_links_n04$Total_Load) 
+  sum06 <- sum(load_links_n06$Total_Load)
+  
+  load_link_sd_event02 <- append(load_link_sd_event02, sd(load_links_n02$Total_Load)) 
+  load_link_sd_event04 <- append(load_link_sd_event04, sd(load_links_n04$Total_Load)) 
+  load_link_sd_event06 <- append(load_link_sd_event06, sd(load_links_n06$Total_Load))
+  
+  load_links_normal02 = append(load_links_normal02,sum02)
+  load_links_normal04 = append(load_links_normal04,sum04)
+  load_links_normal06 = append(load_links_normal06,sum06)
+}
+
+max_sum02 <- max(load_links_normal02)
+max_sum04 <- max(load_links_normal04)
+max_sum06 <- max(load_links_normal06)
+
+
+set_max <- c(max_sum02,max_sum04,max_sum06)
+general_max <- max(set_max)
+
+load_links_normal02 = load_links_normal02/general_max
+load_links_normal04 = load_links_normal04/general_max
+load_links_normal06 = load_links_normal06/general_max
+```
+
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Sum by events normalized - Backhaul
+
+load_links_optic02_cloud <- load_links_optic02 %>% filter(load_links_optic02$Link == "('MBS0', 'MBS2')"  & load_links_optic02$Link != "('MBS0', 'MBS1')")
+load_links_optic04_cloud <- load_links_optic04 %>% filter(load_links_optic04$Link == "('MBS0', 'MBS2')"  & load_links_optic04$Link != "('MBS0', 'MBS1')")
+load_links_optic06_cloud <- load_links_optic06 %>% filter(load_links_optic06$Link == "('MBS0', 'MBS2')"  & load_links_optic06$Link != "('MBS0', 'MBS1')")
+
+load_link_sd_event02_cloud <- c()
+load_link_sd_event04_cloud <- c()
+load_link_sd_event06_cloud <- c()
+
+load_links_normal02_cloud <- c()
+load_links_normal04_cloud <- c()
+load_links_normal06_cloud <- c()
+
+for (i in 1:n){
+  
+  load_links_n02_cloud <- load_links_optic02_cloud %>% filter(load_links_optic02_cloud$Event == i)
+  load_links_n04_cloud <- load_links_optic04_cloud %>% filter(load_links_optic04_cloud$Event == i)
+  load_links_n06_cloud <- load_links_optic06_cloud %>% filter(load_links_optic06_cloud$Event == i)
+  
+  sum02_cloud <- sum(load_links_n02_cloud$Total_Load) 
+  sum04_cloud <- sum(load_links_n04_cloud$Total_Load) 
+  sum06_cloud <- sum(load_links_n06_cloud$Total_Load)
+  
+  load_link_sd_event02_cloud <- append(load_link_sd_event02_cloud, sd(load_links_n02_cloud$Total_Load)) 
+  load_link_sd_event04_cloud <- append(load_link_sd_event04_cloud, sd(load_links_n04_cloud$Total_Load)) 
+  load_link_sd_event06_cloud <- append(load_link_sd_event06_cloud, sd(load_links_n06_cloud$Total_Load))
+  
+  load_links_normal02_cloud = append(load_links_normal02_cloud,sum02_cloud)
+  load_links_normal04_cloud = append(load_links_normal04_cloud,sum04_cloud)
+  load_links_normal06_cloud = append(load_links_normal06_cloud,sum06_cloud)
+}
+
+max_sum02_cloud <- max(load_links_normal02_cloud)
+max_sum04_cloud <- max(load_links_normal04_cloud)
+max_sum06_cloud <- max(load_links_normal06_cloud)
+
+set_max_cloud <- c(max_sum02_cloud,max_sum04_cloud,max_sum06_cloud)
+general_max_cloud <- max(set_max_cloud)
+
+load_links_normal02_cloud = load_links_normal02_cloud/general_max_cloud
+load_links_normal04_cloud = load_links_normal04_cloud/general_max_cloud
+load_links_normal06_cloud = load_links_normal06_cloud/general_max_cloud
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#create columns
+type_cache <- rep("Cache Hit",100)
+d1_02 <- data.frame(event=c(cache_vs_cloud02$Event),
+                    func =  cache_vs_cloud02$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_02 <- data.frame(event=c(cache_vs_cloud02$Event),
+                    func =  cache_vs_cloud02$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Storage Load",100)
+}
+d3_02 <- data.frame(event=c(rep(1:100,1)),
+                    func =  ratio_server_use02,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_02 <- data.frame(event=c(rep(1:100,1)),
+                    func =  load_links_normal02,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_04 <- data.frame(event=c(cache_vs_cloud04$Event),
+                    func = cache_vs_cloud04$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_04 <- data.frame(event=c(cache_vs_cloud04$Event),
+                    func = cache_vs_cloud04$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Storage Load",100)
+}
+d3_04 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use04,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_04 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_normal04,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+
+type_cache <- rep("Cache Hit",100)
+d1_06 <- data.frame(event=c(cache_vs_cloud06$Event),
+                    func = cache_vs_cloud06$Cache,
+                    type = type_cache,
+                    stringsAsFactors = FALSE)
+type_cloud <- rep("Cache Miss",100)
+d2_06 <- data.frame(event=c(cache_vs_cloud06$Event),
+                    func = cache_vs_cloud06$Cloud,
+                    type = type_cloud,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_server_use <- rep("Uso do Armazenamento",100)
+}else{
+  type_server_use <- rep("Storage Load",100)
+}
+
+d3_06 <- data.frame(event=c(rep(1:100,1)),
+                    func = ratio_server_use06,
+                    type = type_server_use,
+                    stringsAsFactors = FALSE)
+if (save_pt){
+  type_network_load <- rep("Carga da Rede Óptica",100)
+}else{
+  type_network_load <- rep("Optical Network Load",100)
+}
+d4_06 <- data.frame(event=c(rep(1:100,1)),
+                    func = load_links_normal06,
+                    type = type_network_load,
+                    stringsAsFactors = FALSE)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#join columns
+df_02 <- bind_rows(d1_02,d2_02,d3_02)
+df_04 <- bind_rows(d1_04,d2_04,d3_04)
+df_06 <- bind_rows(d1_06,d2_06,d3_06)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  x.lab <- "Eventos"
+  y.lab <- "Percentual"
+}else{
+  x.lab <- "Events"
+  y.lab <- "Percentage"
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+g1 <- ggplot(df_02) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab) + ylim(c(0,1))
+
+g2 <- ggplot(df_04) + 
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab) + ylim(c(0,1))
+
+g3 <- ggplot(df_06) +
+  geom_density(position="identity", stat="identity", alpha=0.25, size=1,aes( y=func, x=event, fill=type, group=type))+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab) + ylim(c(0,1))
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+if (save_pt){
+  ggsave(g1,filename = "graph/all_metrics/pt/storage02.png", dpi = 600)
+  ggsave(g2,filename = "graph/all_metrics/pt/storage04.png", dpi = 600)
+  ggsave(g3,filename = "graph/all_metrics/pt/storage06.png", dpi = 600)
+    # ggsave(g_line_standard,filename = "graph/one_hop/pt/standard.png", dpi = 600)
+}else{
+  ggsave(g1,filename = "graph/all_metrics/en/storage02.png", dpi = 600)
+  ggsave(g2,filename = "graph/all_metrics/en/storage04.png", dpi = 600)
+  ggsave(g3,filename = "graph/all_metrics/en/storage06.png", dpi = 600)
+}
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+print(g1)
+print(g2)
+print(g3)
+# print(g_line_standard)
+```
+
+### Network Load - Fronthaul vs Backhaul
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#get last status in event
+
+paths_last_state02 <- data.frame()
+paths_last_state04 <- data.frame()
+paths_last_state06 <- data.frame()
+
+for (i in 1:n){
+  paths_last_state_n_02 <- paths_one_hop %>% filter(paths_one_hop$Event == i)
+  paths_last_state02 <- rbind(paths_last_state02, paths_last_state_n_02 %>%  group_by(Request) %>% slice(n()))
+  
+  paths_last_state_n_04 <- paths_multi_hop %>% filter(paths_multi_hop$Event == i)
+  paths_last_state04 <- rbind(paths_last_state04, paths_last_state_n_04 %>%  group_by(Request) %>% slice(n()))
+  
+  paths_last_state_n_06 <- paths_network_aware %>% filter(paths_network_aware$Event == i)
+  paths_last_state06 <- rbind(paths_last_state06, paths_last_state_n_06 %>%  group_by(Request) %>% slice(n()))
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+paths_last_state02$...1 <- NULL
+paths_last_state04$...1 <- NULL
+paths_last_state06$...1 <- NULL
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#filter FH and BH
+paths02_cloud <- subset(paths_last_state02, Host ==  "MBS0" )
+paths04_cloud <- subset(paths_last_state04, Host ==  "MBS0" )
+paths06_cloud <- subset(paths_last_state06, Host ==  "MBS0" )
+
+paths02_ran <- subset(paths_last_state02, Host !=  "MBS0" )
+paths04_ran <- subset(paths_last_state04, Host !=  "MBS0" )
+paths06_ran <- subset(paths_last_state06, Host !=  "MBS0" )
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#count hops = (n-1)-1 in cloud
+
+paths02_cloud['Hops'] <- NA
+paths04_cloud['Hops'] <- NA
+paths06_cloud['Hops'] <- NA
+
+for (row in 1:nrow(paths02_cloud)){
+  count_cloud02 <- paths02_cloud[row,]$Path
+  count_cloud02 <- strsplit(count_cloud02,",")
+  count_cloud02 <- length(count_cloud02[[1]])
+  count_cloud02 <- count_cloud02 - HOPS
+  paths02_cloud[row,]$Hops <- count_cloud02
+  
+  #paths_hops02_cloud <- rbind(paths_hops02_cloud, paths02_cloud[row,])
+}
+
+for (row in 1:nrow(paths04_cloud)){
+
+  count_cloud04 <- paths04_cloud[row,]$Path
+  count_cloud04 <- strsplit(count_cloud04,",")
+  count_cloud04 <- length(count_cloud04[[1]])
+  count_cloud04 <- count_cloud04 - HOPS
+  paths04_cloud[row,]$Hops <- count_cloud04
+
+  # paths_hops04_cloud <- rbind(paths_hops04_cloud, paths04_cloud[row,])
+}
+for (row in 1:nrow(paths06_cloud)){
+
+  count_cloud06 <- paths06_cloud[row,]$Path
+  count_cloud06 <- strsplit(count_cloud06,",")
+  count_cloud06 <- length(count_cloud06[[1]])
+  count_cloud06 <- count_cloud06 - HOPS
+  paths06_cloud[row,]$Hops <- count_cloud06
+
+  # paths_hops06_cloud <- rbind(paths_hops06_cloud, paths06_cloud[row,])
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#count hops = (n-1)-1 in ran
+
+paths02_ran['Hops'] <- NA
+paths04_ran['Hops'] <- NA
+paths06_ran['Hops'] <- NA
+
+for (row in 1:nrow(paths02_ran)){
+
+  count_ran02 <- paths02_ran[row,]$Path
+  count_ran02 <- strsplit(count_ran02,",")
+  count_ran02 <- length(count_ran02[[1]])
+  count_ran02 <- count_ran02 - HOPS
+  paths02_ran[row,]$Hops <- count_ran02
+
+  # paths_hops02_ran <- rbind(paths_hops02_ran, paths02_ran[row,])
+}
+for (row in 1:nrow(paths04_ran)){
+
+  count_ran04 <- paths04_ran[row,]$Path
+  count_ran04 <- strsplit(count_ran04,",")
+  count_ran04 <- length(count_ran04[[1]])
+  count_ran04 <- count_ran04 - HOPS
+  paths04_ran[row,]$Hops <- count_ran04
+
+  # paths_hops04_ran <- rbind(paths_hops04_ran, paths04_ran[row,])
+}
+for (row in 1:nrow(paths06_ran)){
+
+  count_ran06 <- paths06_ran[row,]$Path
+  count_ran06 <- strsplit(count_ran06,",")
+  count_ran06 <- length(count_ran06[[1]])
+  count_ran06 <- count_ran06 - HOPS
+  paths06_ran[row,]$Hops <- count_ran06
+
+  # paths_hops06_ran <- rbind(paths_hops06_ran, paths06_ran[row,])
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# sum each event (cloud)
+
+sum02_cloud <- c()
+sum04_cloud <- c()
+sum06_cloud <- c()
+
+paths_sum_n_cloud_02 <- data.frame()
+paths_sum_n_cloud_04 <- data.frame()
+paths_sum_n_cloud_06 <- data.frame()
+
+sum02 <- sum04 <- sum06 <- NA
+
+for (i in 1:n){
+  paths_sum_n_cloud_02 <- subset(paths02_cloud, Event == i)
+  sum02 <- sum(paths_sum_n_cloud_02$Hops)
+  sum02_cloud <- append(sum02_cloud, sum02)
+  sum02 <- NA 
+}
+
+for (i in 1:n){
+  paths_sum_n_cloud_04 <- subset(paths04_cloud, Event == i)
+  sum04 <- sum(paths_sum_n_cloud_04$Hops)
+  sum04_cloud <- append(sum04_cloud, sum04)
+  sum04 <- NA 
+}
+
+for (i in 1:n){
+  paths_sum_n_cloud_06 <- subset(paths06_cloud, Event == i)
+  sum06 <- sum(paths_sum_n_cloud_06$Hops)
+  sum06_cloud <- append(sum06_cloud, sum06)
+  sum06 <- NA 
+}
+
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# sum each event (ran)
+
+sum02_ran <- c()
+sum04_ran <- c()
+sum06_ran <- c()
+
+paths_sum_n_ran_02 <- data.frame()
+paths_sum_n_ran_04 <- data.frame()
+paths_sum_n_ran_06 <- data.frame()
+
+sum02 <- sum04 <- sum06 <- NA
+
+for (i in 1:n){
+  paths_sum_n_ran_02 <- subset(paths02_ran, Event == i)
+  sum02 <- sum(paths_sum_n_ran_02$Hops)
+  sum02_ran <- append(sum02_ran, sum02)
+  sum02 <- NA 
+}
+
+for (i in 1:n){
+  paths_sum_n_ran_04 <- subset(paths04_ran, Event == i)
+  sum04 <- sum(paths_sum_n_ran_04$Hops)
+  sum04_ran <- append(sum04_ran, sum04)
+  sum04 <- NA 
+}
+
+for (i in 1:n){
+  paths_sum_n_ran_06 <- subset(paths06_ran, Event == i)
+  sum06 <- sum(paths_sum_n_ran_06$Hops)
+  sum06_ran <- append(sum06_ran, sum06)
+  sum06 <- NA 
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# is need  4 hops to one_hop recovery content of the BH.
+sum02_cloud = sum02_cloud * HOPS_TO_CLOUD
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+
+sum_hops_cloud_normal02 <- get_hops_cloud_normalized(sum02_cloud,sum02_ran)
+sum_hops_ran_normal02 <- get_hops_ran_normalized(sum02_cloud,sum02_ran)
+
+sum_hops_cloud_normal04 <- get_hops_cloud_normalized(sum04_cloud,sum04_ran)
+sum_hops_ran_normal04 <- get_hops_ran_normalized(sum04_cloud,sum04_ran)
+
+sum_hops_cloud_normal06 <- get_hops_cloud_normalized(sum06_cloud,sum06_ran)
+sum_hops_ran_normal06 <- get_hops_ran_normalized(sum06_cloud,sum06_ran)
+```
+
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#create dataframes cloud
+
+type_cloud = rep("Backhaul", 100)
+
+df_sum_hops_cloud_02 = data.frame(
+  event = c(rep(1:100,1)),
+  sum_hops = sum02_cloud,
+  type = type_cloud,
+  storage = rep("0.2",100),
+                   stringsAsFactors = FALSE
+)
+
+df_sum_hops_cloud_04 = data.frame(
+  event =  c(rep(1:100,1)),
+  sum_hops = sum04_cloud,
+  type = type_cloud,
+  storage = rep("0.4",100),
+                   stringsAsFactors = FALSE
+)
+df_sum_hops_cloud_06 = data.frame(
+  event =  c(rep(1:100,1)),
+  sum_hops = sum06_cloud,
+  type = type_cloud,
+  storage = rep("0.6",100),
+                   stringsAsFactors = FALSE
+)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#create dataframes ran
+
+type_ran = rep("Fronthaul", 100)
+df_sum_hops_ran_02 = data.frame(
+  event =  c(rep(1:100,1)),
+  sum_hops = sum02_ran,
+  type = type_ran,
+  storage = rep("0.2",100),
+                   stringsAsFactors = FALSE
+)
+df_sum_hops_ran_04 = data.frame(
+  event =  c(rep(1:100,1)),
+  sum_hops = sum04_ran,
+  type = type_ran,
+  storage = rep("0.4",100),
+                   stringsAsFactors = FALSE
+)
+df_sum_hops_ran_06 = data.frame(
+  event =  c(rep(1:100,1)),
+  sum_hops = sum06_ran,
+  type = type_ran,
+  storage = rep("0.6",100),
+                   stringsAsFactors = FALSE
+)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#create dataframes - join cloud and ran
+df_sum_hops_02 <- bind_rows(df_sum_hops_cloud_02,df_sum_hops_ran_02)
+df_sum_hops_04 <- bind_rows(df_sum_hops_cloud_04,df_sum_hops_ran_04)
+df_sum_hops_06 <- bind_rows(df_sum_hops_cloud_06,df_sum_hops_ran_06)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#Translate
+if (save_pt){
+  y.lab <- "Total de Número de Saltos"
+  x.lab <- "Events"
+}else{
+  y.lab <- "Path Size (Hops)"
+  x.lab <- "Eventos"
+}
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#make graph/one_hop
+  
+sum_hops_02 <- ggplot(df_sum_hops_02, aes(fill=type, y=sum_hops, x=event)) + 
+  # geom_bar(position="fill", stat="identity")+
+  geom_density(position="fill", stat="identity", alpha=0.25, size=1)+
+# geom_area(position="fill", stat="identity",alpha=0.25)+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+sum_hops_04 <- ggplot(df_sum_hops_04, aes(fill=type, y=sum_hops, x=event)) + 
+  geom_bar(position="fill", stat="identity")+
+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+
+sum_hops_06 <- ggplot(df_sum_hops_06, aes(fill=type, y=sum_hops, x=event)) +
+  geom_bar(position="fill", stat="identity")+
+
+  theme_bw()+
+  theme(legend.position = "top",
+        # legend.direction = "vertical",
+        legend.box = "horizontal",
+        #legend.justification = c("right", "top"),
+        #legend.box.background = element_rect(color="black", size=1),
+        #legend.box.just = "right",
+        #legend.margin = margin(4, 4, 4, 2),
+        legend.title = element_blank(),
+        legend.text = element_text(size = 18),
+        axis.text=element_text(size=16),
+        axis.title=element_text(size=16))+
+  xlab(x.lab)+
+  ylab(y.lab)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#normalizado por evento, total de saltos existentes naqueles evento.
+print(sum_hops_02)
+print(sum_hops_04)
+print(sum_hops_06)
+
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+if (save_pt){
+  ggsave(sum_hops_02,filename = "graph/all_metrics/pt/sum_hops02.png", dpi = 600)
+  ggsave(sum_hops_04,filename = "graph/all_metrics/pt/sum_hops04.png", dpi = 600)
+  ggsave(sum_hops_06,filename = "graph/all_metrics/pt/sum_hops06.png", dpi = 600)
+
+}else{
+  ggsave(sum_hops_02,filename = "graph/all_metrics/en/sum_hops02.png", dpi = 600)
+  ggsave(sum_hops_04,filename = "graph/all_metrics/en/sum_hops04.png", dpi = 600)
+  ggsave(sum_hops_06,filename = "graph/all_metrics/en/sum_hops06.png", dpi = 600)
+}
+``` 
+
+### Network Load - Fronthaul vs Backhaul
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#total requests by event - qos * \lambda - thp_min - single link - best case
+total_requests_load_02 <- get_total_requests_load(poisson_one_hop,qos,n)
+total_requests_load_04 <- get_total_requests_load(poisson_multi_hop,qos,n)
+total_requests_load_06 <- get_total_requests_load(poisson_netwok_aware,qos,n)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+# max_sum02_cloud <- max(sum02_cloud)
+# max_sum04_cloud <- max(sum04_cloud)
+# max_sum06_cloud <- max(sum06_cloud)
+# 
+# set_max_cloud <- c(max_sum02_cloud,max_sum04_cloud,max_sum06_cloud)
+# general_max_cloud <- max(set_max_cloud)
+# 
+# max_sum02_ran <- max(sum02_ran)
+# max_sum04_ran <- max(sum04_ran)
+# max_sum06_ran <- max(sum06_ran)
+# 
+# set_max_ran <- c(max_sum02_ran,max_sum04_ran,max_sum06_ran)
+# general_max_ran <- max(set_max_ran)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#total load BH
+thp_cur_cloud_02_raw <- get_total_load(paths02_cloud,rtt_one_hop,n,BUFFER)
+thp_cur_cloud_04_raw <- get_total_load(paths04_cloud,rtt_multi_hop,n,BUFFER)
+thp_cur_cloud_06_raw <- get_total_load(paths06_cloud,rtt_network_aware,n,BUFFER)
+
+thp_cur_cloud_02 <- fit_sd(thp_cur_cloud_02_raw)
+thp_cur_cloud_04 <- fit_sd(thp_cur_cloud_04_raw)
+thp_cur_cloud_06 <- fit_sd(thp_cur_cloud_06_raw)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#total load FH
+thp_cur_ran_02_raw <- get_total_load(paths02_ran,rtt_one_hop,n,BUFFER)
+thp_cur_ran_04_raw <- get_total_load(paths04_ran,rtt_multi_hop,n,BUFFER)
+thp_cur_ran_06_raw <- get_total_load(paths06_ran,rtt_network_aware,n,BUFFER)
+
+thp_cur_ran_02 <- fit_sd(thp_cur_ran_02_raw)
+thp_cur_ran_04 <- fit_sd(thp_cur_ran_04_raw)
+thp_cur_ran_06 <- fit_sd(thp_cur_ran_06_raw)
+```
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#avg load in links FH
+
+#get total optical link
+total_optical_link  <- scattering_optic_one_hop$All[1]
+#correct bug in calc all optics links
+total_optical_link <- total_optical_link - (2*15) - (NUM_MBS/2)
+
+#WARNING: falta remove the BHs. 
+avg_thp_cur_ran_02 <- avg_load_links(load_links_optic02,qos,n)
+avg_thp_cur_ran_04 <- avg_load_links(load_links_optic04,qos,n)
+avg_thp_cur_ran_06 <- avg_load_links(load_links_optic06,qos,n)
+
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+#create dataframes
+df_load_02 <- create_df_network_load(total_requests_load_02,thp_cur_cloud_02,thp_cur_ran_02,avg_thp_cur_ran_02,save_pt)
+df_load_04 <- create_df_network_load(total_requests_load_04,thp_cur_cloud_04,thp_cur_ran_04,avg_thp_cur_ran_04,save_pt)
+df_load_06 <- create_df_network_load(total_requests_load_06,thp_cur_cloud_06,thp_cur_ran_06,avg_thp_cur_ran_06,save_pt)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#plot graph/one_hops
+load_network_02 <- plot_graphs_network_load(df_load_02,save_pt)
+load_network_04 <- plot_graphs_network_load(df_load_04,save_pt)
+load_network_06 <- plot_graphs_network_load(df_load_06,save_pt)
+``` 
+
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+#normalizado pelo maior somatório thp_cur do evento
+#show graph
+print(load_network_02)
+print(load_network_04)
+print(load_network_06)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+if (save_pt){
+  ggsave(load_network_02,filename = "graph/all_metrics/pt/load_bh_fh02.png", dpi = 600)
+  ggsave(load_network_04,filename = "graph/all_metrics/pt/load_bh_fh04.png", dpi = 600)
+  ggsave(load_network_06,filename = "graph/all_metrics/pt/load_bh_fh06.png", dpi = 600)
+}else{
+  ggsave(load_network_02,filename = "graph/all_metrics/en/load_bh_fh02.png", dpi = 600)
+  ggsave(load_network_04,filename = "graph/all_metrics/en/load_bh_fh04.png", dpi = 600)
+  ggsave(load_network_06,filename = "graph/all_metrics/en/load_bh_fh06.png", dpi = 600)
+}
+``` 
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#BH
+  if (save_pt){
+    type_bh <- rep("Único Salto",100)
+  }else{
+    type_bh <- rep("One Hop",100)
+  }
+  df_backhaul_load_sum_02 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_cloud_02[[4]],
+    type = type_bh,
+    stringsAsFactors = FALSE)
+  
+  if (save_pt){
+    type_fh <- rep("Multissaltos",100)
+  }else{
+    type_fh <- rep("Multi Hop",100)
+  }
+  df_backhaul_load_sum_04 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_cloud_04[[4]],
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+    if (save_pt){
+    type_fh <- rep("Orientado à Rede",100)
+  }else{
+    type_fh <- rep("Network Aware",100)
+  }
+  df_backhaul_load_sum_06 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_cloud_06[[4]],
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+  df_bh <- rbind(df_backhaul_load_sum_02, df_backhaul_load_sum_04,df_backhaul_load_sum_06)
+  
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#FH
+  if (save_pt){
+    type_bh <- rep("Único Salto",100)
+  }else{
+    type_bh <- rep("One Hop",100)
+  }
+  df_fronthaul_load_sum_02 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_ran_02[[4]],
+    type = type_bh,
+    stringsAsFactors = FALSE)
+  
+  if (save_pt){
+    type_fh <- rep("Multissaltos",100)
+  }else{
+    type_fh <- rep("Multi Hop",100)
+  }
+  df_fronthaul_load_sum_04 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_ran_04[[4]],
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+    if (save_pt){
+    type_fh <- rep("Orientado à Rede",100)
+  }else{
+    type_fh <- rep("Network Aware",100)
+  }
+  df_fronthaul_load_sum_06 <- data.frame(
+    event = rep(1:100),
+    values = thp_cur_ran_06[[4]],
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+  df_fh <- rbind(df_fronthaul_load_sum_02, df_fronthaul_load_sum_04,df_fronthaul_load_sum_06)
+  
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+  
+print(df_bh)
+  
+if (save_pt){
+    y.lab <- "Carga Total da Rede (BH)"
+    x.lab <- "Eventos"
+  }else{
+    y.lab <- "Network Load (BH)"
+    x.lab <- "Events"
+  }
+  
+  g_bh <- ggplot(df_bh, aes(x=event, y=values, group=type, color=type, fill=type)) + geom_line(position="identity", stat="identity",size=1,shape=1) +
+    #geom_ribbon(aes(ymin =  floor, ymax =  ceiling), alpha=0.25, color=NA)+
+    theme_bw() + #scale_y_log10() +
+    theme(legend.position = "top",
+          # legend.direction = "vertical",
+          legend.box = "horizontal",
+          #legend.justification = c("right", "top"),
+          #legend.box.background = element_rect(color="black", size=1),
+          #legend.box.just = "right",
+          #legend.margin = margin(4, 4, 4, 2),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 16),
+          axis.text=element_text(size=16),
+          axis.title=element_text(size=16))+
+    xlab(x.lab)+
+    ylab(y.lab)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+  
+  if (save_pt){
+    y.lab <- "Carga Total da Rede (FH)"
+    x.lab <- "Eventos"
+  }else{
+    y.lab <- "Network Load (FH)"
+    x.lab <- "Events"
+  }
+  
+  g_fh <- ggplot(df_fh, aes(x=event, y=values, group=type, color=type, fill=type)) + geom_line(position="identity", stat="identity",size=1, shape=1) +
+    #geom_ribbon(aes(ymin =  floor, ymax =  ceiling), alpha=0.25, color=NA)+
+    theme_bw() + #scale_y_log10() +
+    theme(legend.position = "top",
+          # legend.direction = "vertical",
+          legend.box = "horizontal",
+          #legend.justification = c("right", "top"),
+          #legend.box.background = element_rect(color="black", size=1),
+          #legend.box.just = "right",
+          #legend.margin = margin(4, 4, 4, 2),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 16),
+          axis.text=element_text(size=16),
+          axis.title=element_text(size=16))+
+    xlab(x.lab)+
+    ylab(y.lab)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+print(g_bh)
+print(g_fh)
+``` 
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+if (save_pt){
+  ggsave(g_bh,filename = "graph/all_metrics/pt/load_bh.png", dpi = 600)
+  ggsave(g_fh,filename = "graph/all_metrics/pt/load_fh.png", dpi = 600)
+}else{
+  ggsave(g_bh,filename = "graph/all_metrics/en/load_bh.png", dpi = 600)
+  ggsave(g_fh,filename = "graph/all_metrics/en/load_fh.png", dpi = 600)
+}
+``` 
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#BH
+  if (save_pt){
+    type_bh <- rep("Único Salto",100)
+  }else{
+    type_bh <- rep("One Hop",100)
+  }
+  df_backhaul_load_sum_02 <- data.frame(
+    event = rep(1:100),
+    values = sum02_cloud,
+    type = type_bh,
+    stringsAsFactors = FALSE)
+  
+  if (save_pt){
+    type_fh <- rep("Multissaltos",100)
+  }else{
+    type_fh <- rep("Multi Hop",100)
+  }
+  df_backhaul_load_sum_04 <- data.frame(
+    event = rep(1:100),
+    values = sum04_cloud,
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+    if (save_pt){
+    type_fh <- rep("Orientado à Rede",100)
+  }else{
+    type_fh <- rep("Network Aware",100)
+  }
+  df_backhaul_load_sum_06 <- data.frame(
+    event = rep(1:100),
+    values = sum06_cloud,
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+  df_bh <- rbind(df_backhaul_load_sum_02, df_backhaul_load_sum_04,df_backhaul_load_sum_06)
+  
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+#FH
+  if (save_pt){
+    type_bh <- rep("Único Salto",100)
+  }else{
+    type_bh <- rep("One Hop",100)
+  }
+  df_fronthaul_load_sum_02 <- data.frame(
+    event = rep(1:100),
+    values = sum02_ran,
+    type = type_bh,
+    stringsAsFactors = FALSE)
+  
+  if (save_pt){
+    type_fh <- rep("Multissaltos",100)
+  }else{
+    type_fh <- rep("Multi Hop",100)
+  }
+  df_fronthaul_load_sum_04 <- data.frame(
+    event = rep(1:100),
+    values = sum04_ran,
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+    if (save_pt){
+    type_fh <- rep("Orientado à Rede",100)
+  }else{
+    type_fh <- rep("Network Aware",100)
+  }
+  df_fronthaul_load_sum_06 <- data.frame(
+    event = rep(1:100),
+    values = sum06_ran,
+    type = type_fh,
+    stringsAsFactors = FALSE)
+  
+  df_fh <- rbind(df_fronthaul_load_sum_02, df_fronthaul_load_sum_04,df_fronthaul_load_sum_06)
+  
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+  
+if (save_pt){
+  y.lab <- "Total de Número de Saltos"
+  x.lab <- "Events"
+}else{
+  y.lab <- "Path Size (Hops)"
+  x.lab <- "Eventos"
+}
+  
+  g_bh <- ggplot(df_bh, aes(x=event, y=values, group=type, color=type, fill=type)) + geom_line(position="identity", stat="identity",size=1) +
+    #geom_ribbon(aes(ymin =  floor, ymax =  ceiling), alpha=0.25, color=NA)+
+    theme_bw() + #scale_y_log10() +
+    theme(legend.position = "top",
+          # legend.direction = "vertical",
+          legend.box = "horizontal",
+          #legend.justification = c("right", "top"),
+          #legend.box.background = element_rect(color="black", size=1),
+          #legend.box.just = "right",
+          #legend.margin = margin(4, 4, 4, 2),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 16),
+          axis.text=element_text(size=16),
+          axis.title=element_text(size=16))+
+    xlab(x.lab)+
+    ylab(y.lab)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+  
+if (save_pt){
+  y.lab <- "Total de Número de Saltos"
+  x.lab <- "Events"
+}else{
+  y.lab <- "Path Size (Hops)"
+  x.lab <- "Eventos"
+}
+  g_fh <- ggplot(df_fh, aes(x=event, y=values, group=type, color=type, fill=type)) + geom_line(position="identity", stat="identity",size=1) +
+    #geom_ribbon(aes(ymin =  floor, ymax =  ceiling), alpha=0.25, color=NA)+
+    theme_bw() + #scale_y_log10() +
+    theme(legend.position = "top",
+          # legend.direction = "vertical",
+          legend.box = "horizontal",
+          #legend.justification = c("right", "top"),
+          #legend.box.background = element_rect(color="black", size=1),
+          #legend.box.just = "right",
+          #legend.margin = margin(4, 4, 4, 2),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 16),
+          axis.text=element_text(size=16),
+          axis.title=element_text(size=16))+
+    xlab(x.lab)+
+    ylab(y.lab)
+```
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+print(g_bh)
+print(g_fh)
+``` 
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+if (save_pt){
+  ggsave(g_bh,filename = "graph/all_metrics/pt/sum_hops_bh.png", dpi = 600)
+  ggsave(g_fh,filename = "graph/all_metrics/pt/sum_hops_fh.png", dpi = 600)
+}else{
+  ggsave(g_bh,filename = "graph/all_metrics/en/sum_hops_bh.png", dpi = 600)
+  ggsave(g_fh,filename = "graph/all_metrics/en/sum_hops_fh.png", dpi = 600)
+}
+``` 
+
+
+```{r echo=FALSE, results=TRUE, warning=FALSE}
+library(fmsb)
+
+
+df_all_metrics <- data.frame(CacheHit=cache_vs_cloud02$Cache,CacheMiss=cache_vs_cloud02$Cloud,CacheMiss=cache_vs_cloud02$Cloud)
+# df_all_metrics <- data.frame(CacheHit=cache_vs_cloud02$Cache,CacheMiss=cache_vs_cloud02$Cloud,StorageLoad=ratio_server_use02,SumHopsFH=sum02_ran,SumHopsBH=sum02_cloud,BHLoad=thp_cur_cloud_02[[4]],FHload=thp_cur_ran_02[[4]],AVGDelay=delay_links_median_one_hop,SUMDelay=delay_links_sum_one_hop)
+
+radarchart(df_all_metrics)
+```
+

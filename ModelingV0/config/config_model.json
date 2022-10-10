@@ -7,7 +7,7 @@
   "show_reallocation": false,
   "plot_distribution": false,
 
-  "path_dataset": "..\\dataset\\instance\\default.json",
+  "path_dataset": "..\\dataset\\instance\\storage\\40.json",
 
   "mobility": true,
   "location_fixed": true,
@@ -18,12 +18,12 @@
 
   "plot_graph": false,
   "plot_graph_mobility": false,
-  "path_graph": ".\\output\\graph\\default_network_aware",
+  "path_graph": ".\\output\\graph\\storage_network_aware40",
 
   "save_data": true,
-  "path_output": "..\\..\\dataAnalysis\\data\\network_aware\\storage\\default_network_aware.xlsx",
+  "path_output": "..\\..\\dataAnalysis\\data\\network_aware\\storage\\storage_network_aware40.xlsx",
 
-  "path_time": "..\\output\\time_execution\\storage\\default_network_aware.dat",
+  "path_time": "..\\output\\time_execution\\storage\\storage_network_aware40.dat",
 
   "enable_ceil_nodes_capacity": true,
   "deallocate_request": true,

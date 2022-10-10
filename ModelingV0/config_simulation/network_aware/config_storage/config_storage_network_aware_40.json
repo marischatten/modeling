@@ -7,7 +7,7 @@
   "show_reallocation": false,
   "plot_distribution": false,
 
-  "path_dataset": "..\\dataset\\instance\\storage\\40.json",
+  "path_dataset": "..\\dataset\\instance\\default.json",
 
   "mobility": true,
   "location_fixed": true,
@@ -37,7 +37,7 @@
   "num_alpha": 0.80,
 
    "bandwidth_maximum": 0,
-   
+
   "source": [
     "F3"
   ],

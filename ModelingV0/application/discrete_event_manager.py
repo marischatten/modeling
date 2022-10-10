@@ -128,14 +128,6 @@ def application():
         data.set_graph_adj_matrix()
         picture(path_graph)
 
-    #########################################################################
-    for i in range(len(data.key_index_all)):
-        for j in range(len(data.key_index_all)):
-            print(data.graph_adj_matrix[i][j], end=" ")
-        print()
-    print()
-    #########################################################################
-
     start_time_3 = time.time()
     discrete_events()
     full_time = time.time() - start_time_3

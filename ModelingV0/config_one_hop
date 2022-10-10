@@ -8,34 +8,35 @@
   "plot_distribution": false,
 
 
-  "path_dataset": "..\\dataset\\instance\\teste.json",
+  "path_dataset": "..\\dataset\\instance\\one_hop.json",
 
   "mobility": true,
-  "location_fixed": false,
+  "location_fixed": true,
   "path_location": "..\\dataset\\location\\teste.json",
 
-  "requests_fixed": false,
+  "requests_fixed": true,
   "path_requests": "..\\dataset\\request\\teste.json",
 
   "plot_graph": true,
   "plot_graph_mobility": false,
 
 
-  "path_graph": "..\\output\\graph\\teste",
+  "path_graph": "..\\output\\graph\\one_hop",
 
   "save_data": true,
 
-  "path_output": "..\\output\\data\\teste.xlsx",
+  "path_output": "..\\output\\data\\one_hop.xlsx",
 
   "path_time": "..\\output\\time_execution\\teste.dat",
 
   "enable_ceil_nodes_capacity": true,
   "deallocate_request": true,
-  "max_events": 1,
+  "max_events": 5,
 
-  "approach": "network_aware",
 
-  "type": "single",
+  "approach": "one_hop",
+
+  "type": "zipf",
   "fixed": true,
   "avg_qtd_bulk": 2,
   "num_events": 5,
@@ -46,7 +47,7 @@
     "F3"
   ],
   "sink": [
-    "UE1"
+    "UE40"
   ]
 }
 

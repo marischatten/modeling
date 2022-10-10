@@ -1,0 +1,46 @@
+{
+  "show_log": 0,
+  "show_results": false,
+  "show_path": false,
+  "show_var": false,
+  "show_par": false,
+  "show_reallocation": false,
+  "plot_distribution": false,
+
+  "path_dataset": "..\\dataset\\instance\\storage\\20.json",
+
+  "mobility": true,
+  "location_fixed": true,
+  "path_location": "..\\dataset\\location\\default.json",
+
+  "requests_fixed": true,
+  "path_requests": "..\\dataset\\request\\default.json",
+
+  "plot_graph": false,
+  "plot_graph_mobility": false,
+  "path_graph": ".\\output\\graph\\storage_network_aware20",
+
+  "save_data": true,
+  "path_output": "..\\..\\dataAnalysis\\data\\network_aware\\storage\\storage_network_aware20.xlsx",
+
+  "path_time": "..\\output\\time_execution\\storage\\storage_network_aware20.dat",
+
+  "enable_ceil_nodes_capacity": true,
+  "deallocate_request": true,
+  "max_events": 10,
+
+  "approach": "network_aware",
+  "type": "zipf",
+  "fixed": false,
+  "avg_qtd_bulk": 5,
+  "num_events": 100,
+  "num_alpha": 0.80,
+  "source": [
+    "F3"
+  ],
+  "sink": [
+    "UE40"
+  ]
+}
+
+

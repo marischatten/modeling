@@ -1,8 +1,8 @@
 {
-  "path_locations": "..\\dataset\\location\\beta\\instance_10_beta.json",
-  "num_events": 20,
+  "path_locations": "..\\dataset\\location\\teste.json",
+  "num_events": 5,
   "mobility_rate":10,
   "num_files": 10,
-  "key_index_ue": ["UE1", "UE2", "UE3", "UE4", "UE5", "UE6", "UE7", "UE8", "UE9", "UE10", "UE11", "UE12", "UE13", "UE14", "UE15", "UE16", "UE17", "UE18", "UE19", "UE20", "UE21", "UE22", "UE23", "UE24", "UE25", "UE26", "UE27", "UE28", "UE29", "UE30", "UE31", "UE32", "UE33", "UE34", "UE35", "UE36", "UE37", "UE38", "UE39", "UE40", "UE41", "UE42", "UE43", "UE44", "UE45", "UE46", "UE47", "UE48", "UE49", "UE50"],
+  "key_index_ue": ["UE1", "UE2", "UE3"],
   "key_index_bs": ["MBS0", "MBS1", "MBS2", "SBS1", "SBS2", "SBS3", "SBS4"]
 }

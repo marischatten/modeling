@@ -128,6 +128,14 @@ def application():
         data.set_graph_adj_matrix()
         picture(path_graph)
 
+    #########################################################################
+    for i in range(len(data.key_index_all)):
+        for j in range(len(data.key_index_all)):
+            print(data.graph_adj_matrix[i][j], end=" ")
+        print()
+    print()
+    #########################################################################
+
     start_time_3 = time.time()
     discrete_events()
     full_time = time.time() - start_time_3
@@ -178,6 +186,20 @@ def poisson_zipf():
         if plot_graph_mobility:
             data.set_graph_adj_matrix()
             picture(path_graph+"_{0}".format(event+1))
+
+        def __log_weight_network(self):
+            print("GRAFO.")
+            for f, filename in enumerate(self.data.key_index_file):
+                print(filename.upper())
+                for i in range(len(self.data.key_index_all)):
+                    for j in range(len(self.data.key_index_all)):
+                        if self.data.weight_network[f][i][j] == NO_EDGE:
+                            print('ထ', end=" ")
+                        else:
+                            print(str(self.data.weight_network[f][i][j]).format(), end=" ")
+                    print()
+                print()
+            print()
 
         pd.rtt_to_dataframe(event+1)
 

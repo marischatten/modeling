@@ -254,6 +254,8 @@ class Data:
             tag = breaks[i]
             self.exponential_scale_rtt[tag] = scale[i]
 
+        print(self.exponential_scale_rtt)
+
     def clear_hops(self):
         self.hops.clear()
 
@@ -461,7 +463,7 @@ class HandleData:
                     # if self.__data.distance_ue[u][i] <= self.__data.radius_mbs: UE não tem cobertura de MBS.
                     self.__data.omega_user_node[u][i] = 0
                 elif tag_i[:4] == 'MBS0':
-                    self.__data.omega_user_node[u][i] = 1
+                        self.__data.omega_user_node[u][i] = 1
                 else:
                     if self.__data.distance_ue[u][i] <= self.__data.radius_sbs:
                         self.__data.omega_user_node[u][i] = 1
@@ -555,7 +557,7 @@ class HandleData:
                         if self.__is_caching(tag_i, tag_j) and (tag_f == tag_i):
                             self.__data.weight_network[f][i][j] = 0
 
-                    if self.__data.approach.ONE_HOP or self.__data.approach.NO_COOPERATION:
+                    if (self.__data.approach == Approach.ONE_HOP) or (self.__data.approach == Approach.NO_COOPERATION):
                         if tag_i[:4] == 'MBS0' and tag_j[:2] == 'UE':
                             self.__data.weight_network[f][i][j] = 1
 
